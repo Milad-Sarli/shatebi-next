@@ -1,0 +1,120 @@
+import axios from "axios";
+import { API_URL } from "@/lib/constants";
+
+export interface Lesson {
+  id: number;
+  title: string;
+  description?: string;
+  tenant_id?: number;
+  parent_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  tenant?: {
+    id: number;
+    title: string;
+  };
+  parent?: Lesson;
+  children?: Lesson[];
+}
+
+export interface LessonFilters {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  tenant_id?: number;
+  parent_id?: number | null;
+}
+
+export interface PaginationResponse {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+  from: number;
+  to: number;
+}
+
+export interface LessonResponse {
+  data: Lesson[];
+  pagination: PaginationResponse;
+  status: boolean;
+}
+
+export interface LessonCreateData {
+  title: string;
+  description?: string;
+  tenant_id?: number;
+  parent_id?: number | null;
+}
+
+export interface LessonUpdateData extends Partial<LessonCreateData> {}
+
+export class LessonService {
+  static async getLessons(filters: LessonFilters = {}, token: string): Promise<LessonResponse> {
+    const response = await axios.get(`${API_URL}/api/droos`, {
+      params: filters,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  static async getLessonById(id: number, token: string) {
+    const response = await axios.get(`${API_URL}/api/droos/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  static async createLesson(data: LessonCreateData, token: string) {
+    const response = await axios.post(`${API_URL}/api/droos`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  static async updateLesson(id: number, data: LessonUpdateData, token: string) {
+    const response = await axios.put(`${API_URL}/api/droos/${id}`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  static async deleteLesson(id: number, token: string) {
+    const response = await axios.delete(`${API_URL}/api/droos/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+  
+  static async getLessonsByTenant(tenantId: number, token: string) {
+    const response = await axios.get(`${API_URL}/api/droos/tenant/${tenantId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+  
+  static async getLessonsByParent(parentId: number | null, token: string) {
+    const url = parentId 
+      ? `${API_URL}/api/droos/parent/${parentId}` 
+      : `${API_URL}/api/droos/parent/null`;
+    
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+} 
