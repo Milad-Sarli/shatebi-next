@@ -60,25 +60,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyOtp = async (phone: string, otp: string, token: string) => {
     try {
       const response = await AuthService.verifyOtp(phone, otp, token)
+      console.log('Verify OTP Response:', response) // Debug log
+      
+      if (!response.user || !response.access_token) {
+        throw new Error('Invalid response format from server')
+      }
+
       setAccessToken(response.access_token)
       setUser(response.user)
       setIsAuthenticated(true)
       
-      // Store in cookies
-      Cookies.set('access_token', response.access_token, { 
-        expires: 1, // 1 day
-        secure: true,
-        sameSite: 'strict'
-      })
-      Cookies.set('user', JSON.stringify(response.user), {
-        expires: 1,
-        secure: true,
-        sameSite: 'strict'
-      })
+      // Store in cookies with error handling
+      try {
+        Cookies.set('access_token', response.access_token, { 
+          expires: 1, // 1 day
+          secure: true,
+          sameSite: 'strict'
+        })
+        
+        const userData = {
+          id: response.user.id,
+          username: response.user.username,
+          phone: response.user.phone
+        }
+        
+        Cookies.set('user', JSON.stringify(userData), {
+          expires: 1,
+          secure: true,
+          sameSite: 'strict'
+        })
+        
+        console.log('Cookies set successfully') // Debug log
+      } catch (cookieError) {
+        console.error('Error setting cookies:', cookieError)
+        throw new Error('Failed to save authentication data')
+      }
       
       router.push('/dashboard')
       router.refresh()
     } catch (error) {
+      console.error('Verify OTP Error:', error) // Debug log
       throw error
     }
   }

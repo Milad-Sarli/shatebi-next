@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import Link from "next/link";
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -56,6 +56,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         className="fixed inset-y-0 right-0 z-50 w-72 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-xl md:hidden"
       >
         <div className="flex h-full flex-col p-4">
+          <Link href="/dashboard">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
@@ -70,6 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
+          </Link>
           <Sidebar className="flex-1" />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
