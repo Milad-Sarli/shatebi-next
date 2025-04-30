@@ -11,6 +11,7 @@ import {
   Building2,
   BookOpen,
   Shield,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,11 @@ const items = [
     title: "دانش آموزان",
     href: "/dashboard/students",
     icon: GraduationCap,
+  },
+  {
+    title: "اساتید",
+    href: "/dashboard/masters",
+    icon: Briefcase,
   },
   // {
   //   title: "کلاس‌ها",

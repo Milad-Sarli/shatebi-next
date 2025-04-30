@@ -40,7 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const user = {
         id: parsedUser.id,
         username: parsedUser.username || parsedUser.national_id,
-        phone: parsedUser.phone
+        phone: parsedUser.phone,
+        tenant_id: parsedUser.tenant_id
       }
       setAccessToken(token)
       setUser(user)

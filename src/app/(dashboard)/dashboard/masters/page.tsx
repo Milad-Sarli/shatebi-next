@@ -1,20 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search, ChevronLeft, ChevronRight, Sun, Moon, Edit, Trash2, FolderTree } from "lucide-react";
+import { Plus, Search, Sun, Moon, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
 import { useTheme } from "@/lib/context/theme.context";
-import { LessonService, Lesson, LessonFilters, LessonResponse, PaginationResponse } from "@/lib/services/lesson.service";
+import { MasterService, Master, MasterFilters, PaginationResponse } from "@/lib/services/master.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LessonForm } from "./lesson-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MasterForm } from "./master-form";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -33,15 +32,14 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function LessonsPage() {
+export default function MastersPage() {
   const { accessToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [lessons, setLessons] = React.useState<Lesson[]>([]);
+  const [masters, setMasters] = React.useState<Master[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [filters, setFilters] = React.useState<LessonFilters>({
+  const [filters, setFilters] = React.useState<MasterFilters>({
     page: 1,
     per_page: 10,
-    parent_id: null,
   });
   const [pagination, setPagination] = React.useState<PaginationResponse>({
     current_page: 1,
@@ -53,16 +51,14 @@ export default function LessonsPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddLessonOpen, setIsAddLessonOpen] = React.useState(false);
-  const [lessonToDelete, setLessonToDelete] = React.useState<number | null>(null);
-  const [lessonToEdit, setLessonToEdit] = React.useState<Lesson | null>(null);
-  const [currentParent, setCurrentParent] = React.useState<Lesson | null>(null);
-  const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
-  
+  const [isAddMasterOpen, setIsAddMasterOpen] = React.useState(false);
+  const [masterToDelete, setMasterToDelete] = React.useState<number | null>(null);
+  const [masterToEdit, setMasterToEdit] = React.useState<Master | null>(null);
+
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
 
-  const fetchLessons = React.useCallback(async (searchTerm?: string) => {
+  const fetchMasters = React.useCallback(async (searchTerm?: string) => {
     if (!accessToken) return;
     if (searchInProgress.current) return;
 
@@ -72,45 +68,46 @@ export default function LessonsPage() {
       
       const searchQuery = searchTerm !== undefined ? searchTerm : debouncedSearch;
       
-      const response = await LessonService.getLessons(
+      const response = await MasterService.getMasters(
         {
           page: filters.page,
           per_page: filters.per_page,
           search: searchQuery || undefined,
-          parent_id: filters.parent_id !== undefined ? filters.parent_id : null,
+          tenant_id: filters.tenant_id,
         },
         accessToken
       );
-      setLessons(response.data || []);
-      if (response.pagination) {
-        setPagination(response.pagination);
+      
+      // Update masters state with the data array from the response
+      if (response.data) {
+        setMasters(response.data.data);
+        
+        // Update pagination from the response
+        setPagination({
+          current_page: response.data.current_page,
+          last_page: response.data.last_page,
+          total: response.data.total,
+          per_page: response.data.per_page,
+          from: response.data.from,
+          to: response.data.to
+        });
       }
     } catch (error) {
-      toast.error("خطا در دریافت لیست دروس");
+      toast.error("خطا در دریافت لیست استادها");
       console.error(error);
     } finally {
       setLoading(false);
       searchInProgress.current = false;
     }
-  }, [accessToken, filters.page, filters.per_page, filters.parent_id, debouncedSearch]);
+  }, [accessToken, filters, debouncedSearch]);
 
-  // Effect to handle page and per_page changes
+  // Effect for page and per_page changes
   React.useEffect(() => {
     // Only fetch if not triggered by a search change
     if (!searchInProgress.current) {
-      fetchLessons();
+      fetchMasters();
     }
-  }, [filters.page, filters.per_page, fetchLessons]);
-
-  // Effect for parent_id changes (navigation)
-  React.useEffect(() => {
-    if (filters.parent_id !== null && navigationPath.length > 0) {
-      // This is handled by handleNavigateToParent
-      return;
-    }
-    
-    fetchLessons();
-  }, [filters.parent_id, navigationPath.length, fetchLessons]);
+  }, [filters.page, filters.per_page, filters.tenant_id, fetchMasters]);
 
   // Effect to handle debounced search changes
   React.useEffect(() => {
@@ -118,116 +115,45 @@ export default function LessonsPage() {
     if (filters.page !== 1) {
       setFilters(prev => ({ ...prev, page: 1 }));
     } else {
-      fetchLessons();
+      fetchMasters();
     }
-  }, [debouncedSearch, fetchLessons, filters.page]);
-
-  const fetchLessonById = React.useCallback(async (id: number) => {
-    if (!accessToken) return null;
-
-    try {
-      const response = await LessonService.getLessonById(id, accessToken);
-      return response.data;
-    } catch (error) {
-      toast.error("خطا در دریافت اطلاعات درس");
-      console.error(error);
-      return null;
-    }
-  }, [accessToken]);
-
-  const handleNavigateToParent = React.useCallback(async (parentId: number | null) => {
-    try {
-      setLoading(true);
-      if (parentId === null) {
-        setFilters(prev => {
-          const newFilters = { ...prev, parent_id: null, page: 1 };
-          return newFilters;
-        });
-        setCurrentParent(null);
-        setNavigationPath([]);
-        
-        // بارگذاری مستقیم دروس اصلی
-        const response = await LessonService.getLessonsByParent(null, accessToken!);
-        setLessons(response.data || []);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
-        return;
-      }
-
-      const parentLesson = await fetchLessonById(parentId);
-      if (parentLesson) {
-        setFilters(prev => {
-          const newFilters = { ...prev, parent_id: parentId, page: 1 };
-          return newFilters;
-        });
-        setCurrentParent(parentLesson);
-
-        // Update navigation path
-        let newPath = [...navigationPath];
-        const existingIndex = newPath.findIndex(item => item.id === parentLesson.id);
-        
-        if (existingIndex >= 0) {
-          // If already in path, trim the path up to this point
-          newPath = newPath.slice(0, existingIndex + 1);
-        } else {
-          // Add to path
-          newPath.push(parentLesson);
-        }
-        
-        setNavigationPath(newPath);
-        
-        // بارگذاری مستقیم زیردرس‌ها
-        const response = await LessonService.getLessonsByParent(parentId, accessToken!);
-        setLessons(response.data || []);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
-      }
-    } catch (error) {
-      toast.error("خطا در دریافت اطلاعات زیردرس‌ها");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchLessonById, navigationPath, accessToken]);
+  }, [debouncedSearch, fetchMasters, filters.page]);
 
   const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
+    if (page !== filters.page) {
+      setFilters((prev) => ({ ...prev, page }));
+      // No need to call fetchMasters here as the filters change will trigger the useEffect
+    }
   };
 
-  const handleDeleteLesson = async (id: number) => {
-    setLessonToDelete(id);
+  const handleDeleteMaster = (id: number) => {
+    setMasterToDelete(id);
   };
 
   const confirmDelete = async () => {
-    if (!accessToken || !lessonToDelete) return;
+    if (!accessToken || !masterToDelete) return;
 
     try {
-      await LessonService.deleteLesson(lessonToDelete, accessToken);
-      toast.success("درس با موفقیت حذف شد");
-      fetchLessons();
+      await MasterService.deleteMaster(masterToDelete, accessToken);
+      toast.success("استاد با موفقیت حذف شد");
+      fetchMasters();
     } catch (error) {
-      toast.error("خطا در حذف درس");
+      toast.error("خطا در حذف استاد");
       console.error(error);
     } finally {
-      setLessonToDelete(null);
+      setMasterToDelete(null);
     }
   };
 
-  const handleEditLesson = (lesson: Lesson) => {
-    setLessonToEdit(lesson);
+  const handleEditMaster = (master: Master) => {
+    setMasterToEdit(master);
   };
-
-  const handleViewChildren = React.useCallback((lesson: Lesson) => {
-    handleNavigateToParent(lesson.id);
-  }, [handleNavigateToParent]);
 
   const handleSearch = () => {
     if (filters.page !== 1) {
       setFilters(prev => ({ ...prev, page: 1 }));
     } else {
-      fetchLessons(searchInput);
+      fetchMasters(searchInput);
     }
   };
 
@@ -235,7 +161,7 @@ export default function LessonsPage() {
     <PageTransition>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">مدیریت دروس</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">مدیریت استادها</h1>
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <Button
               variant="ghost"
@@ -245,22 +171,21 @@ export default function LessonsPage() {
             >
               {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </Button>
-            <Dialog open={isAddLessonOpen} onOpenChange={setIsAddLessonOpen}>
+            <Dialog open={isAddMasterOpen} onOpenChange={setIsAddMasterOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
                   <Plus className="ml-2 h-4 w-4" />
-                  افزودن درس
+                  افزودن استاد
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-zinc-900 dark:text-zinc-100">افزودن درس جدید</DialogTitle>
+                  <DialogTitle className="text-zinc-900 dark:text-zinc-100">افزودن استاد جدید</DialogTitle>
                 </DialogHeader>
-                <LessonForm
-                  parentId={filters.parent_id}
+                <MasterForm
                   onSuccess={() => {
-                    setIsAddLessonOpen(false);
-                    fetchLessons();
+                    setIsAddMasterOpen(false);
+                    fetchMasters();
                   }}
                 />
               </DialogContent>
@@ -270,47 +195,14 @@ export default function LessonsPage() {
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست دروس</CardTitle>
-              
-              {/* Navigation path / breadcrumb */}
-              {navigationPath.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleNavigateToParent(null)}
-                    className="p-0 h-auto text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                  >
-                    دروس اصلی
-                  </Button>
-                  {navigationPath.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <span>/</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleNavigateToParent(item.id)}
-                        className={`p-0 h-auto ${
-                          index === navigationPath.length - 1 
-                            ? "font-medium text-zinc-900 dark:text-zinc-100" 
-                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                        }`}
-                      >
-                        {item.title}
-                      </Button>
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست استادها</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
                 <Input
-                  placeholder="جستجو..."
+                  placeholder="جستجو بر اساس نام، کد ملی یا شماره تلفن..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
@@ -318,7 +210,7 @@ export default function LessonsPage() {
               </div>
               <Button 
                 variant="outline" 
-                size="default"
+                size="default" 
                 onClick={handleSearch}
                 className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
               >
@@ -332,8 +224,10 @@ export default function LessonsPage() {
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">#</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">عنوان</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">نوع</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">تصویر</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">نام کامل</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">کد ملی</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">شماره تلفن</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">مرکز</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
                   </tr>
@@ -342,20 +236,20 @@ export default function LessonsPage() {
                   <AnimatePresence mode="wait">
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                        <td colSpan={7} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
                           در حال بارگذاری...
                         </td>
                       </tr>
-                    ) : lessons.length === 0 ? (
+                    ) : masters.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
-                          هیچ درسی یافت نشد
+                        <td colSpan={7} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                          هیچ استادی یافت نشد
                         </td>
                       </tr>
                     ) : (
-                      lessons.map((lesson, index) => (
+                      masters.map((master, index) => (
                         <motion.tr
-                          key={lesson.id}
+                          key={master.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -20 }}
@@ -365,47 +259,44 @@ export default function LessonsPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                             {pagination.from ? pagination.from + index : index + 1}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.title}</td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            {lesson.children && lesson.children.length > 0 ? (
-                              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                سرفصل
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                درس
-                              </Badge>
-                            )}
+                            <div className="relative h-8 w-8 overflow-hidden rounded-full">
+                              {master.aks ? (
+                                <img
+                                  src={master.aks}
+                                  alt={master.fullname}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-300">
+                                  {master.fullname.substring(0, 1)}
+                                </div>
+                              )}
+                            </div>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.tenant?.title}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{master.fullname}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{master.mellicode}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{master.phone}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{master.tenant?.name}</td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleViewChildren(lesson)}
-                            >
-                              <FolderTree className="h-4 w-4 ml-1" />
-                              زیردرس‌ها
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleEditLesson(lesson)}
-                            >
-                              <Edit className="h-4 w-4 ml-1" />
-                              ویرایش
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                              onClick={() => handleDeleteLesson(lesson.id)}
-                            >
-                              <Trash2 className="h-4 w-4 ml-1" />
-                              حذف
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="flex h-8 w-8 p-0 items-center justify-center text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                onClick={() => handleEditMaster(master)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="flex h-8 w-8 p-0 items-center justify-center text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                onClick={() => handleDeleteMaster(master.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </motion.tr>
                       ))
@@ -422,14 +313,14 @@ export default function LessonsPage() {
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...
                   </div>
-                ) : lessons.length === 0 ? (
+                ) : masters.length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
-                    هیچ درسی یافت نشد
+                    هیچ استادی یافت نشد
                   </div>
                 ) : (
-                  lessons.map((lesson, index) => (
+                  masters.map((master, index) => (
                     <motion.div
-                      key={lesson.id}
+                      key={master.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
@@ -437,55 +328,57 @@ export default function LessonsPage() {
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
                       <div className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{lesson.title}</h3>
-                          {lesson.children && lesson.children.length > 0 ? (
-                            <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              سرفصل
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
-                              درس
-                            </Badge>
-                          )}
+                        <div className="flex items-center mb-4">
+                          <div className="relative h-12 w-12 overflow-hidden rounded-full mr-3">
+                            {master.aks ? (
+                              <img
+                                src={master.aks}
+                                alt={master.fullname}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-300 text-lg">
+                                {master.fullname.substring(0, 1)}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{master.fullname}</h3>
+                            {master.tenant?.name && (
+                              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                مرکز: {master.tenant.name}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        {lesson.tenant?.title && (
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                            مرکز: {lesson.tenant.title}
-                          </p>
-                        )}
-                        {lesson.description && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
-                            {lesson.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                        <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                          <div>
+                            <p className="text-zinc-500 dark:text-zinc-400">کد ملی:</p>
+                            <p className="text-zinc-900 dark:text-zinc-100">{master.mellicode}</p>
+                          </div>
+                          <div>
+                            <p className="text-zinc-500 dark:text-zinc-400">شماره تلفن:</p>
+                            <p className="text-zinc-900 dark:text-zinc-100">{master.phone}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            onClick={() => handleViewChildren(lesson)}
+                            onClick={() => handleEditMaster(master)}
                           >
-                            <FolderTree className="h-4 w-4 ml-1" />
-                            زیردرس‌ها
+                            <Edit className="h-4 w-4 ml-1" />
+                            ویرایش
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                            onClick={() => handleDeleteLesson(lesson.id)}
+                            onClick={() => handleDeleteMaster(master.id)}
                           >
                             <Trash2 className="h-4 w-4 ml-1" />
                             حذف
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            onClick={() => handleEditLesson(lesson)}
-                          >
-                            <Edit className="h-4 w-4 ml-1" />
-                            ویرایش
                           </Button>
                         </div>
                       </div>
@@ -495,13 +388,13 @@ export default function LessonsPage() {
               </AnimatePresence>
             </div>
 
-            {!loading && lessons.length > 0 && pagination.last_page > 1 && (
+            {!loading && masters.length > 0 && pagination.last_page > 1 && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     <span className="hidden sm:inline">نمایش {pagination.current_page} از {pagination.last_page} صفحه</span>
                     <span className="hidden sm:inline mx-2">|</span>
-                    نمایش {pagination.from} تا {pagination.to} از {pagination.total} درس
+                    نمایش {pagination.from} تا {pagination.to} از {pagination.total} استاد
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -599,33 +492,33 @@ export default function LessonsPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={lessonToEdit !== null} onOpenChange={(open: boolean) => !open && setLessonToEdit(null)}>
+        <Dialog open={masterToEdit !== null} onOpenChange={(open: boolean) => !open && setMasterToEdit(null)}>
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش درس</DialogTitle>
+              <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش استاد</DialogTitle>
             </DialogHeader>
-            <LessonForm
-              lesson={lessonToEdit || undefined}
+            <MasterForm
+              master={masterToEdit || undefined}
               onSuccess={() => {
-                setLessonToEdit(null);
-                fetchLessons();
+                setMasterToEdit(null);
+                fetchMasters();
               }}
             />
           </DialogContent>
         </Dialog>
 
-        <Dialog open={lessonToDelete !== null} onOpenChange={(open: boolean) => !open && setLessonToDelete(null)}>
+        <Dialog open={masterToDelete !== null} onOpenChange={(open: boolean) => !open && setMasterToDelete(null)}>
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-zinc-900 dark:text-zinc-100">تایید حذف درس</DialogTitle>
+              <DialogTitle className="text-zinc-900 dark:text-zinc-100">تایید حذف استاد</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-zinc-600 dark:text-zinc-400">آیا از حذف این درس اطمینان دارید؟</p>
+              <p className="text-zinc-600 dark:text-zinc-400">آیا از حذف این استاد اطمینان دارید؟</p>
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setLessonToDelete(null)}
+                onClick={() => setMasterToDelete(null)}
                 className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
               >
                 انصراف
@@ -643,4 +536,5 @@ export default function LessonsPage() {
       </div>
     </PageTransition>
   );
-} 
+}
+
