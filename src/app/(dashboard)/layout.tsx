@@ -57,34 +57,43 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="flex h-full flex-col p-4">
           <Link href="/dashboard">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
-              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">دارالقرآن</span>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
+                <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                  دارالقرآن
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(false)}
-              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
           </Link>
           <Sidebar className="flex-1" />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/default.svg" alt={user?.username} />
+                  <AvatarImage
+                    src="/avatars/default.svg"
+                    alt={user?.username}
+                  />
                   <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
                     {getUserInitials(user?.username || "")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-0.5 text-sm">
-                  <p className="font-medium text-zinc-900 dark:text-zinc-100">{user?.username}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{user?.phone}</p>
+                  <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                    {user?.username}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {user?.phone}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -94,16 +103,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={toggleTheme}
                   className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 >
-                  {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {theme === "light" ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
                       <Menu className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
-                    <DropdownMenuItem 
+                  <DropdownMenuContent
+                    className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                    align="end"
+                  >
+                    <DropdownMenuItem
                       onClick={() => logout()}
                       className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
@@ -123,7 +143,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
-              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">دارالقرآن</span>
+              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                دارالقرآن
+              </span>
             </div>
           </div>
           <Sidebar className="flex-1" />
@@ -131,14 +153,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/default.svg" alt={user?.username} />
+                  <AvatarImage
+                    src="/avatars/default.svg"
+                    alt={user?.username}
+                  />
                   <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
                     {getUserInitials(user?.username || "")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-0.5 text-sm">
-                  <p className="font-medium text-zinc-900 dark:text-zinc-100">{user?.username}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{user?.phone}</p>
+                  <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                    {user?.username}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {user?.phone}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -148,16 +177,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={toggleTheme}
                   className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 >
-                  {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {theme === "light" ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
                       <Menu className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
-                    <DropdownMenuItem 
+                  <DropdownMenuContent
+                    className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800"
+                    align="end"
+                  >
+                    <DropdownMenuItem
                       onClick={() => logout()}
                       className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
@@ -184,13 +224,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" />
           </Button>
         </div>
-        
+
         <div className="p-4 md:p-6">
-          <AnimatePresence mode="wait">
-            {children}
-          </AnimatePresence>
+          <AnimatePresence mode="wait">{children}</AnimatePresence>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -43,11 +43,11 @@ const items = [
     href: "/dashboard/masters",
     icon: Briefcase,
   },
-  // {
-  //   title: "کلاس‌ها",
-  //   href: "/dashboard/classes",
-  //   icon: BookOpen,
-  // },
+  {
+    title: "کلاس‌ها",
+    href: "/dashboard/optimizedClasses",
+    icon: BookOpen,
+  },
   // {
   //   title: "برنامه کلاسی",
   //   href: "/dashboard/schedule",
@@ -90,4 +90,4 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       })}
     </nav>
   );
-} 
+}
