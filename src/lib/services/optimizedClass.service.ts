@@ -26,6 +26,14 @@ export interface CreateOptimizedClassDto {
 
 export interface UpdateOptimizedClassDto extends Partial<CreateOptimizedClassDto> {}
 
+export interface Student {
+  id: number;
+  Fname: string;
+  Lname: string;
+  name?: string;
+  email?: string;
+}
+
 export const optimizedClassService = {
   async getAll(accessToken: string): Promise<OptimizedClass[]> {
     const response = await axios.get(`${API_URL}/api/optimized-classes`, {
@@ -69,5 +77,15 @@ export const optimizedClassService = {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+  },
+
+  async getStudents(id: number, accessToken: string): Promise<Student[]> {
+    const response = await axios.get(`${API_URL}/api/optimized-classes/${id}/students`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      },
+    });
+    return response.data.data;
   },
 }; 

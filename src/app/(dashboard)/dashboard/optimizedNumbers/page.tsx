@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ClassForm } from "./class-form";
+import { NumberForm } from "./number-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -33,9 +33,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  optimizedClassService,
-  OptimizedClass,
-} from "@/lib/services/optimizedClass.service";
+  optimizedNumberService,
+  OptimizedNumber,
+} from "@/lib/services/number.service";
 import { useRouter } from "next/navigation";
 
 // Custom debounce hook
@@ -55,9 +55,9 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function OptimizedClassesPage() {
+export default function OptimizedNumbersPage() {
   const { accessToken } = useAuth();
-  const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
+  const [numbers, setNumbers] = React.useState<OptimizedNumber[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState({
     page: 1,
@@ -73,18 +73,19 @@ export default function OptimizedClassesPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddClassOpen, setIsAddClassOpen] = React.useState(false);
-  const [classToDelete, setClassToDelete] = React.useState<number | null>(null);
-  const [classToEdit, setClassToEdit] = React.useState<OptimizedClass | null>(
+  const [isAddNumberOpen, setIsAddNumberOpen] = React.useState(false);
+  const [numberToDelete, setNumberToDelete] = React.useState<number | null>(
     null
   );
+  const [numberToEdit, setNumberToEdit] =
+    React.useState<OptimizedNumber | null>(null);
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
 
   const router = useRouter();
 
-  const fetchClasses = React.useCallback(
+  const fetchNumbers = React.useCallback(
     async (searchTerm?: string) => {
       if (!accessToken) return;
       if (searchInProgress.current) return;
@@ -95,10 +96,9 @@ export default function OptimizedClassesPage() {
 
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
+        const response = await optimizedNumberService.getAll(accessToken);
 
-        const response = await optimizedClassService.getAll(accessToken);
-
-        setClasses(response);
+        setNumbers(response);
         // Note: Since the service doesn't support pagination yet, we'll handle it client-side
         const total = response.length;
         const lastPage = Math.ceil(total / filters.per_page);
@@ -111,7 +111,7 @@ export default function OptimizedClassesPage() {
           to: Math.min(filters.page * filters.per_page, total),
         });
       } catch (error) {
-        toast.error("Error loading classes");
+        toast.error("Error loading numbers");
         console.error(error);
       } finally {
         setLoading(false);
@@ -124,50 +124,51 @@ export default function OptimizedClassesPage() {
   // Effect to handle page and per_page changes
   React.useEffect(() => {
     if (!searchInProgress.current) {
-      fetchClasses();
+      fetchNumbers();
     }
-  }, [filters.page, filters.per_page, fetchClasses]);
+  }, [filters.page, filters.per_page, fetchNumbers]);
 
   // Effect to handle debounced search changes
   React.useEffect(() => {
     if (filters.page !== 1) {
       setFilters((prev) => ({ ...prev, page: 1 }));
     } else {
-      fetchClasses();
+      fetchNumbers();
     }
-  }, [debouncedSearch, fetchClasses, filters.page]);
+  }, [debouncedSearch, fetchNumbers, filters.page]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const handleDeleteClass = async (id: number) => {
-    setClassToDelete(id);
+  const handleDeleteNumber = async (id: number) => {
+    setNumberToDelete(id);
   };
 
   const confirmDelete = async () => {
-    if (!accessToken || !classToDelete) return;
+    if (!accessToken || !numberToDelete) return;
 
     try {
-      await optimizedClassService.delete(classToDelete, accessToken);
-      toast.success("Class deleted successfully");
-      fetchClasses();
+      await optimizedNumberService.delete(numberToDelete, accessToken);
+      toast.success("Number deleted successfully");
+      fetchNumbers();
     } catch (error) {
-      toast.error("Error deleting class");
+      toast.error("Error deleting number");
       console.error(error);
     } finally {
-      setClassToDelete(null);
+      setNumberToDelete(null);
     }
   };
 
-  const handleEditClass = (classItem: OptimizedClass) => {
-    setClassToEdit(classItem);
+  const handleEditNumber = (numberItem: OptimizedNumber) => {
+    setNumberToEdit(numberItem);
   };
+
   const handleSearch = () => {
     if (filters.page !== 1) {
       setFilters((prev) => ({ ...prev, page: 1 }));
     } else {
-      fetchClasses(searchInput);
+      fetchNumbers(searchInput);
     }
   };
 
@@ -176,15 +177,15 @@ export default function OptimizedClassesPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            کلاس‌ها
+            نمرات
           </h1>
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <Button
               className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-              onClick={() => router.push("/dashboard/optimizedClasses/add")}
+              onClick={() => router.push("/dashboard/optimizedNumbers/add")}
             >
               <Plus className="ml-2 h-4 w-4" />
-              افزودن کلاس جدید
+              افزودن نمره جدید
             </Button>
           </div>
         </div>
@@ -193,7 +194,7 @@ export default function OptimizedClassesPage() {
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <CardTitle className="text-zinc-900 dark:text-zinc-100">
-                لیست کلاس‌ها
+                لیست نمرات
               </CardTitle>
             </div>
           </CardHeader>
@@ -227,13 +228,13 @@ export default function OptimizedClassesPage() {
                       #
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      دانش‌آموزان
+                      دانش‌آموز
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       استاد
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      وضعیت
+                      نمرات
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       عملیات
@@ -251,24 +252,24 @@ export default function OptimizedClassesPage() {
                           در حال بارگذاری...
                         </td>
                       </tr>
-                    ) : classes.length === 0 ? (
+                    ) : numbers.length === 0 ? (
                       <tr>
                         <td
                           colSpan={5}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
-                          کلاسی یافت نشد
+                          نمره‌ای یافت نشد
                         </td>
                       </tr>
                     ) : (
-                      classes
+                      numbers
                         .slice(
                           (filters.page - 1) * filters.per_page,
                           filters.page * filters.per_page
                         )
-                        .map((classItem, index) => (
+                        .map((numberItem, index) => (
                           <motion.tr
-                            key={classItem.id}
+                            key={numberItem.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
@@ -279,61 +280,52 @@ export default function OptimizedClassesPage() {
                               {pagination.from + index}
                             </td>
                             <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              <div className="flex flex-col gap-1">
-                                {classItem.optimized_class_items?.map(
-                                  (item) =>
-                                    item.student && (
-                                      <span key={item.id}>
-                                        {item.student.Fname}{" "}
-                                        {item.student.Lname}
-                                        {item.student.juz &&
-                                          ` (جزء ${item.student.juz})`}
-                                      </span>
-                                    )
-                                )}
-                              </div>
+                              {numberItem.student?.Fname}{" "}
+                              {numberItem.student?.Lname}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {classItem.optimized_class_masters?.[0]?.master
-                                ?.fullname ? (
+                              {numberItem.masterTeacher?.fullname}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3">
+                              <div className="flex flex-wrap gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                >
+                                  حفظ: {numberItem.hefz}
+                                </Badge>
                                 <Badge
                                   variant="outline"
                                   className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
                                 >
-                                  {
-                                    classItem.optimized_class_masters[0].master
-                                      .fullname
-                                  }
+                                  مشخصات: {numberItem.details}
                                 </Badge>
-                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                                >
+                                  تجوید: {numberItem.tajvid}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                >
+                                  صوت: {numberItem.sout}
+                                </Badge>
                                 <Badge
                                   variant="outline"
                                   className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
                                 >
-                                  بدون استاد
+                                  نمره: {numberItem.number}
                                 </Badge>
-                              )}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3">
-                              <Badge
-                                variant="outline"
-                                className={
-                                  classItem.status === "active"
-                                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                    : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                }
-                              >
-                                {classItem.status === "active"
-                                  ? "فعال"
-                                  : "غیرفعال"}
-                              </Badge>
+                              </div>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                                onClick={() => handleEditClass(classItem)}
+                                onClick={() => handleEditNumber(numberItem)}
                               >
                                 <Edit className="h-4 w-4 ml-1" />
                                 ویرایش
@@ -342,7 +334,9 @@ export default function OptimizedClassesPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                onClick={() => handleDeleteClass(classItem.id)}
+                                onClick={() =>
+                                  handleDeleteNumber(numberItem.id)
+                                }
                               >
                                 <Trash2 className="h-4 w-4 ml-1" />
                                 حذف
@@ -363,19 +357,19 @@ export default function OptimizedClassesPage() {
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...
                   </div>
-                ) : classes.length === 0 ? (
+                ) : numbers.length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
-                    کلاسی یافت نشد
+                    نمره‌ای یافت نشد
                   </div>
                 ) : (
-                  classes
+                  numbers
                     .slice(
                       (filters.page - 1) * filters.per_page,
                       filters.page * filters.per_page
                     )
-                    .map((classItem, index) => (
+                    .map((numberItem, index) => (
                       <motion.div
-                        key={classItem.id}
+                        key={numberItem.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
@@ -385,64 +379,54 @@ export default function OptimizedClassesPage() {
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                              کلاس #{classItem.id}
+                              نمره #{numberItem.id}
                             </h3>
-                            <Badge
-                              variant="outline"
-                              className={
-                                classItem.status === "active"
-                                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                  : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                              }
-                            >
-                              {classItem.status === "active"
-                                ? "فعال"
-                                : "غیرفعال"}
-                            </Badge>
                           </div>
                           <div className="space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
                             <p>
-                              دانشآموزان:{" "}
-                              {classItem.optimized_class_items?.map(
-                                (item) =>
-                                  item.student && (
-                                    <span key={item.id}>
-                                      {item.student.Fname} {item.student.Lname}
-                                      {item.student.juz &&
-                                        ` (جزء ${item.student.juz})`}
-                                    </span>
-                                  )
-                              )}
+                              دانش‌آموز: {numberItem.student?.Fname}{" "}
+                              {numberItem.student?.Lname}
                             </p>
-                            <p>
-                              استاد:{" "}
-                              {classItem.optimized_class_masters?.[0]?.master
-                                ?.fullname ? (
-                                <Badge
-                                  variant="outline"
-                                  className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                >
-                                  {
-                                    classItem.optimized_class_masters[0].master
-                                      .fullname
-                                  }
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                >
-                                  بدون استاد
-                                </Badge>
-                              )}
-                            </p>
+                            <p>استاد: {numberItem.masterTeacher?.fullname}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge
+                                variant="outline"
+                                className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                              >
+                                حفظ: {numberItem.hefz}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              >
+                                مشخصات: {numberItem.details}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                              >
+                                تجوید: {numberItem.tajvid}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                              >
+                                صوت: {numberItem.sout}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
+                              >
+                                نمره: {numberItem.number}
+                              </Badge>
+                            </div>
                           </div>
                           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleEditClass(classItem)}
+                              onClick={() => handleEditNumber(numberItem)}
                             >
                               <Edit className="h-4 w-4 ml-1" />
                               ویرایش
@@ -451,7 +435,7 @@ export default function OptimizedClassesPage() {
                               variant="ghost"
                               size="sm"
                               className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                              onClick={() => handleDeleteClass(classItem.id)}
+                              onClick={() => handleDeleteNumber(numberItem.id)}
                             >
                               <Trash2 className="h-4 w-4 ml-1" />
                               حذف
@@ -464,17 +448,16 @@ export default function OptimizedClassesPage() {
               </AnimatePresence>
             </div>
 
-            {!loading && classes.length > 0 && pagination.last_page > 1 && (
+            {!loading && numbers.length > 0 && pagination.last_page > 1 && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     <span className="hidden sm:inline">
-                      نمایش صفحه {pagination.current_page} از{" "}
-                      {pagination.last_page}
+                      صفحه {pagination.current_page} از {pagination.last_page}
                     </span>
                     <span className="hidden sm:inline mx-2">|</span>
                     نمایش {pagination.from} تا {pagination.to} از{" "}
-                    {pagination.total} کلاس
+                    {pagination.total} نمره
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -600,29 +583,29 @@ export default function OptimizedClassesPage() {
         </Card>
 
         <Dialog
-          open={classToEdit !== null}
-          onOpenChange={(open: boolean) => !open && setClassToEdit(null)}
+          open={numberToEdit !== null}
+          onOpenChange={(open: boolean) => !open && setNumberToEdit(null)}
         >
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                ویرایش کلاس
+                ویرایش نمره
               </DialogTitle>
             </DialogHeader>
-            <ClassForm
-              initialData={classToEdit || undefined}
-              classId={classToEdit?.id}
+            <NumberForm
+              initialData={numberToEdit || undefined}
+              numberId={numberToEdit?.id}
               onSuccess={() => {
-                setClassToEdit(null);
-                fetchClasses();
+                setNumberToEdit(null);
+                fetchNumbers();
               }}
             />
           </DialogContent>
         </Dialog>
 
         <Dialog
-          open={classToDelete !== null}
-          onOpenChange={(open: boolean) => !open && setClassToDelete(null)}
+          open={numberToDelete !== null}
+          onOpenChange={(open: boolean) => !open && setNumberToDelete(null)}
         >
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
@@ -632,13 +615,13 @@ export default function OptimizedClassesPage() {
             </DialogHeader>
             <div className="py-4">
               <p className="text-zinc-600 dark:text-zinc-400">
-                آیا از حذف این کلاس اطمینان دارید؟
+                آیا از حذف این نمره اطمینان دارید؟
               </p>
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setClassToDelete(null)}
+                onClick={() => setNumberToDelete(null)}
                 className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
               >
                 انصراف

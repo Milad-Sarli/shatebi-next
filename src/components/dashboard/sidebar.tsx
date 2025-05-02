@@ -48,6 +48,11 @@ const items = [
     href: "/dashboard/optimizedClasses",
     icon: BookOpen,
   },
+  {
+    title: "نمرات",
+    href: "/dashboard/optimizedNumbers",
+    icon: GraduationCap,
+  },
   // {
   //   title: "برنامه کلاسی",
   //   href: "/dashboard/schedule",
