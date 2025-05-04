@@ -120,3 +120,35 @@
     @apply bg-background text-foreground;
   }
 }
+/* استایل‌های سفارشی برای تقویم شمسی - با اولویت بالا */
+.custom-calendar .rmdp-wrapper {
+  background-color: #333 !important;
+  border-radius: 8px !important;
+}
+
+.custom-calendar .rmdp-day {
+  color: white !important;
+}
+
+.custom-calendar .rmdp-day.rmdp-selected span {
+  background-color: #6366f1 !important;
+  color: white !important;
+}
+
+.custom-calendar .rmdp-week-day {
+  color: #ccc !important;
+}
+
+.custom-calendar .rmdp-header-values {
+  color: white !important;
+  font-weight: bold !important;
+}
+
+.custom-calendar .rmdp-arrow {
+  border-color: white !important;
+}
+
+.custom-calendar .rmdp-arrow-container:hover {
+  background-color: #555 !important;
+  box-shadow: 0 0 5px white !important;
+}

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_URL } from "@/lib/constants";
+import { Dars } from "./optimizedClass.service";
 
 export interface OptimizedNumber {
   id: number;
@@ -22,7 +23,7 @@ export interface OptimizedNumber {
   optimizedClass?: any;
   masterTeacher?: any;
   student?: any;
-  droos?: any;
+  droos?: Dars;
   lessonArea?: any;
   user?: any;
   tenant?: any;

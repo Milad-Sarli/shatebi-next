@@ -61,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyOtp = async (phone: string, otp: string, token: string) => {
     try {
       const response = await AuthService.verifyOtp(phone, otp, token)
-      console.log('Verify OTP Response:', response) // Debug log
       
       if (!response.user || !response.access_token) {
         throw new Error('Invalid response format from server')

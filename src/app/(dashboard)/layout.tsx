@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import Aurora from "@/components/reactbit/backgrounds/Aurora/Aurora";
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -212,7 +213,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1">
+      <div className="flex-1 relative">
+        <div className="absolute -top-10 w-full h-full">
+          <Aurora
+            colorStops={["#00CFFF", "#6CF964", "#00CFFF"]}
+            blend={0.2}
+            amplitude={0.2}
+            speed={0.5}
+            />
+        </div>
         {/* Header for mobile */}
         <div className="sticky top-0 z-30 flex items-center p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 md:hidden">
           <Button
@@ -225,8 +234,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </Button>
         </div>
 
-        <div className="p-4 md:p-6">
-          <AnimatePresence mode="wait">{children}</AnimatePresence>
+        <div className="p-4 md:p-6 relative">
+          <AnimatePresence mode="wait">
+            {children}
+            </AnimatePresence>
         </div>
       </div>
     </div>

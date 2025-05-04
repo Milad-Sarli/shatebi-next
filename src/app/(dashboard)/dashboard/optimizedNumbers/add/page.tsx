@@ -1,17 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/auth.context";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTransition } from "@/components/ui/page-transition";
 import { optimizedNumberService } from "@/lib/services/number.service";
@@ -19,24 +11,474 @@ import {
   optimizedClassService,
   OptimizedClass,
   Student,
+  StudentsResponse,
+  Grade,
+  Dars,
 } from "@/lib/services/optimizedClass.service";
-import { Calendar } from "@/components/ui/calendar";
-import { faIR } from "date-fns/locale";
-import { format } from "date-fns-jalali";
-import { useState } from "react";
+import { format, subHours } from "date-fns-jalali";
+import { SingleSelectCombobox } from "@/components/ui/Combobox";
+import DatePicker from "@/components/ui/DatePicker";
+import { Edit2 } from "lucide-react";
+import { motion } from "framer-motion";
+import RotatingText from "@/components/reactbit/texts/RotatingText";
+import { TextEffect } from "@/components/motion-primitives/text-effect";
+import { TextShimmerWave } from "@/components/motion-primitives/text-shimmer-wave";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
+// Define the form schema for each tab
+const pageBasedSchema = z.object({
+  start_page: z.string().min(1, "صفحه شروع الزامی است"),
+  end_page: z.string().min(1, "صفحه پایان الزامی است"),
+  hefz: z.string().min(1, "نمره حفظ الزامی است"),
+  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
+  sout: z.string().min(1, "نمره صوت الزامی است"),
+  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+});
+
+const surahBasedSchema = z.object({
+  start_surah: z.string().min(1, "سوره شروع الزامی است"),
+  start_verse: z.string().min(1, "آیه شروع الزامی است"),
+  end_surah: z.string().min(1, "سوره پایان الزامی است"),
+  end_verse: z.string().min(1, "آیه پایان الزامی است"),
+  hefz: z.string().min(1, "نمره حفظ الزامی است"),
+  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
+  sout: z.string().min(1, "نمره صوت الزامی است"),
+  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+});
+
+const partBasedSchema = z.object({
+  start_part: z.string().min(1, "پاره شروع الزامی است"),
+  end_part: z.string().min(1, "پاره پایان الزامی است"),
+  hefz: z.string().min(1, "نمره حفظ الزامی است"),
+  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
+  sout: z.string().min(1, "نمره صوت الزامی است"),
+  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+});
+
+interface StudentType {
+  id: number;
+  name: string;
+  father_name: string;
+  student_code: string;
+  phone: string;
+  parent_phone: string;
+  aks?: string;
+}
+
+interface StudentWithGrades {
+  student: StudentType;
+  grades: Grade[];
+}
+
+interface AddGradeModalProps {
+  student: StudentType;
+  onSubmit: (data: any) => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange }: AddGradeModalProps) {
+  const [activeTab, setActiveTab] = React.useState("page");
+  
+  const pageForm = useForm({
+    resolver: zodResolver(pageBasedSchema),
+    defaultValues: {
+      start_page: "",
+      end_page: "",
+      hefz: "",
+      tajvid: "",
+      sout: "",
+      details: "",
+    },
+  });
+
+  const surahForm = useForm({
+    resolver: zodResolver(surahBasedSchema),
+    defaultValues: {
+      start_surah: "",
+      start_verse: "",
+      end_surah: "",
+      end_verse: "",
+      hefz: "",
+      tajvid: "",
+      sout: "",
+      details: "",
+    },
+  });
+
+  const partForm = useForm({
+    resolver: zodResolver(partBasedSchema),
+    defaultValues: {
+      start_part: "",
+      end_part: "",
+      hefz: "",
+      tajvid: "",
+      sout: "",
+      details: "",
+    },
+  });
+
+  const handleSubmit = (data: any) => {
+    onSubmit({ ...data, type: activeTab });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange} dir="rtl">
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <DialogTitle className="text-xl font-bold text-center">
+              ثبت نمره برای {student.name}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              لطفا نوع درس و نمرات را وارد کنید
+            </DialogDescription>
+          </motion.div>
+        </DialogHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="page">صفحه ای</TabsTrigger>
+            <TabsTrigger value="surah">سوره و آیه</TabsTrigger>
+            <TabsTrigger value="part">پاره ای</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="page">
+            <Form {...pageForm}>
+              <form onSubmit={pageForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={pageForm.control}
+                    name="start_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه شروع</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={pageForm.control}
+                    name="end_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه پایان</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={pageForm.control}
+                    name="hefz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره حفظ</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={pageForm.control}
+                    name="tajvid"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تجوید</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={pageForm.control}
+                    name="sout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره صوت</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={pageForm.control}
+                    name="details"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تفاصیل</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full">ثبت نمره</Button>
+              </form>
+            </Form>
+          </TabsContent>
+
+          <TabsContent value="surah">
+            <Form {...surahForm}>
+              <form onSubmit={surahForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={surahForm.control}
+                    name="start_surah"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سوره شروع</FormLabel>
+                        <FormControl>
+                          <Input {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={surahForm.control}
+                    name="start_verse"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>آیه شروع</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={surahForm.control}
+                    name="end_surah"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سوره پایان</FormLabel>
+                        <FormControl>
+                          <Input {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={surahForm.control}
+                    name="end_verse"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>آیه پایان</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={surahForm.control}
+                    name="hefz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره حفظ</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={surahForm.control}
+                    name="tajvid"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تجوید</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={surahForm.control}
+                    name="sout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره صوت</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={surahForm.control}
+                    name="details"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تفاصیل</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full">ثبت نمره</Button>
+              </form>
+            </Form>
+          </TabsContent>
+
+          <TabsContent value="part">
+            <Form {...partForm}>
+              <form onSubmit={partForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={partForm.control}
+                    name="start_part"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>پاره شروع</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={partForm.control}
+                    name="end_part"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>پاره پایان</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={partForm.control}
+                    name="hefz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره حفظ</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={partForm.control}
+                    name="tajvid"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تجوید</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={partForm.control}
+                    name="sout"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره صوت</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={partForm.control}
+                    name="details"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره تفاصیل</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full">ثبت نمره</Button>
+              </form>
+            </Form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AddNumberPage() {
   const { accessToken } = useAuth();
-  const router = useRouter();
   const [loading, setLoading] = React.useState(false);
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
-  const [selectedClass, setSelectedClass] =
-    React.useState<OptimizedClass | null>(null);
-  const [students, setStudents] = React.useState<Student[]>([]);
+  const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
+  const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
-  const [existingGrades, setExistingGrades] = React.useState<
-    Record<number, boolean>
-  >({});
+  const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
+  const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -59,36 +501,31 @@ export default function AddNumberPage() {
       if (!accessToken || !selectedClass) return;
 
       try {
-        const data = await optimizedClassService.getStudents(
+        const response = await optimizedClassService.getStudents(
           selectedClass.id,
+          selectedDate,
           accessToken
         );
 
-        // Ensure unique student IDs by using a Map
-        const uniqueStudentsMap = new Map();
-        data.forEach((student) => {
-          if (!uniqueStudentsMap.has(student.id)) {
-            uniqueStudentsMap.set(student.id, student);
-          }
-        });
-
-        setStudents(Array.from(uniqueStudentsMap.values()));
-
-        // Fetch existing grades for the selected date
-        const grades = await optimizedNumberService.getByClass(
-          selectedClass.id,
-          accessToken
-        );
-        const gradesMap: Record<number, boolean> = {};
+        // Create a map to track students' grades for the selected date
+        const gradesMap: Record<number, Grade[]> = {};
         const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
 
-        grades.forEach((grade) => {
-          const gradeDate = format(new Date(grade.created_at), "yyyy-MM-dd");
-          if (gradeDate === selectedDateStr) {
-            gradesMap[grade.student_id] = true;
+        response.data.forEach((student) => {
+          const todayGrades = student.grades.filter(
+            (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+          );
+          if (todayGrades.length > 0) {
+            gradesMap[student.student.id] = todayGrades;
           }
         });
 
+        // Remove duplicate students while preserving their grade information
+        const uniqueStudents = Array.from(
+          new Map(response.data.map(item => [item.student.id, item])).values()
+        );
+
+        setStudents(uniqueStudents);
         setExistingGrades(gradesMap);
       } catch (error) {
         console.error(error);
@@ -105,7 +542,13 @@ export default function AddNumberPage() {
   };
 
   const handleAddNumber = async (studentId: number) => {
-    if (!accessToken || !selectedClass) return;
+    const student = students.find(s => s.student.id === studentId);
+    setSelectedStudent(student?.student || null);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSubmit = async (data: any) => {
+    if (!accessToken || !selectedClass || !selectedStudent) return;
 
     try {
       setLoading(true);
@@ -113,51 +556,95 @@ export default function AddNumberPage() {
         {
           class_id: selectedClass.id,
           master_id: selectedClass.optimized_class_masters?.[0]?.user_id || 0,
-          student_id: studentId,
+          student_id: selectedStudent.id,
           droos_id: selectedClass.droos_id,
-          hefz: 0,
-          details: 0,
-          tajvid: 0,
-          sout: 0,
+          hefz: parseFloat(data.hefz),
+          details: parseFloat(data.details),
+          tajvid: parseFloat(data.tajvid),
+          sout: parseFloat(data.sout),
           number: 0,
           practice_count: 0,
           lesson_area_id: 0,
           user_id: 0,
           tenant_id: 0,
+          ...data.type === 'page' && {
+            start_page: parseInt(data.start_page),
+            end_page: parseInt(data.end_page),
+          },
+          ...data.type === 'surah' && {
+            start_surah: data.start_surah,
+            start_verse: parseInt(data.start_verse),
+            end_surah: data.end_surah,
+            end_verse: parseInt(data.end_verse),
+          },
+          ...data.type === 'part' && {
+            start_part: parseInt(data.start_part),
+            end_part: parseInt(data.end_part),
+          },
         },
         accessToken
       );
-      toast.success("Number added successfully");
-      // Refresh the grades list
-      const grades = await optimizedNumberService.getByClass(
+      toast.success("نمره با موفقیت ثبت شد");
+      setIsModalOpen(false);
+      
+      // Refresh the student data to get the updated grades
+      const response = await optimizedClassService.getStudents(
         selectedClass.id,
+        selectedDate,
         accessToken
       );
-      const gradesMap: Record<number, boolean> = {};
+      
+      // Update the grades for this student
       const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-
-      grades.forEach((grade) => {
-        const gradeDate = format(new Date(grade.created_at), "yyyy-MM-dd");
-        if (gradeDate === selectedDateStr) {
-          gradesMap[grade.student_id] = true;
-        }
-      });
-
-      setExistingGrades(gradesMap);
+      const student = response.data.find(s => s.student.id === selectedStudent.id);
+      if (student) {
+        const todayGrades = student.grades.filter(
+          (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+        );
+        setExistingGrades(prev => ({
+          ...prev,
+          [selectedStudent.id]: todayGrades
+        }));
+      }
     } catch (error) {
       console.error(error);
-      toast.error("Error adding number");
+      toast.error("خطا در ثبت نمره");
     } finally {
       setLoading(false);
     }
   };
 
+  const isWithin24Hours = (date: string) => {
+    const gradeDate = new Date(date);
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+    return gradeDate > twentyFourHoursAgo;
+  };
+
+  const handleEditGrade = async (studentId: number, grade: Grade) => {
+    // TODO: Implement grade editing functionality
+    console.log("Editing grade for student", studentId, grade);
+  };
+
   return (
     <PageTransition>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            افزودن نمره جدید
+      <div className="space-y-4 min-h-[80vh]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 shadow-lg border-0 relative overflow-hidden">
+          <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-lg"></div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white relative z-10 flex items-center gap-2">
+            <RotatingText
+              texts={['ایجاد', 'ویرایش', 'حذف']}
+              mainClassName="px-2 sm:px-2 md:px-3 bg-cyan-300 text-black overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg"
+              staggerFrom="last"
+              initial={{ y: "100%" }}
+              splitBy="word"
+              animate={{ y: 0 }}
+              exit={{ y: "-120%" }}
+              staggerDuration={0.025}
+              splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1 md:pb-1"
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              rotationInterval={2000}
+            />
+            نمرات قرآن آموزان
           </h1>
         </div>
 
@@ -170,69 +657,201 @@ export default function AddNumberPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <Select onValueChange={handleClassChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="انتخاب کلاس" />
-                  </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    {classes.map((classItem) => (
-                      <SelectItem
-                        key={classItem.id}
-                        value={classItem.id.toString()}
-                      >
-                        {classItem.dars?.title || "بدون نام"} -{" "}
-                        {classItem.optimized_class_masters?.[0]?.master
-                          ?.fullname ||
-                          classItem.optimized_class_masters?.[0]?.users
-                            ?.fullname ||
-                          "بدون استاد"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  locale={faIR}
-                  className="rounded-md border"
+                <SingleSelectCombobox
+                  options={classes.map((classItem) => ({
+                    value: classItem.id.toString(),
+                    label: `${classItem.dars?.title || "بدون نام"} - ${
+                      classItem.optimized_class_masters?.[0]?.master?.fullname ||
+                      classItem.optimized_class_masters?.[0]?.users?.fullname ||
+                      "بدون استاد"
+                    }-${classItem.id || "بدون درس"}`,
+                  }))}
+                  value={selectedClass?.id.toString()}
+                  onChange={(value: string) => handleClassChange(value)}
+                  placeholder="انتخاب کلاس"
+                  className="w-full"
                 />
+              </div>
+              <div className="flex-1 w-full">
+                <DatePicker onChange={(date: Date) => setSelectedDate(date)} />
               </div>
             </div>
 
-            {selectedClass && (
+            {selectedClass ? (
               <div className="space-y-4">
-                <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                  تاریخ: {format(selectedDate, "yyyy/MM/dd")}
-                </h2>
-                <div className="grid gap-4">
-                  {students.map((student) => (
-                    <div
-                      key={student.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-zinc-200 dark:border-zinc-800"
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {students.map((studentData, index) => (
+                    <motion.div
+                      key={studentData.student.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ y: -2 }}
+                      transition={{ 
+                        duration: 0.5,
+                        delay: index * 0.1,
+                        ease: [0.4, 0, 0.2, 1],
+                        opacity: { duration: 0.3 },
+                        y: { duration: 0.3 }
+                      }}
+                      className="flex flex-col p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:shadow-lg hover:border-emerald-500/20 dark:hover:border-emerald-500/30 transition-all duration-300"
                     >
-                      <span className="text-zinc-900 dark:text-zinc-100">
-                        {student.Fname} {student.Lname}
-                      </span>
-                      <Button
-                        onClick={() => handleAddNumber(student.id)}
-                        disabled={loading || existingGrades[student.id]}
-                        className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                      >
-                        {existingGrades[student.id]
-                          ? "نمره ثبت شده"
-                          : "افزودن نمره"}
-                      </Button>
-                    </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <motion.div 
+                            className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center overflow-hidden"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.1 + 0.2 }}
+                          >
+                            {studentData.student.aks ? (
+                              <img 
+                                src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${studentData.student.aks}`} 
+                                alt={studentData.student.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                {studentData.student.name.charAt(0)}
+                              </span>
+                            )}
+                          </motion.div>
+                          <motion.div 
+                            className="flex flex-col"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 + 0.3 }}
+                          >
+                            <span className="text-zinc-900 dark:text-zinc-100 font-medium">
+                              {studentData.student.name}
+                            </span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {studentData.student.student_code}
+                            </span>
+                          </motion.div>
+                        </div>
+                        {!existingGrades[studentData.student.id] && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.1 + 0.4 }}
+                          >
+                            {isWithin24Hours(new Date().toString()) ? (
+                              <Button
+                                onClick={() => handleAddNumber(studentData.student.id)}
+                                disabled={loading}
+                                size="sm"
+                                className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
+                              >
+                                افزودن نمره
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                زمان افزودن نمره به پایان رسیده است
+                              </span>
+                            )}
+                          </motion.div>
+                        )}
+                      </div>
+                      
+                      {existingGrades[studentData.student.id] && (
+                        <div className="grid grid-cols-1 gap-2">
+                          {existingGrades[studentData.student.id].map((grade, gradeIndex) => (
+                            <motion.div 
+                              key={gradeIndex} 
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ 
+                                duration: 0.4,
+                                delay: (index * 0.1) + (gradeIndex * 0.1) + 0.5,
+                                ease: [0.4, 0, 0.2, 1]
+                              }}
+                              className="group relative bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50 p-2 rounded-md hover:shadow-md transition-all duration-300"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                  {grade.dars?.title || "بدون نام"}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                    {(grade.hefz + grade.tajvid + grade.sout + grade.details)}
+                                  </span>
+                                  {isWithin24Hours(grade.created_at) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                      className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                    >
+                                      <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-zinc-900 p-3 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-10 w-full left-0 top-full mt-1">
+                                <div className="grid grid-cols-4 gap-2 text-xs">
+                                  <div className="flex flex-col">
+                                    <span className="text-zinc-500 dark:text-zinc-400">حفظ</span>
+                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.hefz}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-zinc-500 dark:text-zinc-400">تجوید</span>
+                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.tajvid}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-zinc-500 dark:text-zinc-400">صوت</span>
+                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.sout}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-zinc-500 dark:text-zinc-400">تفاصیل</span>
+                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.details}</span>
+                                  </div>
+                                </div>
+                                {grade.lesson_area && (
+                                  <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                                    {grade.lesson_area.start_page && grade.lesson_area.end_page ? (
+                                      <span>صفحه {grade.lesson_area.start_page} تا {grade.lesson_area.end_page}</span>
+                                    ) : grade.lesson_area.start_surah?.titleAr && grade.lesson_area.end_surah?.titleAr ? (
+                                      <span>
+                                        سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.start_surah.titleAr}</span> آیه {grade.lesson_area.start_verse} تا سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.end_surah.titleAr}</span> آیه {grade.lesson_area.end_verse}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                )}
+                                <div className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">
+                                  {format(new Date(grade.created_at), "HH:mm - yyyy/MM/dd")}
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
                   ))}
                 </div>
+              </div>
+            ) : (
+              <div className="flex items-center p-4">
+                <TextEffect preset='fade-in-blur' className=" max-w-fit  p-2 rounded-lg" speedReveal={0.7} speedSegment={0.7}>
+                  لطفا کلاس و تاریخ را انتخاب کنید
+                </TextEffect>
               </div>
             )}
           </CardContent>
         </Card>
+        <TextEffect preset='fade-in-blur' className="text-center absolute bottom-0 left-0 right-0 bg-zinc-900/80 backdrop-blur-lg max-w-fit mx-auto p-2 rounded-lg" speedReveal={0.7} speedSegment={0.7}>
+          ثبت و ویرایش نمرات فقط برای 24 ساعت اخیر ممکن است ⚠️
+        </TextEffect>
       </div>
+
+      {selectedStudent && (
+        <AddGradeModal
+          student={selectedStudent}
+          onSubmit={handleModalSubmit}
+          isOpen={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        />
+      )}
     </PageTransition>
   );
 }

@@ -12,7 +12,7 @@ export interface OptimizedClass {
   deleted_at: string | null;
   tenant?: any;
   users?: any;
-  dars?: any;
+  dars?: Dars;
   optimized_class_masters?: any[];
   optimized_class_items?: any[];
 }
@@ -26,12 +26,53 @@ export interface CreateOptimizedClassDto {
 
 export interface UpdateOptimizedClassDto extends Partial<CreateOptimizedClassDto> {}
 
-export interface Student {
+export interface LessonArea {
   id: number;
-  Fname: string;
-  Lname: string;
-  name?: string;
-  email?: string;
+  start_surah: { id: number; title: string; titleAr: string } | null;
+  start_verse: number | null;
+  end_surah: { id: number; title: string; titleAr: string } | null;
+  end_verse: number | null;
+  start_page: number | null;
+  end_page: number | null;
+  start_joze: number | null;
+  end_joze: number | null;
+}
+
+export interface Dars {
+  id: number;
+  title: string;
+}
+
+export interface Grade {
+  hefz: number;
+  details: number;
+  tajvid: number;
+  sout: number;
+  number: number | null;
+  practice_count: number | null;
+  description: string | null;
+  master_teacher: string | null;
+  dars: Dars;
+  lesson_area: LessonArea;
+  created_at: string;
+}
+
+export interface Student {
+  student: {
+    id: number;
+    name: string;
+    father_name: string;
+    student_code: string;
+    phone: string;
+    parent_phone: string;
+  };
+  grades: Grade[];
+}
+
+export interface StudentsResponse {
+  status: string;
+  date: string;
+  data: Student[];
 }
 
 export const optimizedClassService = {
@@ -79,13 +120,13 @@ export const optimizedClassService = {
     });
   },
 
-  async getStudents(id: number, accessToken: string): Promise<Student[]> {
-    const response = await axios.get(`${API_URL}/api/optimized-classes/${id}/students`, {
+  async getStudents(id: number, date: Date, accessToken: string): Promise<StudentsResponse> {
+    const response = await axios.get(`${API_URL}/api/optimized-classes/${id}/students?date=${date}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json'
       },
     });
-    return response.data.data;
+    return response.data;
   },
 }; 

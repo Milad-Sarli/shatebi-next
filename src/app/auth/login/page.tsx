@@ -6,13 +6,6 @@ import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
   Form,
   FormControl,
   FormField,
@@ -24,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import * as motion from "motion/react-client"
 import { useAuth } from '@/lib/context/auth.context'
 import { OTPInput } from '@/components/ui/otp-input'
+import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
+import BlobCursor from '@/components/reactbit/animations/BlobCursor/BlobCursor'
 
 // Step 1: National ID and Phone Number
 const loginFormSchema = z.object({
@@ -134,42 +129,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="relative min-h-screen w-full overflow-hidden">
       {/* Primary Gradient Background */}
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-grid" />
+      <div className="" />
       
-      {/* Animated Gradient Orbs */}
-      <motion.div 
-        className="absolute left-[15%] top-1/4 w-[35rem] h-[35rem] rounded-full bg-primary/30"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.2, 0.3],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          repeatType: "reverse",
-        }}
-        style={{
-          filter: "blur(100px)",
-        }}
-      />
+     
       
-      <motion.div 
-        className="absolute right-[15%] bottom-1/4 w-[25rem] h-[25rem] rounded-full bg-blue-500/20"
-        animate={{
-          scale: [1.2, 1, 1.2],
-          opacity: [0.2, 0.3, 0.2],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          repeatType: "reverse",
-        }}
-        style={{
-          filter: "blur(100px)",
-        }}
-      />
+    
 
       <div className="relative z-10 min-h-screen w-full grid lg:grid-cols-2 items-center justify-center gap-8 lg:gap-0 p-4">
         {/* Logo and Brand Section */}
@@ -184,7 +150,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.3 }}
-              className="absolute -inset-1 rounded-lg bg-gradient-to-r from-primary/50 to-blue-500/50 blur-2xl opacity-20"
+              className=""
             />
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6">
               سامانه شاطبی
@@ -194,53 +160,53 @@ export default function LoginPage() {
             </p>
           </div>
         </motion.div>
-
-        {/* Login Form Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md mx-auto lg:ml-0 lg:mr-20"
-        >
-          {/* Mobile Logo */}
+        <SpotlightCard className="w-full max-w-fit "> 
+          {/* Login Form Section */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-8 md:hidden"
+            className="w-full "
           >
-            <h1 className="text-3xl font-bold text-white mb-2">
-              سامانه شاطبی
-            </h1>
-            <p className="text-sm text-slate-300/90">
-              سیستم مدیریت یکپارچه اطلاعات
-            </p>
-          </motion.div>
+            {/* Mobile Logo */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-8 md:hidden"
+            >
+              <h1 className="text-3xl font-bold text-white mb-2">
+                سامانه شاطبی
+              </h1>
+              <p className="text-sm text-slate-300/90">
+                سیستم مدیریت یکپارچه اطلاعات
+              </p>
+            </motion.div>
 
-          <Card className="w-full bg-white/[0.08] border-white/[0.08] backdrop-blur-xl shadow-2xl">
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.3 }}
+              className=""
             >
-              <CardHeader className="space-y-1 text-center pb-6">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <CardTitle className="text-xl md:text-2xl font-bold text-white">
-                    ورود به سامانه
-                  </CardTitle>
-                  <CardDescription className="pt-2 text-sm md:text-base text-slate-300">
-                    {!showOTP 
-                      ? 'برای ورود به سامانه، کد ملی و شماره موبایل خود را وارد کنید'
-                      : 'کد تایید ارسال شده به شماره موبایل خود را وارد کنید'
-                    }
-                  </CardDescription>
-                </motion.div>
-              </CardHeader>
-              <CardContent className="pb-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-1 text-center pb-6"
+              >
+                <h2 className="text-xl md:text-2xl font-bold text-white">
+                  ورود به سامانه
+                </h2>
+                <p className="pt-2 text-sm md:text-base text-slate-300">
+                  {!showOTP 
+                    ? 'برای ورود به سامانه، کد ملی و شماره موبایل خود را وارد کنید'
+                    : 'کد تایید ارسال شده به شماره موبایل خود را وارد کنید'
+                  }
+                </p>
+              </motion.div>
+
+              <div className="pb-6">
                 {!showOTP ? (
                   <motion.div
                     initial={{ x: -20, opacity: 0 }}
@@ -447,10 +413,11 @@ export default function LoginPage() {
                     </Form>
                   </motion.div>
                 )}
-              </CardContent>
+                </div>
+              </motion.div>
             </motion.div>
-          </Card>
-        </motion.div>
+
+          </SpotlightCard>
       </div>
     </div>
   )

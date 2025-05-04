@@ -54,7 +54,7 @@ const items = [
     icon: GraduationCap,
   },
   // {
-  //   title: "برنامه کلاسی",
+  //   title: "برنامه کلاسی", 
   //   href: "/dashboard/schedule",
   //   icon: CalendarDays,
   // },
