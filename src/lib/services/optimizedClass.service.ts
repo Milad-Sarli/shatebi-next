@@ -24,7 +24,7 @@ export interface CreateOptimizedClassDto {
   status: "active" | "inactive";
 }
 
-export interface UpdateOptimizedClassDto extends Partial<CreateOptimizedClassDto> {}
+export interface UpdateOptimizedClassDto extends Partial<CreateOptimizedClassDto> { }
 
 export interface LessonArea {
   id: number;
@@ -41,6 +41,7 @@ export interface LessonArea {
 export interface Dars {
   id: number;
   title: string;
+  is_one_grade?: boolean;
 }
 
 export interface Grade {

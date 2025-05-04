@@ -57,7 +57,7 @@ export default function AddClassPage() {
       if (!accessToken) return;
       try {
         const classes = await optimizedClassService.getAll(accessToken);
-
+        console.log('Classes data:', classes);
         // Extract unique students from classes
         const uniqueStudents = new Map();
         classes.forEach((cls) => {

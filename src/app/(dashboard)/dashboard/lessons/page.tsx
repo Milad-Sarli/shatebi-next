@@ -231,6 +231,19 @@ export default function LessonsPage() {
     }
   };
 
+  const handleToggleOneGrade = async (lesson: Lesson) => {
+    if (!accessToken || !lesson.id) return;
+
+    try {
+      const response = await LessonService.toggleOneGrade(lesson.id, accessToken);
+      toast.success("تک نمره با موفقیت تغییر کرد");
+      fetchLessons();
+    } catch (error) {
+      toast.error("خطا در تغییر تک نمره");
+      console.error(error);
+    }
+  };
+
   return (
     <PageTransition>
       <div className="space-y-4">
@@ -335,6 +348,7 @@ export default function LessonsPage() {
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عنوان</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">نوع</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">مرکز</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium"> تک نمره ای </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
                   </tr>
                 </thead>
@@ -378,6 +392,20 @@ export default function LessonsPage() {
                             )}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.tenant?.title}</td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`${
+                                lesson.is_one_grade
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
+                                  : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                              }`}
+                              onClick={() => handleToggleOneGrade(lesson)}
+                            >
+                              {lesson.is_one_grade ? "بله" : "خیر"}
+                            </Button>
+                          </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button 
                               variant="ghost" 
@@ -454,6 +482,21 @@ export default function LessonsPage() {
                             مرکز: {lesson.tenant.title}
                           </p>
                         )}
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400">تک نمره:</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`${
+                              lesson.is_one_grade
+                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
+                                : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                            }`}
+                            onClick={() => handleToggleOneGrade(lesson)}
+                          >
+                            {lesson.is_one_grade ? "بله" : "خیر"}
+                          </Button>
+                        </div>
                         {lesson.description && (
                           <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
                             {lesson.description}

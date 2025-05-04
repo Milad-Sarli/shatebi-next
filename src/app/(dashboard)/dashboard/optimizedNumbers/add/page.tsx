@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTransition } from "@/components/ui/page-transition";
 import { optimizedNumberService } from "@/lib/services/number.service";
+import { SurahService, Surah } from "@/lib/services/surah.service";
 import {
   optimizedClassService,
   OptimizedClass,
@@ -49,6 +50,12 @@ const pageBasedSchema = z.object({
   details: z.string().min(1, "نمره تفاصیل الزامی است"),
 });
 
+const oneGradeSchema = z.object({
+  start_page: z.string().min(1, "صفحه شروع الزامی است"),
+  end_page: z.string().min(1, "صفحه پایان الزامی است"),
+  hefz: z.string().min(1, "نمره الزامی است"),
+});
+
 const surahBasedSchema = z.object({
   start_surah: z.string().min(1, "سوره شروع الزامی است"),
   start_verse: z.string().min(1, "آیه شروع الزامی است"),
@@ -89,12 +96,47 @@ interface AddGradeModalProps {
   onSubmit: (data: any) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  isOneGrade?: boolean;
 }
 
-function AddGradeModal({ student, onSubmit, isOpen, onOpenChange }: AddGradeModalProps) {
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
-  
-  const pageForm = useForm({
+  const [surahs, setSurahs] = React.useState<Surah[]>([]);
+  const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
+  const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
+  const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
+  const { accessToken } = useAuth();
+
+  const getVersesFromJuz = (juzString: string) => {
+    try {
+      const juzData = JSON.parse(juzString);
+      const verses: number[] = [];
+      
+      juzData.forEach((juz: any) => {
+        const startVerse = parseInt(juz.verse.start.replace('verse_', ''));
+        const endVerse = parseInt(juz.verse.end.replace('verse_', ''));
+        for (let i = startVerse; i <= endVerse; i++) {
+          verses.push(i);
+        }
+      });
+      
+      return verses;
+    } catch (error) {
+      console.error('Error parsing juz data:', error);
+      return [];
+    }
+  };
+
+  const oneGradeForm = useForm({
+    resolver: zodResolver(oneGradeSchema),
+    defaultValues: {
+      start_page: "",
+      end_page: "",
+      hefz: "",
+    },
+  });
+
+  const multiGradeForm = useForm({
     resolver: zodResolver(pageBasedSchema),
     defaultValues: {
       start_page: "",
@@ -132,12 +174,49 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange }: AddGradeModa
     },
   });
 
+  React.useEffect(() => {
+    const fetchSurahs = async () => {
+      if (!accessToken) return;
+      try {
+        setIsLoadingSurahs(true);
+        const response = await SurahService.getAllSurahs(accessToken);
+        setSurahs(response.data);
+      } catch (error) {
+        console.error("Error fetching surahs:", error);
+        toast.error("خطا در دریافت سوره‌ها");
+      } finally {
+        setIsLoadingSurahs(false);
+      }
+    };
+    fetchSurahs();
+  }, [accessToken]);
+
+  const handleStartSurahChange = (surahId: string) => {
+    const selectedSurah = surahs.find(s => s.id.toString() === surahId);
+    if (selectedSurah) {
+      const verses = getVersesFromJuz(selectedSurah.juz);
+      setStartSurahVerses(verses);
+      surahForm.setValue('start_surah', selectedSurah.id.toString());
+      surahForm.setValue('start_verse', '');
+    }
+  };
+
+  const handleEndSurahChange = (surahId: string) => {
+    const selectedSurah = surahs.find(s => s.id.toString() === surahId);
+    if (selectedSurah) {
+      const verses = getVersesFromJuz(selectedSurah.juz);
+      setEndSurahVerses(verses);
+      surahForm.setValue('end_surah', selectedSurah.id.toString());
+      surahForm.setValue('end_verse', '');
+    }
+  };
+
   const handleSubmit = (data: any) => {
     onSubmit({ ...data, type: activeTab });
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange} dir="rtl">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <motion.div
@@ -153,317 +232,412 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange }: AddGradeModa
             </DialogDescription>
           </motion.div>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="page">صفحه ای</TabsTrigger>
-            <TabsTrigger value="surah">سوره و آیه</TabsTrigger>
-            <TabsTrigger value="part">پاره ای</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="page">
-            <Form {...pageForm}>
-              <form onSubmit={pageForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={pageForm.control}
-                    name="start_page"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>صفحه شروع</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={pageForm.control}
-                    name="end_page"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>صفحه پایان</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={pageForm.control}
-                    name="hefz"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره حفظ</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={pageForm.control}
-                    name="tajvid"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تجوید</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={pageForm.control}
-                    name="sout"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره صوت</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={pageForm.control}
-                    name="details"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تفاصیل</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <Button type="submit" className="w-full">ثبت نمره</Button>
-              </form>
-            </Form>
-          </TabsContent>
+        {isOneGrade ? (
+          <Form {...oneGradeForm}>
+            <form onSubmit={oneGradeForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={oneGradeForm.control}
+                  name="start_page"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>صفحه شروع</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} dir="rtl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={oneGradeForm.control}
+                  name="end_page"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>صفحه پایان</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} dir="rtl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={oneGradeForm.control}
+                  name="hefz"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>نمره</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} dir="rtl" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button type="submit" className="w-full">ثبت نمره</Button>
+            </form>
+          </Form>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="page">صفحه ای</TabsTrigger>
+              <TabsTrigger value="surah">سوره و آیه</TabsTrigger>
+              <TabsTrigger value="part">پاره ای</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="page">
+              <Form {...multiGradeForm}>
+                <form onSubmit={multiGradeForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="start_page"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>صفحه شروع</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="end_page"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>صفحه پایان</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="hefz"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره حفظ</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="tajvid"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تجوید</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="sout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره صوت</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={multiGradeForm.control}
+                      name="details"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                </form>
+              </Form>
+            </TabsContent>
 
-          <TabsContent value="surah">
-            <Form {...surahForm}>
-              <form onSubmit={surahForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={surahForm.control}
-                    name="start_surah"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>سوره شروع</FormLabel>
-                        <FormControl>
-                          <Input {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={surahForm.control}
-                    name="start_verse"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>آیه شروع</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={surahForm.control}
-                    name="end_surah"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>سوره پایان</FormLabel>
-                        <FormControl>
-                          <Input {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={surahForm.control}
-                    name="end_verse"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>آیه پایان</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={surahForm.control}
-                    name="hefz"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره حفظ</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={surahForm.control}
-                    name="tajvid"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تجوید</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={surahForm.control}
-                    name="sout"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره صوت</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={surahForm.control}
-                    name="details"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تفاصیل</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <Button type="submit" className="w-full">ثبت نمره</Button>
-              </form>
-            </Form>
-          </TabsContent>
+            <TabsContent value="surah">
+              <Form {...surahForm}>
+                <form onSubmit={surahForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={surahForm.control}
+                      name="start_surah"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سوره شروع</FormLabel>
+                          <FormControl>
+                            {isLoadingSurahs ? (
+                              <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                            ) : (
+                              <SingleSelectCombobox
+                                options={surahs?.map(surah => ({
+                                  value: surah.id.toString(),
+                                  label: `${surah.titleAr} (${surah.title})`
+                                })) || []}
+                                value={field.value}
+                                onChange={handleStartSurahChange}
+                                placeholder="انتخاب سوره"
+                                className="w-full"
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={surahForm.control}
+                      name="start_verse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>آیه شروع</FormLabel>
+                          <FormControl>
+                            <SingleSelectCombobox
+                              options={startSurahVerses?.map(verse => ({
+                                value: verse.toString(),
+                                label: verse.toString()
+                              })) || []}
+                              value={field.value}
+                              onChange={(value) => field.onChange(value)}
+                              placeholder="انتخاب آیه"
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={surahForm.control}
+                      name="end_surah"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سوره پایان</FormLabel>
+                          <FormControl>
+                            {isLoadingSurahs ? (
+                              <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                            ) : (
+                              <SingleSelectCombobox
+                                options={surahs?.map(surah => ({
+                                  value: surah.id.toString(),
+                                  label: `${surah.titleAr} (${surah.title})`
+                                })) || []}
+                                value={field.value}
+                                onChange={handleEndSurahChange}
+                                placeholder="انتخاب سوره"
+                                className="w-full"
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={surahForm.control}
+                      name="end_verse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>آیه پایان</FormLabel>
+                          <FormControl>
+                            <SingleSelectCombobox
+                              options={endSurahVerses?.map(verse => ({
+                                value: verse.toString(),
+                                label: verse.toString()
+                              })) || []}
+                              value={field.value}
+                              onChange={(value) => field.onChange(value)}
+                              placeholder="انتخاب آیه"
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={surahForm.control}
+                      name="hefz"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره حفظ</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={surahForm.control}
+                      name="tajvid"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تجوید</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={surahForm.control}
+                      name="sout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره صوت</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={surahForm.control}
+                      name="details"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                </form>
+              </Form>
+            </TabsContent>
 
-          <TabsContent value="part">
-            <Form {...partForm}>
-              <form onSubmit={partForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={partForm.control}
-                    name="start_part"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>پاره شروع</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={partForm.control}
-                    name="end_part"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>پاره پایان</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={partForm.control}
-                    name="hefz"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره حفظ</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} dir="rtl" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={partForm.control}
-                    name="tajvid"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تجوید</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={partForm.control}
-                    name="sout"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره صوت</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={partForm.control}
-                    name="details"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نمره تفاصیل</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <Button type="submit" className="w-full">ثبت نمره</Button>
-              </form>
-            </Form>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="part">
+              <Form {...partForm}>
+                <form onSubmit={partForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={partForm.control}
+                      name="start_part"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>پاره شروع</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={partForm.control}
+                      name="end_part"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>پاره پایان</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={partForm.control}
+                      name="hefz"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره حفظ</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} dir="rtl" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={partForm.control}
+                      name="tajvid"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تجوید</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={partForm.control}
+                      name="sout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره صوت</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={partForm.control}
+                      name="details"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -479,6 +653,7 @@ export default function AddNumberPage() {
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isOneGrade, setIsOneGrade] = React.useState(false);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -543,8 +718,11 @@ export default function AddNumberPage() {
 
   const handleAddNumber = async (studentId: number) => {
     const student = students.find(s => s.student.id === studentId);
-    setSelectedStudent(student?.student || null);
-    setIsModalOpen(true);
+    if (student) {
+      setSelectedStudent(student.student);
+      setIsOneGrade(selectedClass?.dars?.is_one_grade || false);
+      setIsModalOpen(true);
+    }
   };
 
   const handleModalSubmit = async (data: any) => {
@@ -624,7 +802,7 @@ export default function AddNumberPage() {
     // TODO: Implement grade editing functionality
     console.log("Editing grade for student", studentId, grade);
   };
-
+  
   return (
     <PageTransition>
       <div className="space-y-4 min-h-[80vh]">
@@ -850,6 +1028,7 @@ export default function AddNumberPage() {
           onSubmit={handleModalSubmit}
           isOpen={isModalOpen}
           onOpenChange={setIsModalOpen}
+          isOneGrade={isOneGrade}
         />
       )}
     </PageTransition>

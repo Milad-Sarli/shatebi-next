@@ -9,6 +9,7 @@ export interface Lesson {
   parent_id?: number;
   created_at?: string;
   updated_at?: string;
+  is_one_grade?: boolean;
   tenant?: {
     id: number;
     title: string;
@@ -45,9 +46,10 @@ export interface LessonCreateData {
   description?: string;
   tenant_id?: number;
   parent_id?: number | null;
+  is_one_grade?: boolean;
 }
 
-export interface LessonUpdateData extends Partial<LessonCreateData> {}
+export interface LessonUpdateData extends Partial<LessonCreateData> { }
 
 export class LessonService {
   static async getLessons(filters: LessonFilters = {}, token: string): Promise<LessonResponse> {
@@ -95,7 +97,7 @@ export class LessonService {
     });
     return response.data;
   }
-  
+
   static async getLessonsByTenant(tenantId: number, token: string) {
     const response = await axios.get(`${API_URL}/api/droos/tenant/${tenantId}`, {
       headers: {
@@ -104,13 +106,22 @@ export class LessonService {
     });
     return response.data;
   }
-  
+
   static async getLessonsByParent(parentId: number | null, token: string) {
-    const url = parentId 
-      ? `${API_URL}/api/droos/parent/${parentId}` 
+    const url = parentId
+      ? `${API_URL}/api/droos/parent/${parentId}`
       : `${API_URL}/api/droos/parent/null`;
-    
+
     const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  static async toggleOneGrade(id: number, token: string) {
+    const response = await axios.post(`${API_URL}/api/droos/${id}/toggle-one-grade`, null, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
