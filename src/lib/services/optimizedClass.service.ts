@@ -121,7 +121,7 @@ export const optimizedClassService = {
     });
   },
 
-  async getStudents(id: number, date: Date, accessToken: string): Promise<StudentsResponse> {
+  async getStudents(id: number, date: Date | null, accessToken: string): Promise<StudentsResponse> {
     const response = await axios.get(`${API_URL}/api/optimized-classes/${id}/students?date=${date}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,

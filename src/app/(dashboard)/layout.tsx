@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Aurora from "@/components/reactbit/backgrounds/Aurora/Aurora";
+import GradientText from "@/components/reactbit/texts/GradientText";
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -144,9 +145,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
-              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+              <GradientText
+                colors={["#40ffaa", "#4079ff", "#40ffaa", "#4079ff", "#40ffaa"]}
+                animationSpeed={3}
+                showBorder={false}
+                className="text-xl font-bold"
+              >
                 دارالقرآن
-              </span>
+              </GradientText>
             </div>
           </div>
           <Sidebar className="flex-1" />

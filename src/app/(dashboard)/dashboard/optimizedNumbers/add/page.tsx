@@ -40,6 +40,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+interface Course {
+  id: number;
+  title: string;
+  is_one_grade: boolean | null;
+}
+
 // Define the form schema for each tab
 const pageBasedSchema = z.object({
   start_page: z.string().min(1, "صفحه شروع الزامی است"),
@@ -97,9 +103,10 @@ interface AddGradeModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isOneGrade?: boolean;
+  selectedCourse?: Course | null;
 }
 
-function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false }: AddGradeModalProps) {
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
   const [surahs, setSurahs] = React.useState<Surah[]>([]);
   const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
@@ -180,14 +187,13 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       try {
         setIsLoadingSurahs(true);
         const response = await SurahService.getAllSurahs(accessToken);
-        console.log('Surah API Response:', response); // Debug log
         // Check if response and data exist
-        if (response && response.data) {
+        if (response && Array.isArray(response)) {
           // Sort surahs by their index
-          const sortedSurahs = response.data.sort((a, b) => a.index - b.index);
+          const sortedSurahs = response.sort((a: Surah, b: Surah) => a.index - b.index);
           setSurahs(sortedSurahs);
         } else {
-          console.error("Invalid response format from SurahService:", response); // Debug log
+          console.error("Invalid response format from SurahService:", response);
           toast.error("خطا در دریافت سوره‌ها");
         }
       } catch (error) {
@@ -204,6 +210,9 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
     if (selectedSurah) {
       const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setStartSurahVerses(verses);
+      // Set the end surah to match the start surah
+      surahForm.setValue("end_surah", surahId);
+      handleEndSurahChange(surahId);
     }
   };
 
@@ -230,6 +239,14 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
           >
             <DialogTitle className="text-xl font-bold text-center">
               ثبت نمره برای {student.name}
+              <motion.p 
+                className="text-emerald-500 dark:text-emerald-400 font-medium"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                {selectedCourse?.title}
+              </motion.p>
             </DialogTitle>
             <DialogDescription className="text-center">
               لطفا نوع درس و نمرات را وارد کنید
@@ -402,10 +419,13 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                               <SingleSelectCombobox
                                 options={surahs?.map(surah => ({
                                   value: surah.id.toString(),
-                                  label: `${surah.titleAr} (${surah.title}) - ${surah.index}`
+                                  label: `${surah.titleAr}`
                                 })) || []}
                                 value={field.value}
-                                onChange={handleStartSurahChange}
+                                onChange={(value) => {
+                                  field.onChange(value);
+                                  handleStartSurahChange(value);
+                                }}
                                 placeholder="انتخاب سوره"
                                 className="w-full"
                               />
@@ -452,7 +472,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                               <SingleSelectCombobox
                                 options={surahs?.map(surah => ({
                                   value: surah.id.toString(),
-                                  label: `${surah.titleAr} (${surah.title}) - ${surah.index}`
+                                  label: `${surah.titleAr}`
                                 })) || []}
                                 value={field.value}
                                 onChange={handleEndSurahChange}
@@ -647,13 +667,87 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   );
 }
 
+interface SelectCourseModalProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCourseSelect: (course: Course) => void;
+  dars: any;
+}
+
+function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: SelectCourseModalProps) {
+  // Combine parent course and its children, removing duplicates by title
+  const allCourses = React.useMemo(() => {
+    const courses: Course[] = [];
+    
+    // First add all children courses
+    if (dars?.children?.length > 0) {
+      dars.children.forEach((child: any) => {
+        // Only add if there's no course with the same title
+        if (!courses.some(course => course.title === child.title)) {
+          courses.push({
+            id: child.id,
+            title: child.title,
+            is_one_grade: child.is_one_grade
+          });
+        }
+      });
+    }
+    
+    // Add parent course only if its title is not already in children
+    if (dars && !courses.some(course => course.title.includes(dars.title))) {
+      courses.push({
+        id: dars.id,
+        title: dars.title,
+        is_one_grade: dars.is_one_grade
+      });
+    }
+    
+    return courses;
+  }, [dars]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            انتخاب درس
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            لطفا درس مورد نظر را انتخاب کنید
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {allCourses.map((course) => (
+            <Button
+              key={course.id}
+              onClick={() => {
+                onCourseSelect(course);
+                onOpenChange(false);
+              }}
+              className="w-full text-right justify-between px-4 py-3 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+              variant="outline"
+            >
+              <span className="text-base">{course.title}</span>
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-2 h-2 rounded-full bg-emerald-500"
+              />
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AddNumberPage() {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
   const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
   const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
-  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -662,6 +756,8 @@ export default function AddNumberPage() {
   const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
   const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
   const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
+  const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
+  const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -681,7 +777,7 @@ export default function AddNumberPage() {
 
   React.useEffect(() => {
     const fetchStudents = async () => {
-      if (!accessToken || !selectedClass) return;
+      if (!accessToken || !selectedClass || !selectedDate) return;
 
       try {
         const response = await optimizedClassService.getStudents(
@@ -692,7 +788,7 @@ export default function AddNumberPage() {
 
         // Create a map to track students' grades for the selected date
         const gradesMap: Record<number, Grade[]> = {};
-        const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+        const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
 
         response.data.forEach((student) => {
           const todayGrades = student.grades.filter(
@@ -728,13 +824,18 @@ export default function AddNumberPage() {
     const student = students.find(s => s.student.id === studentId);
     if (student) {
       setSelectedStudent(student.student);
-      setIsOneGrade(selectedClass?.dars?.is_one_grade || false);
-      setIsModalOpen(true);
+      setIsCourseModalOpen(true);
     }
   };
 
+  const handleCourseSelect = (course: Course) => {
+    setSelectedCourse(course);
+    setIsOneGrade(course.is_one_grade || false);
+    setIsModalOpen(true);
+  };
+
   const handleModalSubmit = async (data: any) => {
-    if (!accessToken || !selectedClass || !selectedStudent) return;
+    if (!accessToken || !selectedClass || !selectedStudent || !selectedCourse || !selectedDate) return;
 
     try {
       setLoading(true);
@@ -743,7 +844,7 @@ export default function AddNumberPage() {
           class_id: selectedClass.id,
           master_id: selectedClass.optimized_class_masters?.[0]?.user_id || 0,
           student_id: selectedStudent.id,
-          droos_id: selectedClass.droos_id,
+          droos_id: selectedCourse.id, // Use selected course ID
           hefz: parseFloat(data.hefz),
           details: parseFloat(data.details),
           tajvid: parseFloat(data.tajvid),
@@ -772,6 +873,7 @@ export default function AddNumberPage() {
       );
       toast.success("نمره با موفقیت ثبت شد");
       setIsModalOpen(false);
+      setSelectedCourse(null);
       
       // Refresh the student data to get the updated grades
       const response = await optimizedClassService.getStudents(
@@ -781,7 +883,7 @@ export default function AddNumberPage() {
       );
       
       // Update the grades for this student
-      const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+      const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
       const student = response.data.find(s => s.student.id === selectedStudent.id);
       if (student) {
         const todayGrades = student.grades.filter(
@@ -1031,13 +1133,23 @@ export default function AddNumberPage() {
       </div>
 
       {selectedStudent && (
-        <AddGradeModal
-          student={selectedStudent}
-          onSubmit={handleModalSubmit}
-          isOpen={isModalOpen}
-          onOpenChange={setIsModalOpen}
-          isOneGrade={isOneGrade}
-        />
+        <>
+          <SelectCourseModal
+            isOpen={isCourseModalOpen}
+            onOpenChange={setIsCourseModalOpen}
+            onCourseSelect={handleCourseSelect}
+            dars={selectedClass?.dars}
+          />
+          
+          <AddGradeModal
+            student={selectedStudent}
+            onSubmit={handleModalSubmit}
+            isOpen={isModalOpen}
+            onOpenChange={setIsModalOpen}
+            isOneGrade={isOneGrade}
+            selectedCourse={selectedCourse}
+          />
+        </>
       )}
     </PageTransition>
   );
