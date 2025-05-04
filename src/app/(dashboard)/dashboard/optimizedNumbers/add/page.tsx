@@ -180,7 +180,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       try {
         setIsLoadingSurahs(true);
         const response = await SurahService.getAllSurahs(accessToken);
-        setSurahs(response.data);
+        console.log('Surah API Response:', response); // Debug log
+        // Check if response and data exist
+        if (response && response.data) {
+          // Sort surahs by their index
+          const sortedSurahs = response.data.sort((a, b) => a.index - b.index);
+          setSurahs(sortedSurahs);
+        } else {
+          console.error("Invalid response format from SurahService:", response); // Debug log
+          toast.error("خطا در دریافت سوره‌ها");
+        }
       } catch (error) {
         console.error("Error fetching surahs:", error);
         toast.error("خطا در دریافت سوره‌ها");
@@ -190,24 +199,19 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
     };
     fetchSurahs();
   }, [accessToken]);
-
   const handleStartSurahChange = (surahId: string) => {
     const selectedSurah = surahs.find(s => s.id.toString() === surahId);
     if (selectedSurah) {
-      const verses = getVersesFromJuz(selectedSurah.juz);
+      const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setStartSurahVerses(verses);
-      surahForm.setValue('start_surah', selectedSurah.id.toString());
-      surahForm.setValue('start_verse', '');
     }
   };
 
   const handleEndSurahChange = (surahId: string) => {
     const selectedSurah = surahs.find(s => s.id.toString() === surahId);
     if (selectedSurah) {
-      const verses = getVersesFromJuz(selectedSurah.juz);
+      const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setEndSurahVerses(verses);
-      surahForm.setValue('end_surah', selectedSurah.id.toString());
-      surahForm.setValue('end_verse', '');
     }
   };
 
@@ -398,7 +402,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                               <SingleSelectCombobox
                                 options={surahs?.map(surah => ({
                                   value: surah.id.toString(),
-                                  label: `${surah.titleAr} (${surah.title})`
+                                  label: `${surah.titleAr} (${surah.title}) - ${surah.index}`
                                 })) || []}
                                 value={field.value}
                                 onChange={handleStartSurahChange}
@@ -448,7 +452,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                               <SingleSelectCombobox
                                 options={surahs?.map(surah => ({
                                   value: surah.id.toString(),
-                                  label: `${surah.titleAr} (${surah.title})`
+                                  label: `${surah.titleAr} (${surah.title}) - ${surah.index}`
                                 })) || []}
                                 value={field.value}
                                 onChange={handleEndSurahChange}
@@ -654,6 +658,10 @@ export default function AddNumberPage() {
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isOneGrade, setIsOneGrade] = React.useState(false);
+  const [surahs, setSurahs] = React.useState<Surah[]>([]);
+  const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
+  const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
+  const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
