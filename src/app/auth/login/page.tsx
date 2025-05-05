@@ -18,7 +18,6 @@ import * as motion from "motion/react-client"
 import { useAuth } from '@/lib/context/auth.context'
 import { OTPInput } from '@/components/ui/otp-input'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
-import BlobCursor from '@/components/reactbit/animations/BlobCursor/BlobCursor'
 
 // Step 1: National ID and Phone Number
 const loginFormSchema = z.object({

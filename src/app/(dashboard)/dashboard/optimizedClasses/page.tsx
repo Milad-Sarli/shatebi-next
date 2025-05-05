@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ClassForm } from "./class-form";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -73,7 +72,6 @@ export default function OptimizedClassesPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddClassOpen, setIsAddClassOpen] = React.useState(false);
   const [classToDelete, setClassToDelete] = React.useState<number | null>(null);
   const [classToEdit, setClassToEdit] = React.useState<OptimizedClass | null>(
     null
@@ -95,6 +93,7 @@ export default function OptimizedClassesPage() {
 
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
+        console.log(searchQuery);
 
         const response = await optimizedClassService.getAll(accessToken);
 

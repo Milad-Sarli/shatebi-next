@@ -8,16 +8,7 @@ import { useAuth } from "@/lib/context/auth.context";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   optimizedClassService,
-  OptimizedClass,
-  CreateOptimizedClassDto,
 } from "@/lib/services/optimizedClass.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 

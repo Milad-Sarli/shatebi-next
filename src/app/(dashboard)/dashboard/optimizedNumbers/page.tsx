@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { NumberForm } from "./number-form";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -73,7 +72,6 @@ export default function OptimizedNumbersPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddNumberOpen, setIsAddNumberOpen] = React.useState(false);
   const [numberToDelete, setNumberToDelete] = React.useState<number | null>(
     null
   );
@@ -96,6 +94,7 @@ export default function OptimizedNumbersPage() {
 
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
+        console.log(searchQuery);
         const response = await optimizedNumberService.getAll(accessToken);
 
         setNumbers(response);

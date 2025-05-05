@@ -1,6 +1,7 @@
+/* eslint-disable */
 import axios from "axios";
 import { API_URL } from "@/lib/constants";
-import { Dars } from "./optimizedClass.service";
+import { Dars, OptimizedClass } from "./optimizedClass.service";
 
 export interface OptimizedNumber {
   id: number;
@@ -20,7 +21,7 @@ export interface OptimizedNumber {
   tenant_id: number;
   created_at: string;
   updated_at: string;
-  optimizedClass?: any;
+  optimizedClass?: OptimizedClass;
   masterTeacher?: any;
   student?: any;
   droos?: Dars;

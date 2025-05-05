@@ -57,10 +57,10 @@ export function ClassForm({ initialData, classId, onSuccess }: ClassFormProps) {
 
     try {
       if (classId) {
-        await optimizedClassService.update(classId, values);
+        await optimizedClassService.update(classId, values, accessToken);
         toast.success("Class updated successfully");
       } else {
-        await optimizedClassService.create(values);
+        await optimizedClassService.create(values, accessToken);
         toast.success("Class created successfully");
       }
       onSuccess?.();

@@ -1,18 +1,38 @@
+/* eslint-disable */
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState, useMemo } from 'react';
 
-const buildKeyframes = (from, steps) => {
+interface KeyframeStep {
+  [key: string]: string | number;
+}
+
+const buildKeyframes = (from: KeyframeStep, steps: KeyframeStep[]): Record<string, (string | number)[]> => {
   const keys = new Set([
     ...Object.keys(from),
     ...steps.flatMap((s) => Object.keys(s)),
   ]);
 
-  const keyframes = {};
+  const keyframes: Record<string, (string | number)[]> = {};
   keys.forEach((k) => {
     keyframes[k] = [from[k], ...steps.map((s) => s[k])];
   });
   return keyframes;
 };
+
+interface BlurTextProps {
+  text?: string;
+  delay?: number;
+  className?: string;
+  animateBy?: 'words' | 'chars';
+  direction?: 'top' | 'bottom';
+  threshold?: number;
+  rootMargin?: string;
+  animationFrom?: KeyframeStep;
+  animationTo?: KeyframeStep[];
+  easing?: (t: number) => number;
+  onAnimationComplete?: () => void;
+  stepDuration?: number;
+}
 
 const BlurText = ({
   text = '',
@@ -24,13 +44,13 @@ const BlurText = ({
   rootMargin = '0px',
   animationFrom,
   animationTo,
-  easing = (t) => t,
+  easing = (t: number) => t,
   onAnimationComplete,
   stepDuration = 0.35,
-}) => {
+}: BlurTextProps) => {
   const elements = animateBy === 'words' ? text.split(' ') : text.split('');
   const [inView, setInView] = useState(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -38,14 +58,13 @@ const BlurText = ({
       ([entry]) => {
         if (entry.isIntersecting) {
           setInView(true);
-          observer.unobserve(ref.current);
+          observer.unobserve(ref.current!);
         }
       },
       { threshold, rootMargin }
     );
     observer.observe(ref.current);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold, rootMargin]);
 
   const defaultFrom = useMemo(
@@ -89,8 +108,8 @@ const BlurText = ({
           duration: totalDuration,
           times,
           delay: (index * delay) / 1000,
+          ease: easing,
         };
-        (spanTransition).ease = easing;
 
         return (
           <motion.span

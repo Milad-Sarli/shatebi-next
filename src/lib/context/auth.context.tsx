@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { AuthService, LoginResponse, VerifyOtpResponse, ResendOtpResponse } from '@/lib/services/auth.service'
+import { AuthService, LoginResponse, ResendOtpResponse } from '@/lib/services/auth.service'
 import Cookies from 'js-cookie'
 
 interface User {

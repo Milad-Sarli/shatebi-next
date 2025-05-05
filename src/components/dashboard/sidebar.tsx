@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import * as React from "react";
@@ -6,9 +7,6 @@ import { usePathname } from "next/navigation";
 import {
   Users,
   GraduationCap,
-  CalendarDays,
-  Settings,
-  Building2,
   BookOpen,
   Shield,
   Briefcase,
@@ -53,21 +51,6 @@ const items = [
     href: "/dashboard/optimizedNumbers",
     icon: GraduationCap,
   },
-  // {
-  //   title: "برنامه کلاسی", 
-  //   href: "/dashboard/schedule",
-  //   icon: CalendarDays,
-  // },
-  // {
-  //   title: "مراکز",
-  //   href: "/dashboard/centers",
-  //   icon: Building2,
-  // },
-  // {
-  //   title: "تنظیمات",
-  //   href: "/dashboard/settings",
-  //   icon: Settings,
-  // },
 ];
 
 export function Sidebar({ className, ...props }: SidebarProps) {

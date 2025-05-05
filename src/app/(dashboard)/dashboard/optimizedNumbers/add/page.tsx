@@ -11,10 +11,8 @@ import { SurahService, Surah } from "@/lib/services/surah.service";
 import {
   optimizedClassService,
   OptimizedClass,
-  Student,
-  StudentsResponse,
   Grade,
-  Dars,
+  Dars
 } from "@/lib/services/optimizedClass.service";
 import { format, subHours } from "date-fns-jalali";
 import { SingleSelectCombobox } from "@/components/ui/Combobox";
@@ -23,22 +21,20 @@ import { Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
 import RotatingText from "@/components/reactbit/texts/RotatingText";
 import { TextEffect } from "@/components/motion-primitives/text-effect";
-import { TextShimmerWave } from "@/components/motion-primitives/text-shimmer-wave";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import Image from "next/image";
 
 interface Course {
   id: number;
@@ -99,7 +95,7 @@ interface StudentWithGrades {
 
 interface AddGradeModalProps {
   student: StudentType;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isOneGrade?: boolean;
@@ -114,25 +110,25 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
   const { accessToken } = useAuth();
 
-  const getVersesFromJuz = (juzString: string) => {
-    try {
-      const juzData = JSON.parse(juzString);
-      const verses: number[] = [];
+  // const getVersesFromJuz = (juzString: string) => {
+  //   try {
+  //     const juzData = JSON.parse(juzString);
+  //     const verses: number[] = [];
       
-      juzData.forEach((juz: any) => {
-        const startVerse = parseInt(juz.verse.start.replace('verse_', ''));
-        const endVerse = parseInt(juz.verse.end.replace('verse_', ''));
-        for (let i = startVerse; i <= endVerse; i++) {
-          verses.push(i);
-        }
-      });
+  //     juzData.forEach((juz: any) => {
+  //       const startVerse = parseInt(juz.verse.start.replace('verse_', ''));
+  //       const endVerse = parseInt(juz.verse.end.replace('verse_', ''));
+  //       for (let i = startVerse; i <= endVerse; i++) {
+  //         verses.push(i);
+  //       }
+  //     });
       
-      return verses;
-    } catch (error) {
-      console.error('Error parsing juz data:', error);
-      return [];
-    }
-  };
+  //     return verses;
+  //   } catch (error) {
+  //     console.error('Error parsing juz data:', error);
+  //     return [];
+  //   }
+  // };
 
   const oneGradeForm = useForm({
     resolver: zodResolver(oneGradeSchema),
@@ -224,7 +220,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
     }
   };
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = (data: Record<string, unknown>) => {
     onSubmit({ ...data, type: activeTab });
   };
 
@@ -671,7 +667,9 @@ interface SelectCourseModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onCourseSelect: (course: Course) => void;
-  dars: any;
+  dars?: Dars & {
+    children?: Array<Dars>;
+  };
 }
 
 function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: SelectCourseModalProps) {
@@ -680,14 +678,14 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
     const courses: Course[] = [];
     
     // First add all children courses
-    if (dars?.children?.length > 0) {
-      dars.children.forEach((child: any) => {
+    if (dars?.children && dars.children.length > 0) {
+      dars.children.forEach((child) => {
         // Only add if there's no course with the same title
         if (!courses.some(course => course.title === child.title)) {
           courses.push({
             id: child.id,
             title: child.title,
-            is_one_grade: child.is_one_grade
+            is_one_grade: child.is_one_grade || null
           });
         }
       });
@@ -698,7 +696,7 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
       courses.push({
         id: dars.id,
         title: dars.title,
-        is_one_grade: dars.is_one_grade
+        is_one_grade: dars.is_one_grade || null
       });
     }
     
@@ -743,19 +741,15 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
 
 export default function AddNumberPage() {
   const { accessToken } = useAuth();
-  const [loading, setLoading] = React.useState(false);
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
   const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
   const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
+  const [loading, setLoading] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isOneGrade, setIsOneGrade] = React.useState(false);
-  const [surahs, setSurahs] = React.useState<Surah[]>([]);
-  const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
-  const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
-  const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
   const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
   const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
 
@@ -834,43 +828,69 @@ export default function AddNumberPage() {
     setIsModalOpen(true);
   };
 
-  const handleModalSubmit = async (data: any) => {
+  const handleModalSubmit = async (data: Record<string, unknown>) => {
     if (!accessToken || !selectedClass || !selectedStudent || !selectedCourse || !selectedDate) return;
 
     try {
       setLoading(true);
-      await optimizedNumberService.create(
-        {
-          class_id: selectedClass.id,
-          master_id: selectedClass.optimized_class_masters?.[0]?.user_id || 0,
-          student_id: selectedStudent.id,
-          droos_id: selectedCourse.id, // Use selected course ID
-          hefz: parseFloat(data.hefz),
-          details: parseFloat(data.details),
-          tajvid: parseFloat(data.tajvid),
-          sout: parseFloat(data.sout),
-          number: 0,
-          practice_count: 0,
-          lesson_area_id: 0,
-          user_id: 0,
-          tenant_id: 0,
-          ...data.type === 'page' && {
-            start_page: parseInt(data.start_page),
-            end_page: parseInt(data.end_page),
-          },
-          ...data.type === 'surah' && {
-            start_surah: data.start_surah,
-            start_verse: parseInt(data.start_verse),
-            end_surah: data.end_surah,
-            end_verse: parseInt(data.end_verse),
-          },
-          ...data.type === 'part' && {
-            start_part: parseInt(data.start_part),
-            end_part: parseInt(data.end_part),
-          },
-        },
-        accessToken
-      );
+
+      // Define the type for the payload
+      type PayloadType = {
+        class_id: number;
+        master_id: number;
+        student_id: number;
+        droos_id: number;
+        hefz: number;
+        details: number;
+        tajvid: number;
+        sout: number;
+        number: number;
+        practice_count: number;
+        lesson_area_id: number;
+        user_id: number;
+        tenant_id: number;
+        start_page?: number;
+        end_page?: number;
+        start_surah?: string;
+        start_verse?: number;
+        end_surah?: string;
+        end_verse?: number;
+        start_part?: number;
+        end_part?: number;
+      };
+
+      // Create the base payload
+      const payload: PayloadType = {
+        class_id: selectedClass.id,
+        master_id: selectedClass.optimized_class_masters?.[0]?.user_id || 0,
+        student_id: selectedStudent.id,
+        droos_id: selectedCourse.id,
+        hefz: parseFloat(data.hefz as string),
+        details: parseFloat(data.details as string),
+        tajvid: parseFloat(data.tajvid as string),
+        sout: parseFloat(data.sout as string),
+        number: 0,
+        practice_count: 0,
+        lesson_area_id: 0,
+        user_id: 0,
+        tenant_id: 0,
+      };
+
+      // Add type-specific fields
+      if (data.type === 'page') {
+        payload.start_page = parseInt(data.start_page as string);
+        payload.end_page = parseInt(data.end_page as string);
+      } else if (data.type === 'surah') {
+        payload.start_surah = data.start_surah as string;
+        payload.start_verse = parseInt(data.start_verse as string);
+        payload.end_surah = data.end_surah as string;
+        payload.end_verse = parseInt(data.end_verse as string);
+      } else if (data.type === 'part') {
+        payload.start_part = parseInt(data.start_part as string);
+        payload.end_part = parseInt(data.end_part as string);
+      }
+
+      await optimizedNumberService.create(payload, accessToken);
       toast.success("نمره با موفقیت ثبت شد");
       setIsModalOpen(false);
       setSelectedCourse(null);
@@ -992,10 +1012,12 @@ export default function AddNumberPage() {
                             transition={{ delay: index * 0.1 + 0.2 }}
                           >
                             {studentData.student.aks ? (
-                              <img 
+                              <Image 
                                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${studentData.student.aks}`} 
                                 alt={studentData.student.name}
                                 className="w-full h-full object-cover"
+                                width={40}
+                                height={40}
                               />
                             ) : (
                               <span className="text-emerald-600 dark:text-emerald-400 font-medium">

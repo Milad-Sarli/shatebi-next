@@ -14,6 +14,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MasterForm } from "./master-form";
+import Image from "next/image";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -262,10 +263,12 @@ export default function MastersPage() {
                           <td className="whitespace-nowrap px-4 py-3">
                             <div className="relative h-8 w-8 overflow-hidden rounded-full">
                               {master.aks ? (
-                                <img
+                                <Image
                                   src={master.aks}
                                   alt={master.fullname}
                                   className="h-full w-full object-cover"
+                                  width={32}
+                                  height={32}
                                 />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-300">
@@ -331,10 +334,12 @@ export default function MastersPage() {
                         <div className="flex items-center mb-4">
                           <div className="relative h-12 w-12 overflow-hidden rounded-full mr-3">
                             {master.aks ? (
-                              <img
+                              <Image
                                 src={master.aks}
                                 alt={master.fullname}
                                 className="h-full w-full object-cover"
+                                width={48}
+                                height={48}
                               />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-300 text-lg">

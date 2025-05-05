@@ -6,6 +6,7 @@ import * as motion from "motion/react-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OTPInput } from "@/components/ui/otp-input";
+import Image from "next/image";
 
 export default function VerifyPage() {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -35,7 +36,7 @@ export default function VerifyPage() {
       >
         <div className="absolute inset-0 bg-[url('/mosque-pattern.svg')] bg-cover bg-no-repeat opacity-50" />
         <div className="relative z-20 flex items-center text-lg font-medium">
-          <img src="/logo.svg" alt="Logo" className="h-8 w-8 ml-2" />
+          <Image src="/logo.svg" alt="Logo" className="h-8 w-8 ml-2" width={32} height={32} />
           سامانه مدیریت دارالقرآن
         </div>
         <div className="relative z-20 mt-auto">

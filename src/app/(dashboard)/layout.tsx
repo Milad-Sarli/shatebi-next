@@ -3,7 +3,6 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Sun, Moon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +17,8 @@ import {
 import Link from "next/link";
 import Aurora from "@/components/reactbit/backgrounds/Aurora/Aurora";
 import GradientText from "@/components/reactbit/texts/GradientText";
+import Image from "next/image";
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -61,7 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Link href="/dashboard">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
+                <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
                 <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                   دارالقرآن
                 </span>
@@ -144,7 +145,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <img src="/fav-icon.png" alt="Logo" className="h-8 w-8" />
+              <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
               <GradientText
                 colors={["#40ffaa", "#4079ff", "#40ffaa", "#4079ff", "#40ffaa"]}
                 animationSpeed={3}

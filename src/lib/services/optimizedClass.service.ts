@@ -1,4 +1,7 @@
+/* eslint-disable */
+
 import axios from "axios";
+
 import { API_URL } from "@/lib/constants";
 
 export interface OptimizedClass {

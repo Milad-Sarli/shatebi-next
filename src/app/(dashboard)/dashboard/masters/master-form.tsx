@@ -7,7 +7,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MasterService, Master, MasterCreateData, MasterUpdateData } from "@/lib/services/master.service";
+import { MasterService, Master, MasterCreateData } from "@/lib/services/master.service";
 import { useAuth } from "@/lib/context/auth.context";
 import { toast } from "sonner";
 

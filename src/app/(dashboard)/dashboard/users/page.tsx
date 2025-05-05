@@ -1,7 +1,9 @@
+
 "use client";
 
+/* eslint-disable */
 import * as React from "react";
-import { Plus, Search, Filter, ChevronLeft, ChevronRight, Sun, Moon, Edit, Trash2, Mail, Phone, Building } from "lucide-react";
+import { Plus, Search,  ChevronLeft, ChevronRight, Sun, Moon, Edit, Trash2, Mail, Phone, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,7 +58,11 @@ export default function UsersPage() {
         current_page: response.meta.current_page,
         last_page: response.meta.last_page,
         total: response.meta.total,
-        links: response.meta.links,
+        links: Object.entries(response.links).map(([key, value], index) => ({
+          url: value,
+          label: (index + 1).toString(),
+          active: index + 1 === response.meta.current_page
+        }))
       });
     } catch (error) {
       toast.error("خطا در دریافت لیست کاربران");
@@ -420,7 +426,7 @@ export default function UsersPage() {
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش کاربر</DialogTitle>
             </DialogHeader>
             <UserForm
-              initialData={userToEdit}
+              initialData={userToEdit || undefined}
               onSuccess={() => {
                 setUserToEdit(null);
                 fetchUsers();

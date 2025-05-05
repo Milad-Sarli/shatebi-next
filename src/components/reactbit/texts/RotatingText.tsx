@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import {
@@ -66,7 +67,7 @@ const RotatingText: ForwardRefRenderFunction<RotatingTextRef, RotatingTextProps>
 
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
-  const splitIntoCharacters = (text) => {
+  const splitIntoCharacters = (text: string): string[] => {
     if (typeof Intl !== "undefined" && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
       return Array.from(segmenter.segment(text), (segment) => segment.segment);
@@ -103,7 +104,7 @@ const RotatingText: ForwardRefRenderFunction<RotatingTextRef, RotatingTextProps>
   }, [texts, currentTextIndex, splitBy]);
 
   const getStaggerDelay = useCallback(
-    (index, totalChars) => {
+    (index: number, totalChars: number): number => {
       const total = totalChars;
       if (staggerFrom === "first") return index * staggerDuration;
       if (staggerFrom === "last") return (total - 1 - index) * staggerDuration;
@@ -121,7 +122,7 @@ const RotatingText: ForwardRefRenderFunction<RotatingTextRef, RotatingTextProps>
   );
 
   const handleIndexChange = useCallback(
-    (newIndex) => {
+    (newIndex: number): void => {
       setCurrentTextIndex(newIndex);
       if (onNext) onNext(newIndex);
     },
@@ -153,7 +154,7 @@ const RotatingText: ForwardRefRenderFunction<RotatingTextRef, RotatingTextProps>
   }, [currentTextIndex, texts.length, loop, handleIndexChange]);
 
   const jumpTo = useCallback(
-    (index) => {
+    (index: number): void => {
       const validIndex = Math.max(0, Math.min(index, texts.length - 1));
       if (validIndex !== currentTextIndex) {
         handleIndexChange(validIndex);

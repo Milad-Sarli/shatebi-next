@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
 import { useTheme } from "@/lib/context/theme.context";
-import { LessonService, Lesson, LessonFilters, LessonResponse, PaginationResponse } from "@/lib/services/lesson.service";
+import { LessonService, Lesson, LessonFilters, PaginationResponse } from "@/lib/services/lesson.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LessonForm } from "./lesson-form";
@@ -56,7 +56,6 @@ export default function LessonsPage() {
   const [isAddLessonOpen, setIsAddLessonOpen] = React.useState(false);
   const [lessonToDelete, setLessonToDelete] = React.useState<number | null>(null);
   const [lessonToEdit, setLessonToEdit] = React.useState<Lesson | null>(null);
-  const [currentParent, setCurrentParent] = React.useState<Lesson | null>(null);
   const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
   
   // Reference to track if a search is already in progress
@@ -143,7 +142,6 @@ export default function LessonsPage() {
           const newFilters = { ...prev, parent_id: null, page: 1 };
           return newFilters;
         });
-        setCurrentParent(null);
         setNavigationPath([]);
         
         // بارگذاری مستقیم دروس اصلی
@@ -161,7 +159,6 @@ export default function LessonsPage() {
           const newFilters = { ...prev, parent_id: parentId, page: 1 };
           return newFilters;
         });
-        setCurrentParent(parentLesson);
 
         // Update navigation path
         let newPath = [...navigationPath];
@@ -235,7 +232,7 @@ export default function LessonsPage() {
     if (!accessToken || !lesson.id) return;
 
     try {
-      const response = await LessonService.toggleOneGrade(lesson.id, accessToken);
+      await LessonService.toggleOneGrade(lesson.id, accessToken);
       toast.success("تک نمره با موفقیت تغییر کرد");
       fetchLessons();
     } catch (error) {
