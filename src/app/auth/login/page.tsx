@@ -151,10 +151,10 @@ export default function LoginPage() {
               transition={{ duration: 1, delay: 0.3 }}
               className=""
             />
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-foreground mb-6">
               سامانه شاطبی
             </h1>
-            <p className="text-base md:text-lg lg:text-xl text-slate-300/90">
+            <p className="text-base md:text-lg lg:text-xl text-muted-foreground">
               سیستم مدیریت یکپارچه اطلاعات
             </p>
           </div>

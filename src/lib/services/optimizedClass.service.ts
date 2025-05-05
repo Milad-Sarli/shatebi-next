@@ -56,7 +56,7 @@ export interface Grade {
   practice_count: number | null;
   description: string | null;
   master_teacher: string | null;
-  dars: Dars;
+  droos_id: Dars;
   lesson_area: LessonArea;
   created_at: string;
 }

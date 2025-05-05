@@ -47,7 +47,7 @@ export interface CreateOptimizedNumberDto {
   tenant_id: number;
 }
 
-export interface UpdateOptimizedNumberDto extends Partial<CreateOptimizedNumberDto> {}
+export interface UpdateOptimizedNumberDto extends Partial<CreateOptimizedNumberDto> { }
 
 export const optimizedNumberService = {
   async getAll(accessToken: string): Promise<OptimizedNumber[]> {
@@ -55,7 +55,7 @@ export const optimizedNumberService = {
     console.log("Request headers:", {
       Authorization: `Bearer ${accessToken}`,
     });
-    
+
     try {
       const response = await axios.get(`${API_URL}/api/optimized-numbers`, {
         headers: {

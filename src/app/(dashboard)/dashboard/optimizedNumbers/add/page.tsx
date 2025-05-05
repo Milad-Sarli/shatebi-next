@@ -980,7 +980,7 @@ export default function AddNumberPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex-1 w-full">
+              <div className="flex-1 w-full mx-auto">
                 <DatePicker onChange={(date: Date) => setSelectedDate(date)} />
               </div>
             </div>
@@ -1149,9 +1149,7 @@ export default function AddNumberPage() {
             )}
           </CardContent>
         </Card>
-        <TextEffect preset='fade-in-blur' className="text-center absolute bottom-0 left-0 right-0 bg-zinc-900/80 backdrop-blur-lg max-w-fit mx-auto p-2 rounded-lg" speedReveal={0.7} speedSegment={0.7}>
-          ثبت و ویرایش نمرات فقط برای 24 ساعت اخیر ممکن است ⚠️
-        </TextEffect>
+       
       </div>
 
       {selectedStudent && (

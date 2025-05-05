@@ -51,6 +51,11 @@ const items = [
     href: "/dashboard/optimizedNumbers",
     icon: GraduationCap,
   },
+  {
+    title: "ثبت نمرات",
+    href: "/dashboard/optimizedNumbers/add", 
+    icon: GraduationCap,
+  },
 ];
 
 export function Sidebar({ className, ...props }: SidebarProps) {

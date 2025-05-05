@@ -17,9 +17,15 @@ const calendarStyles = `
   .rmdp-input {
     background-color: rgb(39 39 42) !important;
     color: white !important;
-    min-width: 400px !important;
+    width: 100% !important;
+    min-width: 0 !important;
     border: 1px solid rgb(39 39 42) !important;
     padding: .99rem 0.75rem !important;
+  }
+  @media (min-width: 640px) {
+    .rmdp-input {
+      min-width: 400px !important;
+    }
   }
   .rmdp-day {
     color: white !important;
@@ -72,7 +78,7 @@ export default function DatePicker({ onChange }: { onChange: (date: Date) => voi
   return (
     <>
       <style>{calendarStyles}</style>
-          <div className="rounded-md w-full">
+          <div className="rounded-md w-full mx-auto">
               {/* Use directly the Calendar component */}
               {renderCalendar()}
           </div>
