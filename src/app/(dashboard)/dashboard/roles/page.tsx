@@ -31,7 +31,7 @@ import { useAuth } from '@/lib/context/auth.context';
 
 const roleTranslations = {
   admin: 'مدیر',
-  master: 'استاد',
+  master: 'مربی',
 };
 
 export default function RolesPage() {
@@ -137,7 +137,7 @@ export default function RolesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-300 via-blue-200 to-purple-200 flex items-center justify-center py-10" dir="rtl">
+    <div className="min-h-screen  flex items-center justify-center py-10" dir="rtl">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-3xl font-extrabold text-gray-800 text-center md:text-right">مدیریت نقش‌ها</h1>
@@ -200,7 +200,7 @@ export default function RolesPage() {
         <div className="overflow-x-auto rounded-lg">
           <Table className="w-full text-center">
             <TableHeader>
-              <TableRow className="bg-gradient-to-r from-blue-100 to-green-100">
+              <TableRow className="">
                 <TableHead className="text-gray-700 font-bold text-lg">شناسه کاربر</TableHead>
                 <TableHead className="text-gray-700 font-bold text-lg">نام نقش</TableHead>
               </TableRow>
