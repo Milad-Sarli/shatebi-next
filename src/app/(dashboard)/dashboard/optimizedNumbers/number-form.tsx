@@ -31,12 +31,14 @@ import {
 
 const formSchema = z.object({
   student_id: z.string().min(1, "لطفا دانش‌آموز را انتخاب کنید"),
-  master_teacher_id: z.string().min(1, "لطفا استاد را انتخاب کنید"),
+  master_id: z.string().min(1, "لطفا استاد را انتخاب کنید"),
   hefz: z.string().min(1, "لطفا نمره حفظ را وارد کنید"),
   details: z.string().min(1, "لطفا نمره جزئیات را وارد کنید"),
   tajvid: z.string().min(1, "لطفا نمره تجوید را وارد کنید"),
   sout: z.string().min(1, "لطفا نمره صوت را وارد کنید"),
   number: z.string().min(1, "لطفا نمره کل را وارد کنید"),
+  practice_count: z.string().min(1, "لطفا تعداد تمرین را وارد کنید"),
+  lesson_area_id: z.string().min(1, "لطفا حوزه درس را انتخاب کنید"),
 });
 
 interface NumberFormProps {
@@ -54,17 +56,20 @@ export function NumberForm({
   const [loading, setLoading] = React.useState(false);
   const [students, setStudents] = React.useState([]);
   const [teachers, setTeachers] = React.useState([]);
+  const [lessonAreas, setLessonAreas] = React.useState([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       student_id: initialData?.student_id?.toString() || "",
-      master_teacher_id: initialData?.masterTeacher.id?.toString() || "",
+      master_id: initialData?.masterTeacher?.id?.toString() || "",
       hefz: initialData?.hefz?.toString() || "",
       details: initialData?.details?.toString() || "",
       tajvid: initialData?.tajvid?.toString() || "",
       sout: initialData?.sout?.toString() || "",
       number: initialData?.number?.toString() || "",
+      practice_count: initialData?.practice_count?.toString() || "",
+      lesson_area_id: initialData?.lesson_area_id?.toString() || "",
     },
   });
 
@@ -73,10 +78,32 @@ export function NumberForm({
       if (!accessToken) return;
 
       try {
-        // Fetch students and teachers here
-        // This is a placeholder - you'll need to implement the actual API calls
-        setStudents([]);
-        setTeachers([]);
+        // Fetch teachers
+        const teachersResponse = await fetch('/api/teachers', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        const teachersData = await teachersResponse.json();
+        setTeachers(teachersData);
+
+        // Fetch lesson areas
+        const lessonAreasResponse = await fetch('/api/lesson-areas', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        const lessonAreasData = await lessonAreasResponse.json();
+        setLessonAreas(lessonAreasData);
+
+        // Fetch students
+        const studentsResponse = await fetch('/api/students', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        const studentsData = await studentsResponse.json();
+        setStudents(studentsData);
       } catch (error) {
         console.error(error);
         toast.error("Error loading data");
@@ -92,47 +119,32 @@ export function NumberForm({
     try {
       setLoading(true);
 
+      const formData = {
+        student_id: parseInt(values.student_id),
+        master_id: parseInt(values.master_id),
+        hefz: parseFloat(values.hefz),
+        details: parseFloat(values.details),
+        tajvid: parseFloat(values.tajvid),
+        sout: parseFloat(values.sout),
+        number: parseFloat(values.number),
+        practice_count: parseInt(values.practice_count),
+        lesson_area_id: parseInt(values.lesson_area_id),
+        class_id: 0,
+        droos_id: 0,
+      };
+
       if (numberId) {
-        await optimizedNumberService.update(
-          numberId,
-          {
-            student_id: parseInt(values.student_id),
-            master_id: parseInt(values.master_teacher_id),
-            hefz: parseFloat(values.hefz),
-            details: parseFloat(values.details),
-            tajvid: parseFloat(values.tajvid),
-            sout: parseFloat(values.sout),
-            number: parseFloat(values.number),
-          },
-          accessToken
-        );
-        toast.success("Number updated successfully");
+        await optimizedNumberService.update(numberId, formData, accessToken);
+        toast.success("نمره با موفقیت بروزرسانی شد");
       } else {
-        await optimizedNumberService.create(
-          {
-            master_id: parseInt(values.master_teacher_id),
-            student_id: parseInt(values.student_id),
-            hefz: parseFloat(values.hefz),
-            details: parseFloat(values.details),
-            tajvid: parseFloat(values.tajvid),
-            sout: parseFloat(values.sout),
-            number: parseFloat(values.number),
-            class_id: 0, // Required by CreateOptimizedNumberDto
-            droos_id: 0, // Required by CreateOptimizedNumberDto
-            practice_count: 0, // Required by CreateOptimizedNumberDto
-            lesson_area_id: 0, // Required by CreateOptimizedNumberDto
-            tenant_id: 0, // Required by CreateOptimizedNumberDto
-            user_id: 0, // Required by CreateOptimizedNumberDto
-          },
-          accessToken
-        );
-        toast.success("Number created successfully");
+        await optimizedNumberService.create(formData, accessToken);
+        toast.success("نمره با موفقیت ثبت شد");
       }
 
       onSuccess?.();
     } catch (error) {
       console.error(error);
-      toast.error("Error saving number");
+      toast.error("خطا در ذخیره نمره");
     } finally {
       setLoading(false);
     }
@@ -168,7 +180,7 @@ export function NumberForm({
 
         <FormField
           control={form.control}
-          name="master_teacher_id"
+          name="master_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>استاد</FormLabel>
@@ -256,6 +268,45 @@ export function NumberForm({
               <FormControl>
                 <Input type="number" step="0.01" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="practice_count"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>تعداد تمرین</FormLabel>
+              <FormControl>
+                <Input type="number" step="1" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="lesson_area_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>حوزه درس</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب حوزه درس" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {lessonAreas.map((area: { id: number; name: string }) => (
+                    <SelectItem key={area.id} value={area.id.toString()}>
+                      {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

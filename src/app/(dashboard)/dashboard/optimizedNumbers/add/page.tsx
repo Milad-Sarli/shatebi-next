@@ -46,16 +46,36 @@ interface Course {
 const pageBasedSchema = z.object({
   start_page: z.string().min(1, "صفحه شروع الزامی است"),
   end_page: z.string().min(1, "صفحه پایان الزامی است"),
-  hefz: z.string().min(1, "نمره حفظ الزامی است"),
-  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
-  sout: z.string().min(1, "نمره صوت الزامی است"),
-  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+  hefz: z.string()
+    .min(1, "نمره حفظ الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 70, {
+      message: "نمره حفظ باید بین 0 تا 70 باشد"
+    }),
+  tajvid: z.string()
+    .min(1, "نمره تجوید الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تجوید باید بین 0 تا 10 باشد"
+    }),
+  sout: z.string()
+    .min(1, "نمره صوت الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره صوت باید بین 0 تا 10 باشد"
+    }),
+  details: z.string()
+    .min(1, "نمره تفاصیل الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+    }),
 });
 
 const oneGradeSchema = z.object({
   start_page: z.string().min(1, "صفحه شروع الزامی است"),
   end_page: z.string().min(1, "صفحه پایان الزامی است"),
-  hefz: z.string().min(1, "نمره الزامی است"),
+  hefz: z.string()
+    .min(1, "نمره الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 70, {
+      message: "نمره باید بین 0 تا 70 باشد"
+    }),
 });
 
 const surahBasedSchema = z.object({
@@ -63,19 +83,51 @@ const surahBasedSchema = z.object({
   start_verse: z.string().min(1, "آیه شروع الزامی است"),
   end_surah: z.string().min(1, "سوره پایان الزامی است"),
   end_verse: z.string().min(1, "آیه پایان الزامی است"),
-  hefz: z.string().min(1, "نمره حفظ الزامی است"),
-  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
-  sout: z.string().min(1, "نمره صوت الزامی است"),
-  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+  hefz: z.string()
+    .min(1, "نمره حفظ الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 70, {
+      message: "نمره حفظ باید بین 0 تا 70 باشد"
+    }),
+  tajvid: z.string()
+    .min(1, "نمره تجوید الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تجوید باید بین 0 تا 10 باشد"
+    }),
+  sout: z.string()
+    .min(1, "نمره صوت الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره صوت باید بین 0 تا 10 باشد"
+    }),
+  details: z.string()
+    .min(1, "نمره تفاصیل الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+    }),
 });
 
 const partBasedSchema = z.object({
-  start_part: z.string().min(1, "پاره شروع الزامی است"),
-  end_part: z.string().min(1, "پاره پایان الزامی است"),
-  hefz: z.string().min(1, "نمره حفظ الزامی است"),
-  tajvid: z.string().min(1, "نمره تجوید الزامی است"),
-  sout: z.string().min(1, "نمره صوت الزامی است"),
-  details: z.string().min(1, "نمره تفاصیل الزامی است"),
+  start_joze: z.string().min(1, "جز شروع الزامی است"),
+  end_joze: z.string().min(1, "جز پایان الزامی است"),
+  hefz: z.string()
+    .min(1, "نمره حفظ الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 70, {
+      message: "نمره حفظ باید بین 0 تا 70 باشد"
+    }),
+  tajvid: z.string()
+    .min(1, "نمره تجوید الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تجوید باید بین 0 تا 10 باشد"
+    }),
+  sout: z.string()
+    .min(1, "نمره صوت الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره صوت باید بین 0 تا 10 باشد"
+    }),
+  details: z.string()
+    .min(1, "نمره تفاصیل الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
+      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+    }),
 });
 
 interface StudentType {
@@ -109,15 +161,14 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
   const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
   const { accessToken } = useAuth();
-
-  // const getVersesFromJuz = (juzString: string) => {
+  // const getVersesFromjoze = (jozeString: string) => {
   //   try {
-  //     const juzData = JSON.parse(juzString);
+  //     const jozeData = JSON.parse(jozeString);
   //     const verses: number[] = [];
       
-  //     juzData.forEach((juz: any) => {
-  //       const startVerse = parseInt(juz.verse.start.replace('verse_', ''));
-  //       const endVerse = parseInt(juz.verse.end.replace('verse_', ''));
+  //     jozeData.forEach((joze: any) => {
+  //       const startVerse = parseInt(joze.verse.start.replace('verse_', ''));
+  //       const endVerse = parseInt(joze.verse.end.replace('verse_', ''));
   //       for (let i = startVerse; i <= endVerse; i++) {
   //         verses.push(i);
   //       }
@@ -125,11 +176,10 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       
   //     return verses;
   //   } catch (error) {
-  //     console.error('Error parsing juz data:', error);
+  //     console.error('Error parsing joze data:', error);
   //     return [];
   //   }
   // };
-
   const oneGradeForm = useForm({
     resolver: zodResolver(oneGradeSchema),
     defaultValues: {
@@ -168,8 +218,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   const partForm = useForm({
     resolver: zodResolver(partBasedSchema),
     defaultValues: {
-      start_part: "",
-      end_part: "",
+      start_joze: "",
+      end_joze: "",
       hefz: "",
       tajvid: "",
       sout: "",
@@ -199,6 +249,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
         setIsLoadingSurahs(false);
       }
     };
+    
     fetchSurahs();
   }, [accessToken]);
   const handleStartSurahChange = (surahId: string) => {
@@ -211,12 +262,13 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       handleEndSurahChange(surahId);
     }
   };
-
   const handleEndSurahChange = (surahId: string) => {
     const selectedSurah = surahs.find(s => s.id.toString() === surahId);
     if (selectedSurah) {
       const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setEndSurahVerses(verses);
+      // Update the form value for end_surah
+      surahForm.setValue("end_surah", surahId);
     }
   };
 
@@ -303,7 +355,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="page">صفحه ای</TabsTrigger>
               <TabsTrigger value="surah">سوره و آیه</TabsTrigger>
-              <TabsTrigger value="part">پاره ای</TabsTrigger>
+              <TabsTrigger value="part">جز ای</TabsTrigger>
             </TabsList>
             
             <TabsContent value="page">
@@ -571,10 +623,10 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={partForm.control}
-                      name="start_part"
+                      name="start_joze"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>پاره شروع</FormLabel>
+                          <FormLabel>جز شروع</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} dir="rtl" />
                           </FormControl>
@@ -584,10 +636,10 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                     />
                     <FormField
                       control={partForm.control}
-                      name="end_part"
+                      name="end_joze"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>پاره پایان</FormLabel>
+                          <FormLabel>جز پایان</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} />
                           </FormControl>
@@ -855,14 +907,14 @@ export default function AddNumberPage() {
         start_verse?: number;
         end_surah?: string;
         end_verse?: number;
-        start_part?: number;
-        end_part?: number;
+        start_joze?: number;
+        end_joze?: number;
       };
 
       // Create the base payload
       const payload: PayloadType = {
         class_id: selectedClass.id,
-        master_id: selectedClass.optimized_class_masters?.[0]?.user_id || 0,
+        master_id: selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0,
         student_id: selectedStudent.id,
         droos_id: selectedCourse.id,
         hefz: parseFloat(data.hefz as string),
@@ -871,7 +923,7 @@ export default function AddNumberPage() {
         sout: parseFloat(data.sout as string),
         number: 0,
         practice_count: 0,
-        lesson_area_id: 0,
+        lesson_area_id: selectedClass.dars?.id || 0,
         user_id: 0,
         tenant_id: 0,
       };
@@ -886,8 +938,8 @@ export default function AddNumberPage() {
         payload.end_surah = data.end_surah as string;
         payload.end_verse = parseInt(data.end_verse as string);
       } else if (data.type === 'part') {
-        payload.start_part = parseInt(data.start_part as string);
-        payload.end_part = parseInt(data.end_part as string);
+        payload.start_joze = parseInt(data.start_joze as string);
+        payload.end_joze = parseInt(data.end_joze as string);
       }
 
       await optimizedNumberService.create(payload, accessToken);
@@ -914,9 +966,40 @@ export default function AddNumberPage() {
           [selectedStudent.id]: todayGrades
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("خطا در ثبت نمره");
+      if (error.response?.data?.errors) {
+        // Handle validation errors from the server
+        const errors = error.response.data.errors;
+        Object.keys(errors).forEach((field) => {
+          const errorMessage = errors[field][0];
+          // Convert English error messages to Persian
+          const persianMessage = errorMessage
+            .replace("The tajvid field must not be greater than 10.", "نمره تجوید نباید بیشتر از 10 باشد")
+            .replace("The hefz field must not be greater than 70.", "نمره حفظ نباید بیشتر از 70 باشد")
+            .replace("The sout field must not be greater than 10.", "نمره صوت نباید بیشتر از 10 باشد")
+            .replace("The details field must not be greater than 10.", "نمره تفاصیل نباید بیشتر از 10 باشد");
+          
+          // Set the error message in the appropriate form
+          if (isOneGrade) {
+            oneGradeForm.setError(field as any, { message: persianMessage });
+          } else {
+            switch (activeTab) {
+              case 'page':
+                multiGradeForm.setError(field as any, { message: persianMessage });
+                break;
+              case 'surah':
+                surahForm.setError(field as any, { message: persianMessage });
+                break;
+              case 'part':
+                partForm.setError(field as any, { message: persianMessage });
+                break;
+            }
+          }
+        });
+      } else {
+        toast.error("خطا در ثبت نمره");
+      }
     } finally {
       setLoading(false);
     }
@@ -1065,75 +1148,99 @@ export default function AddNumberPage() {
                       
                       {existingGrades[studentData.student.id] && (
                         <div className="grid grid-cols-1 gap-2">
-                          {existingGrades[studentData.student.id].map((grade, gradeIndex) => (
-                            <motion.div 
-                              key={gradeIndex} 
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ 
-                                duration: 0.4,
-                                delay: (index * 0.1) + (gradeIndex * 0.1) + 0.5,
-                                ease: [0.4, 0, 0.2, 1]
-                              }}
-                              className="group relative bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50 p-2 rounded-md hover:shadow-md transition-all duration-300"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                  {grade.dars?.title || "بدون نام"}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                    {(grade.hefz + grade.tajvid + grade.sout + grade.details)}
+                          {existingGrades[studentData.student.id].map((grade, gradeIndex) => {
+                            const totalScore = grade.hefz + grade.tajvid + grade.sout + grade.details;
+                            const isNegative = totalScore < 80;
+                            
+                            return (
+                              <motion.div 
+                                key={gradeIndex} 
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ 
+                                  duration: 0.4,
+                                  delay: (index * 0.1) + (gradeIndex * 0.1) + 0.5,
+                                  ease: [0.4, 0, 0.2, 1]
+                                }}
+                                className={`group relative bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50 p-2 rounded-md hover:shadow-md transition-all duration-300 ${
+                                  isNegative ? 'hover:border-2 hover:border-red-500/50 dark:hover:border-red-500/30' : ''
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                    {grade.droos_id?.title || "بدون نام"}
                                   </span>
-                                  {isWithin24Hours(grade.created_at) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEditGrade(studentData.student.id, grade)}
-                                      className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
-                                    >
-                                      <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-zinc-900 p-3 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-10 w-full left-0 top-full mt-1">
-                                <div className="grid grid-cols-4 gap-2 text-xs">
-                                  <div className="flex flex-col">
-                                    <span className="text-zinc-500 dark:text-zinc-400">حفظ</span>
-                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.hefz}</span>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-zinc-500 dark:text-zinc-400">تجوید</span>
-                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.tajvid}</span>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-zinc-500 dark:text-zinc-400">صوت</span>
-                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.sout}</span>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-zinc-500 dark:text-zinc-400">تفاصیل</span>
-                                    <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.details}</span>
-                                  </div>
-                                </div>
-                                {grade.lesson_area && (
-                                  <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-                                    {grade.lesson_area.start_page && grade.lesson_area.end_page ? (
-                                      <span>صفحه {grade.lesson_area.start_page} تا {grade.lesson_area.end_page}</span>
-                                    ) : grade.lesson_area.start_surah?.titleAr && grade.lesson_area.end_surah?.titleAr ? (
-                                      <span>
-                                        سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.start_surah.titleAr}</span> آیه {grade.lesson_area.start_verse} تا سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.end_surah.titleAr}</span> آیه {grade.lesson_area.end_verse}
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
+                                      <span className={`text-sm font-bold ${
+                                        isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                                      }`}>
+                                        {totalScore}
                                       </span>
-                                    ) : null}
+                                      {isNegative && (
+                                        <motion.span 
+                                          initial={{ opacity: 0, scale: 0.8 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full"
+                                        >
+                                          منفی
+                                        </motion.span>
+                                      )}
+                                    </div>
+                                    {isWithin24Hours(grade.created_at) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                        className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                      >
+                                        <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                      </Button>
+                                    )}
                                   </div>
-                                )}
-                                <div className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">
-                                  {format(new Date(grade.created_at), "HH:mm - yyyy/MM/dd")}
                                 </div>
-                              </div>
-                            </motion.div>
-                          ))}
+                                
+                                <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-zinc-900 p-3 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-10 w-full left-0 top-full mt-1">
+                                  <div className="grid grid-cols-4 gap-2 text-xs">
+                                    <div className="flex flex-col">
+                                      <span className="text-zinc-500 dark:text-zinc-400">حفظ</span>
+                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.hefz}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-zinc-500 dark:text-zinc-400">تجوید</span>
+                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.tajvid}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-zinc-500 dark:text-zinc-400">صوت</span>
+                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.sout}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-zinc-500 dark:text-zinc-400">تفاصیل</span>
+                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.details}</span>
+                                    </div>
+                                  </div>
+                                  {grade.lesson_area && (
+                                    <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                                      {grade.lesson_area.start_page && grade.lesson_area.end_page ? (
+                                        <span>صفحه {grade.lesson_area.start_page} تا {grade.lesson_area.end_page}</span>
+                                      ) : grade.lesson_area.start_surah?.titleAr && grade.lesson_area.end_surah?.titleAr ? (
+                                        <span>
+                                          سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.start_surah.titleAr}</span> آیه {grade.lesson_area.start_verse} تا سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.end_surah.titleAr}</span> آیه {grade.lesson_area.end_verse}
+                                        </span>
+                                      ) : grade.lesson_area.start_joze && grade.lesson_area.end_joze ? (
+                                        <span>
+                                          جز {grade.lesson_area.start_joze} تا {grade.lesson_area.end_joze}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  )}
+                                  <div className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">
+                                    {format(new Date(grade.created_at), "HH:mm - yyyy/MM/dd")}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       )}
                     </motion.div>

@@ -17,8 +17,6 @@ export interface OptimizedNumber {
   practice_count: number;
   description?: string;
   lesson_area_id: number;
-  user_id: number;
-  tenant_id: number;
   created_at: string;
   updated_at: string;
   optimizedClass?: OptimizedClass;
@@ -27,7 +25,6 @@ export interface OptimizedNumber {
   droos?: Dars;
   lessonArea?: any;
   user?: any;
-  tenant?: any;
 }
 
 export interface CreateOptimizedNumberDto {
@@ -43,8 +40,6 @@ export interface CreateOptimizedNumberDto {
   practice_count: number;
   description?: string;
   lesson_area_id: number;
-  user_id: number;
-  tenant_id: number;
 }
 
 export interface UpdateOptimizedNumberDto extends Partial<CreateOptimizedNumberDto> { }
