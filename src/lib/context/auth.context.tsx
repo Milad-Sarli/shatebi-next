@@ -5,10 +5,40 @@ import { useRouter } from 'next/navigation'
 import { AuthService, LoginResponse, ResendOtpResponse } from '@/lib/services/auth.service'
 import Cookies from 'js-cookie'
 
+interface AppRole {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Tenant {
+  id: number;
+  name: string;
+  title: string;
+  expire_date: string;
+  status: number;
+}
+
 interface User {
   id: number
   username: string
   phone: string
+  fname?: string | null
+  name?: string | null
+  lname?: string | null
+  avatar?: string | null
+  email?: string | null
+  tenant_id?: number
+  send_sms?: boolean
+  is_superuser?: boolean | null
+  is_admin?: boolean | null
+  created_at?: string
+  updated_at?: string
+  tenant?: Tenant
+  tenants?: Tenant[]
+  app_roles?: AppRole[]
 }
 
 interface AuthContextType {
@@ -41,7 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: parsedUser.id,
         username: parsedUser.username || parsedUser.national_id,
         phone: parsedUser.phone,
-        tenant_id: parsedUser.tenant_id
+        tenant_id: parsedUser.tenant_id,
+        app_roles: parsedUser.app_roles
       }
       setAccessToken(token)
       setUser(user)
@@ -65,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.user || !response.access_token) {
         throw new Error('Invalid response format from server')
       }
+      
 
       setAccessToken(response.access_token)
       setUser(response.user)
@@ -78,10 +110,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sameSite: 'strict'
         })
         
+        // Store app_roles in a cookie if present
+        const fullUser = response.user as User;
+        if (fullUser.app_roles) {
+          Cookies.set('app_roles', encodeURIComponent(JSON.stringify(fullUser.app_roles)), {
+            expires: 1,
+            secure: true,
+            sameSite: 'strict'
+          })
+        }
+        
         const userData = {
           id: response.user.id,
           username: response.user.username,
-          phone: response.user.phone
+          phone: response.user.phone,
+          app_roles: response.user.app_roles
         }
         
         Cookies.set('user', JSON.stringify(userData), {

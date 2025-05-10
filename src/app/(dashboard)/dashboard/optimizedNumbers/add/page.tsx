@@ -792,7 +792,7 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
 }
 
 export default function AddNumberPage() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
   const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
   const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
@@ -1048,20 +1048,24 @@ export default function AddNumberPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <SingleSelectCombobox
-                  options={classes.map((classItem) => ({
-                    value: classItem.id.toString(),
-                    label: `${classItem.dars?.title || "بدون نام"} - ${
-                      classItem.optimized_class_masters?.[0]?.master?.fullname ||
-                      classItem.optimized_class_masters?.[0]?.users?.fullname ||
-                      "بدون استاد"
-                    }-${classItem.id || "بدون درس"}`,
-                  }))}
-                  value={selectedClass?.id.toString()}
-                  onChange={(value: string) => handleClassChange(value)}
-                  placeholder="انتخاب کلاس"
-                  className="w-full"
-                />
+                {user?.app_roles?.some(role => role.name === 'admin') ? (
+                  <SingleSelectCombobox
+                    options={classes.map((classItem) => ({
+                      value: classItem.id.toString(),
+                      label: `${classItem.dars?.title || "بدون نام"} - ${
+                        classItem.optimized_class_masters?.[0]?.master?.fullname ||
+                        classItem.optimized_class_masters?.[0]?.users?.fullname ||
+                        "بدون استاد"
+                      }-${classItem.id || "بدون درس"}`,
+                    }))}
+                    value={selectedClass?.id.toString()}
+                    onChange={(value: string) => handleClassChange(value)}
+                    placeholder="انتخاب کلاس"
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="text-center text-red-500">شما دسترسی به مشاهده کلاس‌ها ندارید</div>
+                )}
               </div>
               <div className="flex-1 w-full mx-auto">
                 <DatePicker onChange={(date: Date) => setSelectedDate(date)} />

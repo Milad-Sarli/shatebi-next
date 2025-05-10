@@ -12,6 +12,7 @@ export interface VerifyOtpResponse {
     id: number;
     username: string;
     phone: string;
+    app_roles: AppRole[];
   };
 }
 
@@ -24,10 +25,23 @@ export interface LogoutResponse {
   message: string;
 }
 
+export interface AppRole {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export class AuthService {
   private static setAccessTokenCookie(token: string) {
     // Set cookie with secure options
     document.cookie = `access_token=${token}; path=/; secure; samesite=strict; max-age=86400`; // 24 hours
+  }
+
+  private static setAppRolesCookie(appRoles: AppRole[]) {
+    // Store app_roles as a JSON string in a cookie (expires in 24 hours)
+    document.cookie = `app_roles=${encodeURIComponent(JSON.stringify(appRoles))}; path=/; secure; samesite=strict; max-age=86400`;
   }
 
   static async login(username: string, phone: string): Promise<LoginResponse> {
@@ -68,6 +82,10 @@ export class AuthService {
     const data = await response.json();
     // Set the access token cookie after successful verification
     this.setAccessTokenCookie(data.access_token);
+    // // Set the app_roles cookie after successful verification
+    // if (data.user && data.user.app_roles) {
+    //   this.setAppRolesCookie(data.user.app_roles);
+    // }
     return data;
   }
 
