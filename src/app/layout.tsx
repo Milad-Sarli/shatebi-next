@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { pinar } from "./fonts";
 import { Toaster } from "sonner";
+import { ToastProvider } from '@/components/ui/use-toast';
 
 export const metadata: Metadata = {
   title: "سامانه شاطبی",
@@ -34,10 +35,12 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className={pinar.variable}>
       <body className={pinar.className}>
-        <Providers>
-          {children}
-          <Toaster position="top-right" />
-        </Providers>
+        <ToastProvider>
+          <Providers>
+            {children}
+            <Toaster position="top-right" />
+          </Providers>
+        </ToastProvider>
       </body>
     </html>
   );

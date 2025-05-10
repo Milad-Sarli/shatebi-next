@@ -54,4 +54,16 @@ export interface User {
   }>;
   roles?: Role[];
   permissions?: Permission[];
+}
+
+export interface AppRole {
+  id: number;
+  name: string;
+  description?: string;
+  user_id: number;
+  user?: {
+    id: number;
+    name: string;
+    // Add other user fields as needed
+  };
 } 
