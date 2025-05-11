@@ -141,7 +141,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </motion.div>
 
       {/* Desktop sidebar */}
-      <div className="sticky top-0 h-screen w-64 border-l border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 hidden md:block">
+      <div className="sticky top-0 h-screen w-64 border-l border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 hidden md:block relative overflow-hidden">
+        {/* Wavy gradient background */}
+        <div className="absolute inset-0 -z-10">
+          <svg width="100%" height="100%" viewBox="0 0 320 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <defs>
+              <linearGradient id="sidebarGradient" x1="0" y1="0" x2="0" y2="1" gradientTransform="scale(1 4)">
+                <stop offset="0%" stopColor="#40ffaa" />
+                <stop offset="100%" stopColor="#4079ff" />
+              </linearGradient>
+            </defs>
+            <path d="M0,0 Q80,80 160,0 T320,0 V800 H0 Z" fill="url(#sidebarGradient)" fillOpacity="0.18" />
+            <path d="M0,200 Q80,280 160,200 T320,200 V800 H0 Z" fill="url(#sidebarGradient)" fillOpacity="0.12" />
+          </svg>
+        </div>
+        {/* End wavy gradient background */}
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -220,15 +234,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 relative">
-        <div className="absolute -top-10 w-full h-full">
-          <Aurora
-            colorStops={["#00CFFF", "#6CF964", "#00CFFF"]}
-            blend={0.2}
-            amplitude={0.2}
-            speed={0.5}
-            />
-        </div>
+      <div className="flex-1 relative overflow-hidden">
+     
         {/* Header for mobile */}
         <div className="sticky top-0 z-30 flex items-center p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 md:hidden">
           <Button

@@ -1,4 +1,5 @@
 import { API_URL } from '@/lib/constants';
+import type { AppRole } from '@/lib/types';
 
 export interface User {
   id: number;
@@ -29,6 +30,7 @@ export interface User {
     expire_date: string;
     status: string;
   }>;
+  app_roles?: AppRole[];
 }
 
 export interface PaginatedResponse<T> {
