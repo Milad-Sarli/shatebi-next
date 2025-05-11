@@ -12,6 +12,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/context/auth.context";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -20,50 +21,69 @@ const items = [
     title: "مدیریت کاربران",
     href: "/dashboard/users",
     icon: Users,
+    requiredRole: "admin"
   },
   {
     title: "نقش‌ها و دسترسی‌ها",
     href: "/dashboard/roles",
     icon: Shield,
+    requiredRole: "admin"
   },
   {
     title: "دروس",
     href: "/dashboard/lessons",
     icon: BookOpen,
+    requiredRole: "admin"
   },
   {
     title: "دانش آموزان",
     href: "/dashboard/students",
     icon: GraduationCap,
+    requiredRole: "admin"
   },
   {
     title: "اساتید",
     href: "/dashboard/masters",
     icon: Briefcase,
+    requiredRole: "admin"
   },
   {
     title: "کلاس‌ها",
     href: "/dashboard/optimizedClasses",
     icon: BookOpen,
+    requiredRole: "admin"
   },
   {
     title: "نمرات",
     href: "/dashboard/optimizedNumbers",
     icon: GraduationCap,
+    requiredRole: "admin"
   },
   {
     title: "ثبت نمرات",
     href: "/dashboard/optimizedNumbers/add", 
     icon: GraduationCap,
+    requiredRole: "admin"
   },
 ];
 
 export function Sidebar({ className, ...props }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const hasRequiredRole = (requiredRole: string) => {
+    if (!user?.app_roles) return false;
+    return user.app_roles.some(role => role.name === requiredRole);
+  };
+
+  const filteredItems = items.filter(item => {
+    if (!item.requiredRole) return true;
+    return hasRequiredRole(item.requiredRole);
+  });
 
   return (
     <nav className={cn("space-y-2", className)} {...props}>
-      {items.map((item) => {
+      {filteredItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
 

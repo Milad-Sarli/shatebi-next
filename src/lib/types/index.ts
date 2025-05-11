@@ -61,7 +61,7 @@ export interface AppRole {
   name: string;
   description?: string;
   user_id: number;
-  user?: {
+  users?: {
     id: number;
     name: string;
     // Add other user fields as needed

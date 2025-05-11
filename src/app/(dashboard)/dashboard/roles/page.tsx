@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { AppRoleService, AppRole } from '@/lib/services/approle.service';
-import { StudentService, Student } from '@/lib/services/student.service';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/lib/context/auth.context';
+import { useTheme } from 'next-themes';
+import { Sun, Moon, Plus, Search, Link2, Loader2 } from 'lucide-react';
+import { PageTransition } from '@/components/ui/page-transition';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -19,36 +19,57 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/lib/context/auth.context';
+import { useRouter } from 'next/navigation';
 
 const roleTranslations = {
-  admin: 'مدیر',
-  master: 'مربی',
+  admin: { fa: 'مدیر', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  master: { fa: 'مربی', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+  superuser: { fa: 'کاربر ویژه', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+  user: { fa: 'کاربر عادی', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
+  moderator: { fa: 'مدیر محتوا', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  editor: { fa: 'ویرایشگر', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
+  analyst: { fa: 'تحلیلگر', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  support: { fa: 'پشتیبان', color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' }
+};
+
+// Function to generate random color for new roles
+const generateRoleColor = (roleName: string) => {
+  const colors = [
+    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300',
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+    'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+    'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
+    'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+    'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
+    'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
+  ];
+  
+  // Generate a consistent index based on role name
+  const index = roleName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+  return colors[index];
 };
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [roleName, setRoleName] = useState<string>('');
+  const [roleDescription, setRoleDescription] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isStudentsLoading, setIsStudentsLoading] = useState(false);
   const { toast } = useToast();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const router = useRouter();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
 
   useEffect(() => {
     if (accessToken) {
       fetchRoles();
-      fetchStudents();
     }
   }, [accessToken]);
 
@@ -60,43 +81,27 @@ export default function RolesPage() {
       toast({
         title: 'خطا',
         description: 'در دریافت لیست نقش‌ها مشکلی پیش آمده است',
-        variant: 'destructive',
       });
-    }
-  };
-
-  const fetchStudents = async () => {
-    if (!accessToken) return;
-    setIsStudentsLoading(true);
-    try {
-      const response = await StudentService.getStudents({ per_page: 10000 }, accessToken!);
-      const studentsArr = response?.data?.data ?? [];
-      setStudents(studentsArr);
-    } catch (error) {
-      toast({
-        title: 'خطا',
-        description: 'در دریافت لیست دانش‌آموزان مشکلی پیش آمده است',
-        variant: 'destructive',
-      });
-      setStudents([]);
-    } finally {
-      setIsStudentsLoading(false);
     }
   };
 
   const handleDialogOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
-    if (open) {
-      fetchStudents();
-    }
   };
 
   const handleCreateRole = async () => {
-    if (!selectedStudent || !selectedRole) {
+    if (!roleName) {
       toast({
         title: 'خطا',
-        description: 'لطفا دانش‌آموز و نقش را انتخاب کنید',
-        variant: 'destructive',
+        description: 'لطفا نام نقش را وارد کنید',
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: 'خطا',
+        description: 'شناسه کاربری یافت نشد',
       });
       return;
     }
@@ -105,8 +110,9 @@ export default function RolesPage() {
     try {
       await AppRoleService.createAppRole(
         {
-          name: selectedRole,
-          user_id: parseInt(selectedStudent),
+          name: roleName,
+          description: roleDescription,
+          user_id: user.id
         },
         accessToken!
       );
@@ -115,122 +121,132 @@ export default function RolesPage() {
         description: 'نقش با موفقیت ایجاد شد',
       });
       fetchRoles();
-      setSelectedStudent('');
-      setSelectedRole('');
+      setRoleName('');
+      setRoleDescription('');
+      setIsDialogOpen(false);
     } catch (error) {
       toast({
         title: 'خطا',
         description: 'در ایجاد نقش مشکلی پیش آمده است',
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!Array.isArray(students)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-300 via-blue-200 to-purple-200">
-        <div className="text-center py-8 text-lg font-semibold text-gray-700">در حال بارگذاری...</div>
-      </div>
-    );
-  }
+  const handleRemoveRole = async (roleId: number, userId: number) => {
+    try {
+      await AppRoleService.removeRole(
+        {
+          role_id: roleId,
+          user_id: userId,
+        },
+        accessToken!
+      );
+      toast({
+        title: 'موفق',
+        description: 'نقش با موفقیت حذف شد',
+      });
+      fetchRoles();
+    } catch (error) {
+      toast({
+        title: 'خطا',
+        description: 'در حذف نقش مشکلی پیش آمده است',
+      });
+    }
+  };
 
   return (
-    <div className="min-h-screen  flex items-center justify-center py-10" dir="rtl">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl p-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-          <h1 className="text-3xl font-extrabold text-gray-800 text-center md:text-right">مدیریت نقش‌ها</h1>
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-500 to-green-400 text-white font-bold px-6 py-2 rounded-lg shadow hover:from-blue-600 hover:to-green-500 transition-all duration-200">
+    <PageTransition>
+      <div className="space-y-4">
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
+          
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
+              مدیریت نقش‌ها
+            </h1>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+              >
+                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </Button>
+              <Button 
+                onClick={() => router.push('/dashboard/roles/add')}
+                className="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10"
+              >
+                <Plus className="ml-2 h-4 w-4" />
                 ایجاد نقش جدید
               </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-xl p-6 max-w-md mx-auto">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold mb-4">ایجاد نقش جدید</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">دانش‌آموز</label>
-                  <Select value={selectedStudent} onValueChange={setSelectedStudent} disabled={isStudentsLoading}>
-                    <SelectTrigger className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400">
-                      <SelectValue placeholder={isStudentsLoading ? 'در حال بارگذاری...' : 'دانش‌آموز را انتخاب کنید'} />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {isStudentsLoading ? (
-                        <div className="py-2 px-3 text-gray-400">در حال بارگذاری...</div>
-                      ) : students.length === 0 ? (
-                        <div className="py-2 px-3 text-gray-400">دانش‌آموزی یافت نشد</div>
-                      ) : (
-                        students.map((student) => (
-                          <SelectItem key={student.id} value={student.id.toString()} className="py-2 px-3 hover:bg-blue-50">
-                            {student.Fname} {student.Lname}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">نقش</label>
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400">
-                      <SelectValue placeholder="نقش را انتخاب کنید" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin" className="py-2 px-3 hover:bg-blue-50">مدیر</SelectItem>
-                      <SelectItem value="master" className="py-2 px-3 hover:bg-blue-50">مربی</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  onClick={handleCreateRole}
-                  disabled={isLoading || isStudentsLoading}
-                  className="w-full bg-gradient-to-r from-blue-500 to-green-400 text-white font-bold py-2 rounded-lg shadow hover:from-blue-600 hover:to-green-500 transition-all duration-200"
-                >
-                  {isLoading ? 'در حال ایجاد...' : 'ایجاد نقش'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </div>
         </div>
-        <hr className="mb-6 border-gray-200" />
-        <div className="overflow-x-auto rounded-lg">
-          <Table className="w-full text-center">
-            <TableHeader>
-              <TableRow className="">
-                <TableHead className="text-gray-700 font-bold text-lg">شناسه کاربر</TableHead>
-                <TableHead className="text-gray-700 font-bold text-lg">نام نقش</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {roles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={2} className="py-6 text-gray-400">هیچ نقشی وجود ندارد</TableCell>
-                </TableRow>
-              ) : (
-                roles.map((role, idx) => (
-                  <TableRow
-                    key={role.id}
-                    className={
-                      idx % 2 === 0
-                        ? 'bg-white hover:bg-blue-50 transition-all duration-150'
-                        : 'bg-gray-50 hover:bg-blue-50 transition-all duration-150'
-                    }
-                  >
-                    <TableCell className="py-3 text-lg text-gray-700">{role.user_id}</TableCell>
-                    <TableCell className="py-3 text-lg font-semibold text-gray-800">
-                      {roleTranslations[role.name as keyof typeof roleTranslations] || role.name}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+
+        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
+          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+            <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست نقش‌ها</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  <tr>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">نام نقش</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">توضیحات</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  <AnimatePresence mode="wait">
+                    {roles.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                          هیچ نقشی وجود ندارد
+                        </td>
+                      </tr>
+                    ) : (
+                      roles.map((role, idx) => (
+                        <motion.tr
+                          key={role.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.2 }}
+                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
+                        >
+                         
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleTranslations[role.name as keyof typeof roleTranslations]?.color || generateRoleColor(role.name)}`}>
+                              {roleTranslations[role.name as keyof typeof roleTranslations]?.fa || role.name}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                            {role.description || '-'}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                              onClick={() => handleRemoveRole(role.id, role.user_id)}
+                            >
+                              حذف
+                            </Button>
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </PageTransition>
   );
 }

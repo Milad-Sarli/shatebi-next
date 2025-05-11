@@ -24,6 +24,27 @@ export interface SingleAppRoleResponse {
     data: AppRole;
 }
 
+export interface RoleAssignmentResponse {
+    message: string;
+}
+
+export interface AppRoleCreateData {
+    name: string;
+    user_id: number;
+    description?: string;
+}
+
+export interface AppRoleUpdateData {
+    name?: string;
+    user_id?: number;
+    description?: string;
+}
+
+export interface RoleAssignmentData {
+    user_id: number;
+    role_id: number;
+}
+
 export class AppRoleService {
     static async getAppRoles(filters: AppRoleFilters, token: string): Promise<AppRoleResponse> {
         const queryParams = new URLSearchParams();
@@ -62,7 +83,7 @@ export class AppRoleService {
         return response.json();
     }
 
-    static async createAppRole(data: { name: string; user_id: number }, token: string): Promise<SingleAppRoleResponse> {
+    static async createAppRole(data: AppRoleCreateData, token: string): Promise<SingleAppRoleResponse> {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles`, {
             method: "POST",
             headers: {
@@ -81,7 +102,7 @@ export class AppRoleService {
         return response.json();
     }
 
-    static async updateAppRole(id: number, data: { name?: string; user_id?: number }, token: string): Promise<SingleAppRoleResponse> {
+    static async updateAppRole(id: number, data: AppRoleUpdateData, token: string): Promise<SingleAppRoleResponse> {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/${id}`, {
             method: "PUT",
             headers: {
@@ -114,6 +135,44 @@ export class AppRoleService {
             const error = await response.json();
             throw new Error(error.message || "Failed to delete app role");
         }
+    }
+
+    static async assignRole(data: RoleAssignmentData, token: string): Promise<RoleAssignmentResponse> {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/assign`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Failed to assign role");
+        }
+
+        return response.json();
+    }
+
+    static async removeRole(data: RoleAssignmentData, token: string): Promise<RoleAssignmentResponse> {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/remove`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Failed to remove role");
+        }
+
+        return response.json();
     }
 
     static async hasMasterRole(userId: number, token: string): Promise<boolean> {
