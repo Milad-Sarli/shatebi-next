@@ -59,6 +59,10 @@ const educationLevels = [
   { value: 'دانشگاه', label: 'دانشگاه' },
 ];
 
+interface ApiError extends Error {
+  message: string;
+}
+
 export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -157,8 +161,9 @@ export default function RegistrationForm() {
       }, accessToken);
       alert('ثبت نام با موفقیت انجام شد');
       setForm(initialState);
-    } catch (error: any) {
-      alert(error.message || 'خطا در ثبت نام');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      alert(apiError.message || 'خطا در ثبت نام');
     } finally {
       setLoading(false);
     }

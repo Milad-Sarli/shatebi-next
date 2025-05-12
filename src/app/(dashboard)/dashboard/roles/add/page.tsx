@@ -101,7 +101,7 @@ export default function CreateRolePage() {
         description: 'نقش با موفقیت ایجاد شد',
       });
       router.push('/dashboard/roles');
-    } catch (error) {
+    } catch {
       toast({
         title: 'خطا',
         description: 'در ایجاد نقش مشکلی پیش آمده است',

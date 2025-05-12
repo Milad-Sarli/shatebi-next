@@ -57,13 +57,13 @@ const items = [
     title: "نمرات",
     href: "/dashboard/optimizedNumbers",
     icon: GraduationCap,
-    requiredRole: "admin"
+    requiredRole: ["admin", "master"]
   },
   {
     title: "ثبت نمرات",
     href: "/dashboard/optimizedNumbers/add", 
     icon: GraduationCap,
-    requiredRole: "admin"
+    requiredRole: ["admin", "master"]
   },
 ];
 
@@ -71,9 +71,12 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const hasRequiredRole = (requiredRole: string) => {
+  const hasRequiredRole = (requiredRole: string | string[]) => {
     if (!user?.app_roles) return false;
-    return user.app_roles.some(role => role.name === requiredRole);
+    if (Array.isArray(requiredRole)) {
+      return requiredRole.some(role => user?.app_roles?.some(userRole => userRole.name === role) ?? false);
+    }
+    return user?.app_roles?.some(role => role.name === requiredRole) ?? false;
   };
 
   const filteredItems = items.filter(item => {

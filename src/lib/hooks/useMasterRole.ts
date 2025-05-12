@@ -1,33 +1,25 @@
 import { useState, useEffect } from 'react';
 import { AppRoleService } from '@/lib/services/approle.service';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/lib/context/auth.context';
 
 export const useMasterRole = () => {
     const [isMaster, setIsMaster] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const { user, token } = useAuth();
+    const { user, accessToken } = useAuth();
 
     useEffect(() => {
         const checkMasterRole = async () => {
-            if (!user || !token) {
-                setIsMaster(false);
-                setLoading(false);
-                return;
-            }
-
+            if (!user || !accessToken) return;
             try {
-                const hasMaster = await AppRoleService.hasMasterRole(user.id, token);
+                const hasMaster = await AppRoleService.hasMasterRole(user.id, accessToken);
                 setIsMaster(hasMaster);
             } catch (error) {
                 console.error('Error checking master role:', error);
                 setIsMaster(false);
-            } finally {
-                setLoading(false);
             }
         };
 
         checkMasterRole();
-    }, [user, token]);
+    }, [user, accessToken]);
 
-    return { isMaster, loading };
+    return isMaster;
 }; 

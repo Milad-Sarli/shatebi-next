@@ -2,15 +2,19 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // List of public routes that don't require authentication
-const publicRoutes = ['/auth/login', '/auth/register']
+const publicRoutes = ['/auth/login', '/auth/register', '/registeration/1']
 
 // List of admin-only routes
 const adminRoutes = ['/dashboard/roles']
 
+interface AppRole {
+  name: string;
+  [key: string]: unknown;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const accessToken = request.cookies.get('access_token')
-  const userData = request.cookies.get('user')
   const appRoles = request.cookies.get('app_roles')
 
   // Check if the route is public
@@ -32,8 +36,8 @@ export function middleware(request: NextRequest) {
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route))
   if (isAdminRoute) {
     // Parse app roles from cookie
-    const roles = appRoles ? JSON.parse(decodeURIComponent(appRoles.value)) : []
-    const isAdmin = roles.some((role: any) => role.name === 'admin')
+    const roles = appRoles ? JSON.parse(decodeURIComponent(appRoles.value)) as AppRole[] : []
+    const isAdmin = roles.some((role) => role.name === 'admin')
 
     if (!isAdmin) {
       // Redirect to dashboard if user is not admin   

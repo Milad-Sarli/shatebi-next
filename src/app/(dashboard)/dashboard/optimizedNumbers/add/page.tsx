@@ -35,6 +35,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Image from "next/image";
+import { UseFormReturn } from "react-hook-form";
 
 interface Course {
   id: number;
@@ -145,6 +146,13 @@ interface StudentWithGrades {
   grades: Grade[];
 }
 
+interface FormRefs {
+  multiGradeForm: UseFormReturn<z.infer<typeof pageBasedSchema>>;
+  surahForm: UseFormReturn<z.infer<typeof surahBasedSchema>>;
+  partForm: UseFormReturn<z.infer<typeof partBasedSchema>>;
+  activeTab: string;
+}
+
 interface AddGradeModalProps {
   student: StudentType;
   onSubmit: (data: Record<string, unknown>) => void;
@@ -152,34 +160,16 @@ interface AddGradeModalProps {
   onOpenChange: (open: boolean) => void;
   isOneGrade?: boolean;
   selectedCourse?: Course | null;
+  onFormRefsChange?: (refs: FormRefs) => void;
 }
 
-function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse }: AddGradeModalProps) {
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse, onFormRefsChange }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
   const [surahs, setSurahs] = React.useState<Surah[]>([]);
   const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
   const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
   const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
   const { accessToken } = useAuth();
-  // const getVersesFromjoze = (jozeString: string) => {
-  //   try {
-  //     const jozeData = JSON.parse(jozeString);
-  //     const verses: number[] = [];
-      
-  //     jozeData.forEach((joze: any) => {
-  //       const startVerse = parseInt(joze.verse.start.replace('verse_', ''));
-  //       const endVerse = parseInt(joze.verse.end.replace('verse_', ''));
-  //       for (let i = startVerse; i <= endVerse; i++) {
-  //         verses.push(i);
-  //       }
-  //     });
-      
-  //     return verses;
-  //   } catch (error) {
-  //     console.error('Error parsing joze data:', error);
-  //     return [];
-  //   }
-  // };
   const oneGradeForm = useForm({
     resolver: zodResolver(oneGradeSchema),
     defaultValues: {
@@ -233,9 +223,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       try {
         setIsLoadingSurahs(true);
         const response = await SurahService.getAllSurahs(accessToken);
-        // Check if response and data exist
         if (response && Array.isArray(response)) {
-          // Sort surahs by their index
           const sortedSurahs = response.sort((a: Surah, b: Surah) => a.index - b.index);
           setSurahs(sortedSurahs);
         } else {
@@ -252,12 +240,12 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
     
     fetchSurahs();
   }, [accessToken]);
+
   const handleStartSurahChange = (surahId: string) => {
     const selectedSurah = surahs.find(s => s.id.toString() === surahId);
     if (selectedSurah) {
       const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setStartSurahVerses(verses);
-      // Set the end surah to match the start surah
       surahForm.setValue("end_surah", surahId);
       handleEndSurahChange(surahId);
     }
@@ -267,7 +255,6 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
     if (selectedSurah) {
       const verses = Array.from({ length: selectedSurah.count }, (_, i) => i + 1);
       setEndSurahVerses(verses);
-      // Update the form value for end_surah
       surahForm.setValue("end_surah", surahId);
     }
   };
@@ -275,6 +262,17 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   const handleSubmit = (data: Record<string, unknown>) => {
     onSubmit({ ...data, type: activeTab });
   };
+
+  React.useEffect(() => {
+    if (onFormRefsChange) {
+      onFormRefsChange({
+        multiGradeForm,
+        surahForm,
+        partForm,
+        activeTab
+      });
+    }
+  }, [multiGradeForm, surahForm, partForm, activeTab, onFormRefsChange]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -725,14 +723,11 @@ interface SelectCourseModalProps {
 }
 
 function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: SelectCourseModalProps) {
-  // Combine parent course and its children, removing duplicates by title
   const allCourses = React.useMemo(() => {
     const courses: Course[] = [];
     
-    // First add all children courses
     if (dars?.children && dars.children.length > 0) {
       dars.children.forEach((child) => {
-        // Only add if there's no course with the same title
         if (!courses.some(course => course.title === child.title)) {
           courses.push({
             id: child.id,
@@ -743,7 +738,6 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
       });
     }
     
-    // Add parent course only if its title is not already in children
     if (dars && !courses.some(course => course.title.includes(dars.title))) {
       courses.push({
         id: dars.id,
@@ -791,6 +785,29 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
   );
 }
 
+interface ValidationError {
+  response?: {
+    data?: {
+      errors?: Record<string, string[]>;
+    };
+  };
+}
+
+interface FormField {
+  hefz?: number;
+  tajvid?: number;
+  sout?: number;
+  details?: number;
+  start_page?: number;
+  end_page?: number;
+  start_surah?: string;
+  start_verse?: number;
+  end_surah?: string;
+  end_verse?: number;
+  start_joze?: number;
+  end_joze?: number;
+}
+
 export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
@@ -804,6 +821,7 @@ export default function AddNumberPage() {
   const [isOneGrade, setIsOneGrade] = React.useState(false);
   const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
   const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
+  const [formRefs, setFormRefs] = React.useState<FormRefs | null>(null);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -832,7 +850,6 @@ export default function AddNumberPage() {
           accessToken
         );
 
-        // Create a map to track students' grades for the selected date
         const gradesMap: Record<number, Grade[]> = {};
         const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
 
@@ -845,7 +862,6 @@ export default function AddNumberPage() {
           }
         });
 
-        // Remove duplicate students while preserving their grade information
         const uniqueStudents = Array.from(
           new Map(response.data.map(item => [item.student.id, item])).values()
         );
@@ -886,7 +902,6 @@ export default function AddNumberPage() {
     try {
       setLoading(true);
 
-      // Define the type for the payload
       type PayloadType = {
         class_id: number;
         master_id: number;
@@ -911,7 +926,6 @@ export default function AddNumberPage() {
         end_joze?: number;
       };
 
-      // Create the base payload
       const payload: PayloadType = {
         class_id: selectedClass.id,
         master_id: selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0,
@@ -928,7 +942,6 @@ export default function AddNumberPage() {
         tenant_id: 0,
       };
 
-      // Add type-specific fields
       if (data.type === 'page') {
         payload.start_page = parseInt(data.start_page as string);
         payload.end_page = parseInt(data.end_page as string);
@@ -947,14 +960,12 @@ export default function AddNumberPage() {
       setIsModalOpen(false);
       setSelectedCourse(null);
       
-      // Refresh the student data to get the updated grades
       const response = await optimizedClassService.getStudents(
         selectedClass.id,
         selectedDate,
         accessToken
       );
       
-      // Update the grades for this student
       const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
       const student = response.data.find(s => s.student.id === selectedStudent.id);
       if (student) {
@@ -966,33 +977,40 @@ export default function AddNumberPage() {
           [selectedStudent.id]: todayGrades
         }));
       }
-    } catch (error: any) {
-      console.error(error);
-      if (error.response?.data?.errors) {
-        // Handle validation errors from the server
-        const errors = error.response.data.errors;
+    } catch (error: unknown) {
+      const validationError = error as ValidationError;
+      console.error(validationError);
+      if (validationError.response?.data?.errors) {
+        const errors = validationError.response.data.errors;
         Object.keys(errors).forEach((field) => {
           const errorMessage = errors[field][0];
-          // Convert English error messages to Persian
           const persianMessage = errorMessage
             .replace("The tajvid field must not be greater than 10.", "نمره تجوید نباید بیشتر از 10 باشد")
             .replace("The hefz field must not be greater than 70.", "نمره حفظ نباید بیشتر از 70 باشد")
             .replace("The sout field must not be greater than 10.", "نمره صوت نباید بیشتر از 10 باشد")
             .replace("The details field must not be greater than 10.", "نمره تفاصیل نباید بیشتر از 10 باشد");
           
-          // Set the error message in the appropriate form
           if (isOneGrade) {
-            oneGradeForm.setError(field as any, { message: persianMessage });
+            toast.error(persianMessage);
+          } else if (!formRefs) {
+            toast.error(persianMessage);
           } else {
-            switch (activeTab) {
+            const fieldName = field as string;
+            switch (formRefs.activeTab) {
               case 'page':
-                multiGradeForm.setError(field as any, { message: persianMessage });
+                if (fieldName in pageBasedSchema.shape) {
+                  formRefs.multiGradeForm.setError(fieldName as keyof z.infer<typeof pageBasedSchema>, { message: persianMessage });
+                }
                 break;
               case 'surah':
-                surahForm.setError(field as any, { message: persianMessage });
+                if (fieldName in surahBasedSchema.shape) {
+                  formRefs.surahForm.setError(fieldName as keyof z.infer<typeof surahBasedSchema>, { message: persianMessage });
+                }
                 break;
               case 'part':
-                partForm.setError(field as any, { message: persianMessage });
+                if (fieldName in partBasedSchema.shape) {
+                  formRefs.partForm.setError(fieldName as keyof z.infer<typeof partBasedSchema>, { message: persianMessage });
+                }
                 break;
             }
           }
@@ -1012,7 +1030,6 @@ export default function AddNumberPage() {
   };
 
   const handleEditGrade = async (studentId: number, grade: Grade) => {
-    // TODO: Implement grade editing functionality
     console.log("Editing grade for student", studentId, grade);
   };
   
@@ -1281,6 +1298,7 @@ export default function AddNumberPage() {
             onOpenChange={setIsModalOpen}
             isOneGrade={isOneGrade}
             selectedCourse={selectedCourse}
+            onFormRefsChange={setFormRefs}
           />
         </>
       )}

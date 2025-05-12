@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AppRoleService, AppRole } from '@/lib/services/approle.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,13 +67,7 @@ export default function RolesPage() {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  useEffect(() => {
-    if (accessToken) {
-      fetchRoles();
-    }
-  }, [accessToken]);
-
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await AppRoleService.getAppRoles({}, accessToken!);
       setRoles(response.data);
@@ -84,7 +78,13 @@ export default function RolesPage() {
         description: 'در دریافت لیست نقش‌ها مشکلی پیش آمده است',
       });
     }
-  };
+  }, [accessToken, toast]);
+
+  useEffect(() => {
+    if (accessToken) {
+      fetchRoles();
+    }
+  }, [accessToken, fetchRoles]);
 
   const handleRemoveRole = async (roleId: number, userId: number) => {
     try {
