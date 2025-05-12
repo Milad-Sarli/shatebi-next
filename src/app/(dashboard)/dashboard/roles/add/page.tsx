@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppRoleService } from '@/lib/services/approle.service';
+import { AppRolePermissionService } from '@/lib/services/app-role-permission.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +12,17 @@ import { useAuth } from '@/lib/context/auth.context';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CreateRolePage() {
   const [roleName, setRoleName] = useState<string>('');
   const [roleDescription, setRoleDescription] = useState<string>('');
+  const [permissions, setPermissions] = useState({
+    create: false,
+    view: false,
+    edit: false,
+    delete: false
+  });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { accessToken, user } = useAuth();
@@ -39,7 +47,8 @@ export default function CreateRolePage() {
 
     setIsLoading(true);
     try {
-      await AppRoleService.createAppRole(
+      // Create the role first
+      const roleResponse = await AppRoleService.createAppRole(
         {
           name: roleName,
           description: roleDescription,
@@ -47,6 +56,46 @@ export default function CreateRolePage() {
         },
         accessToken!
       );
+
+      // Create permissions for the role
+      const roleId = roleResponse.data.id;
+      const permissionPromises = [];
+
+      if (permissions.create) {
+        permissionPromises.push(
+          AppRolePermissionService.createAppRolePermission(
+            { role_id: roleId, permission: 'create' },
+            accessToken!
+          )
+        );
+      }
+      if (permissions.view) {
+        permissionPromises.push(
+          AppRolePermissionService.createAppRolePermission(
+            { role_id: roleId, permission: 'view' },
+            accessToken!
+          )
+        );
+      }
+      if (permissions.edit) {
+        permissionPromises.push(
+          AppRolePermissionService.createAppRolePermission(
+            { role_id: roleId, permission: 'edit' },
+            accessToken!
+          )
+        );
+      }
+      if (permissions.delete) {
+        permissionPromises.push(
+          AppRolePermissionService.createAppRolePermission(
+            { role_id: roleId, permission: 'delete' },
+            accessToken!
+          )
+        );
+      }
+
+      await Promise.all(permissionPromises);
+
       toast({
         title: 'موفق',
         description: 'نقش با موفقیت ایجاد شد',
@@ -109,6 +158,53 @@ export default function CreateRolePage() {
                   className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
                 />
               </div>
+
+              <div className="space-y-4">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">دسترسی‌ها</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="create"
+                      checked={permissions.create}
+                      onCheckedChange={(checked) => 
+                        setPermissions(prev => ({ ...prev, create: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="create">ایجاد</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="view"
+                      checked={permissions.view}
+                      onCheckedChange={(checked) => 
+                        setPermissions(prev => ({ ...prev, view: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="view">مشاهده</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit"
+                      checked={permissions.edit}
+                      onCheckedChange={(checked) => 
+                        setPermissions(prev => ({ ...prev, edit: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="edit">ویرایش</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="delete"
+                      checked={permissions.delete}
+                      onCheckedChange={(checked) => 
+                        setPermissions(prev => ({ ...prev, delete: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="delete">حذف</Label>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={handleCreateRole}
                 disabled={isLoading}

@@ -1126,21 +1126,23 @@ export default function AddNumberPage() {
                             </span>
                           </motion.div>
                         </div>
-                        {!existingGrades[studentData.student.id] && (
+                        {(!existingGrades[studentData.student.id] || existingGrades[studentData.student.id].length < 3) && (
                           <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 + 0.4 }}
                           >
                             {isWithin24Hours(new Date().toString()) ? (
-                              <Button
-                                onClick={() => handleAddNumber(studentData.student.id)}
-                                disabled={loading}
-                                size="sm"
-                                className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
-                              >
-                                افزودن نمره
-                              </Button>
+                              <div className="flex flex-col items-end gap-1">
+                                <Button
+                                  onClick={() => handleAddNumber(studentData.student.id)}
+                                  disabled={loading}
+                                  size="sm"
+                                  className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
+                                >
+                                  افزودن نمره
+                                </Button>
+                              </div>
                             ) : (
                               <span className="text-xs text-zinc-500 dark:text-zinc-400">
                                 زمان افزودن نمره به پایان رسیده است
