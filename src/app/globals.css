@@ -165,3 +165,31 @@
     background-position: 0% 50%;
   }
 }
+
+/* === Pinar Font Faces === */
+@font-face {
+  font-family: 'Pinar';
+  src: url('/fonts/Pinar-DS2-FD-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pinar';
+  src: url('/fonts/Pinar-DS2-FD-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pinar';
+  src: url('/fonts/Pinar-DS2-FD-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Set Pinar as default font */
+body, * {
+  font-family: 'Pinar', Tahoma, Arial, sans-serif !important;
+}
