@@ -4,21 +4,24 @@ import { useEffect, useState } from 'react';
 import { AppRoleService, AppRole } from '@/lib/services/approle.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/context/auth.context';
 import { useTheme } from 'next-themes';
-import { Sun, Moon, Plus, Search, Link2, Loader2 } from 'lucide-react';
+import { Sun, Moon, Plus, Trash2 } from 'lucide-react';
 import { PageTransition } from '@/components/ui/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 import { useRouter } from 'next/navigation';
 
 const roleTranslations = {
@@ -54,12 +57,9 @@ const generateRoleColor = (roleName: string) => {
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [roleName, setRoleName] = useState<string>('');
-  const [roleDescription, setRoleDescription] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<{ id: number; user_id: number } | null>(null);
   const { toast } = useToast();
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -77,60 +77,12 @@ export default function RolesPage() {
     try {
       const response = await AppRoleService.getAppRoles({}, accessToken!);
       setRoles(response.data);
-    } catch (error) {
+      setRoleToDelete(null);
+    } catch {
       toast({
         title: 'خطا',
         description: 'در دریافت لیست نقش‌ها مشکلی پیش آمده است',
       });
-    }
-  };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setIsDialogOpen(open);
-  };
-
-  const handleCreateRole = async () => {
-    if (!roleName) {
-      toast({
-        title: 'خطا',
-        description: 'لطفا نام نقش را وارد کنید',
-      });
-      return;
-    }
-
-    if (!user?.id) {
-      toast({
-        title: 'خطا',
-        description: 'شناسه کاربری یافت نشد',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await AppRoleService.createAppRole(
-        {
-          name: roleName,
-          description: roleDescription,
-          user_id: user.id
-        },
-        accessToken!
-      );
-      toast({
-        title: 'موفق',
-        description: 'نقش با موفقیت ایجاد شد',
-      });
-      fetchRoles();
-      setRoleName('');
-      setRoleDescription('');
-      setIsDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: 'خطا',
-        description: 'در ایجاد نقش مشکلی پیش آمده است',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -147,8 +99,9 @@ export default function RolesPage() {
         title: 'موفق',
         description: 'نقش با موفقیت حذف شد',
       });
-      fetchRoles();
-    } catch (error) {
+      setRoles((prevRoles) => prevRoles.filter(role => !(role.id == roleId)));
+      setRoleToDelete(null);
+    } catch {
       toast({
         title: 'خطا',
         description: 'در حذف نقش مشکلی پیش آمده است',
@@ -209,7 +162,7 @@ export default function RolesPage() {
                         </td>
                       </tr>
                     ) : (
-                      roles.map((role, idx) => (
+                      roles.map((role) => (
                         <motion.tr
                           key={role.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -218,7 +171,6 @@ export default function RolesPage() {
                           transition={{ duration: 0.2 }}
                           className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                         >
-                         
                           <td className="whitespace-nowrap px-4 py-3">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleTranslations[role.name as keyof typeof roleTranslations]?.color || generateRoleColor(role.name)}`}>
                               {roleTranslations[role.name as keyof typeof roleTranslations]?.fa || role.name}
@@ -228,14 +180,39 @@ export default function RolesPage() {
                             {role.description || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                              onClick={() => handleRemoveRole(role.id, role.user_id)}
-                            >
-                              حذف
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                  onClick={() => setRoleToDelete({ id: role.id, user_id: role.user_id })}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    این عمل قابل بازگشت نیست. نقش &apos;{roleTranslations[role.name as keyof typeof roleTranslations]?.fa || role.name}&apos; برای همیشه حذف خواهد شد.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setRoleToDelete(null)}>لغو</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => {
+                                      if (roleToDelete && roleToDelete.id === role.id) {
+                                        handleRemoveRole(roleToDelete.id, roleToDelete.user_id);
+                                      }
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </td>
                         </motion.tr>
                       ))

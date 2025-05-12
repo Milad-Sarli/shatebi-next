@@ -157,14 +157,13 @@ export class AppRoleService {
     }
 
     static async removeRole(data: RoleAssignmentData, token: string): Promise<RoleAssignmentResponse> {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/remove`, {
-            method: "POST",
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/${data.role_id}`, {
+            method: "DELETE",
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/json",
                 "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
+            }
         });
 
         if (!response.ok) {

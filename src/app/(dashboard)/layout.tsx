@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import Aurora from "@/components/reactbit/backgrounds/Aurora/Aurora";
 import GradientText from "@/components/reactbit/texts/GradientText";
 import Image from "next/image";
 
@@ -61,12 +60,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex h-full flex-col p-4">
           <Link href="/dashboard">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
                 <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
                 <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                   دارالقرآن
                 </span>
-              </div>
               <Button
                 variant="ghost"
                 size="icon"
