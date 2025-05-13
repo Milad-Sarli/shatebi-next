@@ -10,6 +10,7 @@ import {
   BookOpen,
   Shield,
   Briefcase,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
@@ -60,10 +61,10 @@ const items = [
     requiredRole: ["admin", "master"]
   },
   {
-    title: "ثبت نمرات",
-    href: "/dashboard/optimizedNumbers/add", 
-    icon: GraduationCap,
-    requiredRole: ["admin", "master"]
+    title: "متقاضیان", 
+    href: "/dashboard/applicants",
+    icon: UserPlus,
+    requiredRole: "admin"
   },
 ];
 

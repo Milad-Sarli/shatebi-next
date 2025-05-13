@@ -1,16 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DatePicker from '@/components/ui/DatePicker';
 import { ApplicantService } from '@/lib/services/applicant.service';
 import { useAuth } from '@/lib/context/auth.context';
 import { locationService, Province, City } from '@/lib/services/location.service';
 import { SingleSelectCombobox } from '@/components/ui/Combobox';
+import { useTheme } from '@/lib/context/theme.context';
+import { Sun, Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 
 interface FormState {
   Fname: string;
   Lname: string;
-  Aks: string;
+  Aks: string | File;
   FatherName: string;
   Mellicode: string;
   Birthday: string;
@@ -58,7 +62,7 @@ const educationLevels = [
   { value: 'دوازدهم', label: 'دوازدهم' },
   { value: 'دانشگاه', label: 'دانشگاه' },
 ];
-
+ 
 interface ApiError extends Error {
   message: string;
 }
@@ -67,10 +71,14 @@ export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const { accessToken, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -127,19 +135,29 @@ export default function RegistrationForm() {
     });
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm(prev => ({ ...prev, Aks: file } as FormState));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validate = () => {
     const newErrors: Partial<Record<keyof FormState, string>> = {};
     if (!form.Fname) newErrors.Fname = 'نام الزامی است';
     if (!form.Lname) newErrors.Lname = 'نام خانوادگی الزامی است';
     if (!form.FatherName) newErrors.FatherName = 'نام پدر الزامی است';
     if (!form.Mellicode) newErrors.Mellicode = 'کد ملی الزامی است';
-    if (!form.Birthday) newErrors.Birthday = 'تاریخ تولد الزامی است';
     if (!form.Phone) newErrors.Phone = 'شماره موبایل الزامی است';
     if (!form.Ostan) newErrors.Ostan = 'استان الزامی است';
     if (!form.City) newErrors.City = 'شهر الزامی است';
-    if (!form.Adress) newErrors.Adress = 'آدرس الزامی است';
     if (!form.Degree) newErrors.Degree = 'پایه تحصیلی الزامی است';
-    if (!form.Health) newErrors.Health = 'وضعیت سلامت الزامی است';
+    if (form.TelPhone && form.TelPhone.length > 11) newErrors.TelPhone = 'شماره تلفن ثابت نباید بیشتر از 11 کاراکتر باشد';
     return newErrors;
   };
 
@@ -150,135 +168,380 @@ export default function RegistrationForm() {
       setErrors(validationErrors);
       return;
     }
+    if (!accessToken) {
+      toast({
+        title: 'خطا',
+        description: 'شما وارد نشده‌اید.',
+        type: 'destructive',
+      });
+      return;
+    }
     setErrors({});
     setLoading(true);
     try {
-      if (!accessToken || !user) throw new Error('شما وارد نشده‌اید');
-      await ApplicantService.createApplicant({
-        ...form,
-        status: 1,
-        tenant_id: 1,
-      }, accessToken);
-      alert('ثبت نام با موفقیت انجام شد');
+      const formData = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (key === 'Aks' && value instanceof File) {
+          // Send the File object directly
+          formData.append('Aks', value); 
+          console.log('Image data:', value); // Log File object
+        } else {
+          formData.append(key, value as string);
+          console.log(`${key}:`, value); // Log other form fields
+        }
+      });
+      formData.set('status', '1');
+      formData.set('tenant_id', '1');
+
+      // Log all FormData entries
+      console.log('All FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'File object' : pair[1]));
+      }
+
+      await ApplicantService.createApplicant(formData, accessToken);
+      toast({
+        title: 'ثبت نام موفق',
+        description: 'ثبت نام شما با موفقیت انجام شد.',
+        type: 'default',
+      });
       setForm(initialState);
+      setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      alert(apiError.message || 'خطا در ثبت نام');
+      let message = apiError.message || 'خطا در ثبت نام';
+      if (message.includes('کد ملی') || message.includes('duplicate') || message.includes('تکراری')) {
+        toast({
+          title: 'کد ملی تکراری است',
+          description: 'این کد ملی قبلاً ثبت شده است. لطفاً کد ملی دیگری وارد کنید.',
+          type: 'destructive',
+        });
+      } else if (message.toLowerCase().includes('the aks field must be a file of type: jpeg, png, jpg')) {
+        toast({
+          title: 'خطا در آپلود عکس',
+          description: 'فیلد عکس باید یک فایل از نوع: jpeg ،png ،jpg باشد.',
+          type: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'خطا',
+          description: message,
+          type: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-8 bg-white rounded-2xl shadow-2xl mt-10 border border-gray-100" dir="rtl">
-      <h2 className="text-3xl font-extrabold mb-10 text-center text-black">فرم ثبت نام</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">نام</label>
-          <input name="Fname" value={form.Fname} onChange={handleChange} placeholder="نام را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-          {errors.Fname && <span className="text-red-500 text-sm mt-1">{errors.Fname}</span>}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 px-2 sm:px-6 lg:px-8 flex items-center justify-center">
+      <div className="w-full max-w-md sm:max-w-2xl mx-auto">
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
+            فرم ثبت نام <span className="text-green-600 dark:text-green-400">دارالقرآن امام شاطبی (رح)</span>
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">نام خانوادگی</label>
-          <input name="Lname" value={form.Lname} onChange={handleChange} placeholder="نام خانوادگی را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-          {errors.Lname && <span className="text-red-500 text-sm mt-1">{errors.Lname}</span>}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-4 sm:p-8">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                نام <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="Fname" 
+                value={form.Fname} 
+                onChange={handleChange} 
+                placeholder="نام را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+              {errors.Fname && <span className="text-red-500 text-xs mt-1">{errors.Fname}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                نام خانوادگی <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="Lname" 
+                value={form.Lname} 
+                onChange={handleChange} 
+                placeholder="نام خانوادگی را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+              {errors.Lname && <span className="text-red-500 text-xs mt-1">{errors.Lname}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                نام پدر <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="FatherName" 
+                value={form.FatherName} 
+                onChange={handleChange} 
+                placeholder="نام پدر را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                کد ملی <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="Mellicode" 
+                maxLength={10} 
+                value={form.Mellicode} 
+                onChange={handleChange} 
+                placeholder="کد ملی را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+              {errors.Mellicode && <span className="text-red-500 text-xs mt-1">{errors.Mellicode}</span>}
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                تاریخ تولد <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <div className="w-full">
+                <DatePicker 
+                  onChange={(date: Date) => {
+                    const d = new Date(date);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
+                  }} 
+                />
+                {form.Birthday && (
+                  <div className="text-xs text-gray-500 mt-2">{form.Birthday}</div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                شماره موبایل <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="Phone" 
+                maxLength={11} 
+                value={form.Phone} 
+                onChange={handleChange} 
+                placeholder="شماره موبایل را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+              {errors.Phone && <span className="text-red-500 text-xs mt-1">{errors.Phone}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                تلفن ثابت <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="TelPhone" 
+                value={form.TelPhone} 
+                onChange={handleChange} 
+                placeholder="تلفن ثابت را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                استان <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={provinces.map(province => ({
+                  value: province.name,
+                  label: province.name
+                }))}
+                value={form.Ostan}
+                onChange={handleProvinceChange}
+                placeholder="استان را انتخاب کنید"
+                emptyMessage="استانی یافت نشد"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                شهر <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={cities.map(city => ({
+                  value: city.name,
+                  label: city.name
+                }))}
+                value={form.City}
+                onChange={handleCityChange}
+                placeholder="شهر را انتخاب کنید"
+                emptyMessage="شهری یافت نشد"
+                searchable={true}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                روستا <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Vilage" 
+                value={form.Vilage} 
+                onChange={handleChange} 
+                placeholder="روستا را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                آدرس <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Adress" 
+                value={form.Adress} 
+                onChange={handleChange} 
+                placeholder="آدرس را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                پایه تحصیلی <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={educationLevels}
+                value={form.Degree}
+                onChange={(value) => setForm(prev => ({ ...prev, Degree: value }))}
+                placeholder="پایه تحصیلی را انتخاب کنید"
+                emptyMessage="پایه تحصیلی یافت نشد"
+              />
+              {errors.Degree && <span className="text-red-500 text-xs mt-1">{errors.Degree}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                معرف <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Referer" 
+                value={form.Referer} 
+                onChange={handleChange} 
+                placeholder="نام معرف را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                وضعیت سلامت <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Health" 
+                value={form.Health} 
+                onChange={handleChange} 
+                placeholder="وضعیت سلامت را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                توضیحات <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <textarea 
+                name="Description" 
+                value={form.Description} 
+                onChange={handleChange} 
+                placeholder="توضیحات را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition min-h-[60px]" 
+              />
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                عکس <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 300 * 1024) { // 300KB in bytes
+                        toast({
+                          title: "خطا", 
+                          description: "حجم عکس باید کمتر از 300 کیلوبایت باشد",
+                          type: "destructive"
+                        });
+                        e.target.value = '';
+                        return;
+                      }
+                      
+                      // Create image element to get dimensions
+                      const img = new Image();
+                      img.src = URL.createObjectURL(file);
+                      img.onload = () => {
+                        // Create canvas for cropping
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Calculate dimensions for square crop
+                        const size = Math.min(img.width, img.height);
+                        canvas.width = size;
+                        canvas.height = size;
+                        
+                        // Draw cropped image centered
+                        const offsetX = (img.width - size) / 2;
+                        const offsetY = (img.height - size) / 2;
+                        ctx?.drawImage(img, offsetX, offsetY, size, size, 0, 0, size, size);
+                        
+                        // Convert to blob and create preview
+                        canvas.toBlob((blob) => {
+                          if (blob) {
+                            const croppedFile = new File([blob], file.name, { type: file.type });
+                            setForm(prev => ({ ...prev, Aks: croppedFile }));
+                            setImagePreview(URL.createObjectURL(blob));
+                          }
+                        }, file.type);
+                      };
+                    }
+                  }}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+                />
+
+                {imagePreview && (
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="پیش‌نمایش عکس" 
+                      className="mt-2 rounded-full w-40 h-40 object-cover border-2 border-gray-200 dark:border-gray-700 mx-auto"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setForm(prev => ({ ...prev, Aks: '' }));
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute top-4 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-lg transition mt-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+                disabled={loading}
+              >
+                {loading ? 'در حال ثبت...' : 'ثبت نام'}
+              </button>
+            </div>
+          </form>
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">نام پدر</label>
-          <input name="FatherName" value={form.FatherName} onChange={handleChange} placeholder="نام پدر را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">کد ملی</label>
-          <input name="Mellicode" maxLength={10}  value={form.Mellicode} onChange={handleChange} placeholder="کد ملی را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-          {errors.Mellicode && <span className="text-red-500 text-sm mt-1">{errors.Mellicode}</span>}
-        </div>
-        <div className="flex flex-col gap-2 col-span-2">
-          <label className="text-base font-bold mb-1">تاریخ تولد</label>
-          <div className="w-full">
-            <DatePicker onChange={(date: Date) => {
-              const d = new Date(date);
-              const yyyy = d.getFullYear();
-              const mm = String(d.getMonth() + 1).padStart(2, '0');
-              const dd = String(d.getDate()).padStart(2, '0');
-              setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
-            }} />
-            {form.Birthday && (
-              <div className="text-xs text-gray-500 mt-2">{form.Birthday}</div>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">شماره موبایل</label>
-          <input name="Phone" maxLength={11} value={form.Phone} onChange={handleChange} placeholder="شماره موبایل را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-          {errors.Phone && <span className="text-red-500 text-sm mt-1">{errors.Phone}</span>}
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">تلفن ثابت</label>
-          <input name="TelPhone" value={form.TelPhone} onChange={handleChange} placeholder="تلفن ثابت را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">استان</label>
-          <SingleSelectCombobox
-            options={provinces.map(province => ({
-              value: province.name,
-              label: province.name
-            }))}
-            value={form.Ostan}
-            onChange={handleProvinceChange}
-            placeholder="استان را انتخاب کنید"
-            emptyMessage="استانی یافت نشد"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">شهر</label>
-          <SingleSelectCombobox
-            options={cities.map(city => ({
-              value: city.name,
-              label: city.name
-            }))}
-            value={form.City}
-            onChange={handleCityChange}
-            placeholder="شهر را انتخاب کنید"
-            emptyMessage="شهری یافت نشد"
-            searchable={true}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">روستا</label>
-          <input name="Vilage" value={form.Vilage} onChange={handleChange} placeholder="روستا را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="md:col-span-2 flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">آدرس</label>
-          <input name="Adress" value={form.Adress} onChange={handleChange} placeholder="آدرس را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">پایه تحصیلی</label>
-          <SingleSelectCombobox
-            options={educationLevels}
-            value={form.Degree}
-            onChange={(value) => setForm(prev => ({ ...prev, Degree: value }))}
-            placeholder="پایه تحصیلی را انتخاب کنید"
-            emptyMessage="پایه تحصیلی یافت نشد"
-          />
-          {errors.Degree && <span className="text-red-500 text-sm mt-1">{errors.Degree}</span>}
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">معرف</label>
-          <input name="Referer" value={form.Referer} onChange={handleChange} placeholder="نام معرف را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">وضعیت سلامت</label>
-          <input name="Health" value={form.Health} onChange={handleChange} placeholder="وضعیت سلامت را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" />
-        </div>
-        <div className="md:col-span-2 flex flex-col gap-2">
-          <label className="text-base font-bold mb-1">توضیحات</label>
-          <textarea name="Description" value={form.Description} onChange={handleChange} placeholder="توضیحات را وارد کنید" className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition min-h-[60px]" />
-        </div>
-       
-        <button type="submit" className="md:col-span-2 bg-blue-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-blue-700 transition mt-4 shadow-lg" disabled={loading}>
-          {loading ? 'در حال ثبت...' : 'ثبت نام'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
