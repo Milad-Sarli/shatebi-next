@@ -1095,7 +1095,7 @@ export default function AddNumberPage() {
                         classItem.optimized_class_masters?.[0]?.master?.fullname ||
                         classItem.optimized_class_masters?.[0]?.users?.fullname ||
                         "بدون استاد"
-                      }-${classItem.id || "بدون درس"}`,
+                      }`,
                     }))}
                     value={selectedClass?.id.toString()}
                     onChange={(value: string) => handleClassChange(value)}
