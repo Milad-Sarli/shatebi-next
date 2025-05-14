@@ -61,6 +61,12 @@ const items = [
     requiredRole: ["admin", "master"]
   },
   {
+    title: "ثبت نمرات",
+    href: "/dashboard/optimizedNumbers/add", 
+    icon: GraduationCap,
+    requiredRole: ["admin", "master"]
+  },
+  {
     title: "متقاضیان", 
     href: "/dashboard/applicants",
     icon: UserPlus,

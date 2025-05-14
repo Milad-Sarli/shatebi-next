@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/context/auth.context";
 import { Student, StudentService } from "@/lib/services/student.service";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -17,6 +17,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import DatePicker from "@/components/ui/DatePicker";
+import { locationService, Province, City } from '@/lib/services/location.service';
+import { SingleSelectCombobox } from '@/components/ui/Combobox';
+
+const educationLevels = [
+  { value: "پنجم", label: "پنجم" },
+  { value: "ششم", label: "ششم" },
+  { value: "هفتم", label: "هفتم" },
+  { value: "هشتم", label: "هشتم" },
+  { value: "نهم", label: "نهم" },
+  { value: "دهم", label: "دهم" },
+  { value: "یازدهم", label: "یازدهم" },
+  { value: "دوازدهم", label: "دوازدهم" },
+  { value: "دانشگاه", label: "دانشگاه" },
+];
 
 const studentSchema = z.object({
   Fname: z.string().min(1, "نام الزامی است"),
@@ -28,7 +44,13 @@ const studentSchema = z.object({
     .max(10, "کد ملی باید 10 رقم باشد"),
   FatherJob: z.string().min(1, "شغل پدر الزامی است"),
   Ostan: z.string().min(1, "استان الزامی است"),
-  status: z.enum(["active", "inactive"]),
+  status: z.enum([
+    "در حال تحصیل",
+    "ترک تحصیل",
+    "فارغ التحصیل",
+    "انتقالی",
+    "اخراجی",
+  ]),
   Aks: z.string().optional(),
   juz: z.string().optional(),
   ziafat: z.string().optional(),
@@ -62,9 +84,23 @@ interface StudentFormProps {
   onSuccess: () => void;
 }
 
+interface ApiErrorLike {
+  response?: {
+    data?: {
+      message?: string | Record<string, string[]>;
+      status?: string; // Added status based on usage
+    };
+  };
+  message?: string;
+}
+
 export function StudentForm({ student, onSuccess }: StudentFormProps) {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const { toast: customToast } = useToast();
+  const [provinces, setProvinces] = React.useState<Province[]>([]);
+  const [cities, setCities] = React.useState<City[]>([]);
+  const [selectedProvinceId, setSelectedProvinceId] = React.useState<number | null>(null);
 
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
@@ -75,7 +111,14 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       Mellicode: student?.Mellicode || "",
       FatherJob: student?.FatherJob || "",
       Ostan: student?.Ostan || "",
-      status: (student?.status as "active" | "inactive") || "active",
+      City: student?.City || "",
+      status:
+        (student?.status as
+          | "در حال تحصیل"
+          | "ترک تحصیل"
+          | "فارغ التحصیل"
+          | "انتقالی"
+          | "اخراجی") || "در حال تحصیل",
       Aks: student?.Aks || "",
       juz: student?.juz || "",
       ziafat: student?.ziafat || "",
@@ -86,7 +129,6 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       Phone: student?.Phone || "",
       TelPhone: student?.TelPhone || "",
       ParentPhone: student?.ParentPhone || "",
-      City: student?.City || "",
       Vilage: student?.Vilage || "",
       Adress: student?.Adress || "",
       Educating: student?.Educating || "",
@@ -103,6 +145,62 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
     },
   });
 
+  React.useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const provincesData = await locationService.getAllProvinces();
+        setProvinces(provincesData);
+        if (student && student.Ostan) {
+          const currentProvince = provincesData.find(p => p.name === student.Ostan);
+          if (currentProvince) {
+            setSelectedProvinceId(currentProvince.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching provinces:', error);
+        sonnerToast.error("خطا در دریافت لیست استان ها");
+      }
+    };
+    fetchProvinces();
+  }, [student]);
+
+  React.useEffect(() => {
+    const fetchCities = async () => {
+      if (selectedProvinceId) {
+        try {
+          const citiesData = await locationService.getCitiesByProvince(selectedProvinceId);
+          setCities(citiesData);
+        } catch (error) {
+          console.error('Error fetching cities:', error);
+          setCities([]);
+          sonnerToast.error("خطا در دریافت لیست شهر ها");
+        }
+      } else {
+        setCities([]);
+      }
+    };
+    fetchCities();
+  }, [selectedProvinceId]);
+
+  const handleProvinceChange = (value: string) => {
+    const province = provinces.find(p => p.name === value);
+    if (province) {
+      setSelectedProvinceId(province.id);
+      form.setValue("Ostan", value);
+      form.setValue("City", "");
+      setCities([]);
+    } else {
+      setSelectedProvinceId(null);
+      form.setValue("Ostan", "");
+      form.setValue("City", "");
+      setCities([]);
+    }
+  };
+
+  const handleCityChange = (value: string) => {
+    form.setValue("City", value);
+  };
+
   const onSubmit = async (data: StudentFormData) => {
     if (!accessToken) return;
 
@@ -110,14 +208,58 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       setLoading(true);
       if (student) {
         await StudentService.updateStudent(student.id, data, accessToken);
-        toast.success("دانش آموز با موفقیت ویرایش شد");
+        sonnerToast.success("دانش آموز با موفقیت ویرایش شد", {
+          style: { background: '#22c55e', color: '#fff' }
+        });
       } else {
         await StudentService.createStudent(data, accessToken);
-        toast.success("دانش آموز با موفقیت ایجاد شد");
+        sonnerToast.success("دانش آموز با موفقیت ایجاد شد", {
+          style: { background: '#22c55e', color: '#fff' }
+        });
       }
       onSuccess();
-    } catch (error) {
-      toast.error("خطا در ذخیره اطلاعات دانش آموز");
+    } catch (error: unknown) {
+      console.error("Full error object from backend:", (error as ApiErrorLike).response || error);
+      const apiError = error as ApiErrorLike;
+
+      if (apiError.response && apiError.response.data) {
+        const errorData = apiError.response.data;
+        console.log("Received errorData from backend:", errorData);
+
+        if (errorData.status === "error") {
+          if (errorData.message === "کد ملی تکراری است") {
+            console.log("Attempting to set Mellicode error in form state (for form validity).");
+            form.setError("Mellicode", {
+              type: "manual",
+              message: "کد ملی تکراری است",
+            });
+            console.log("Current form.formState.errors after setError:", JSON.parse(JSON.stringify(form.formState.errors)));
+            customToast({
+              title: "کد ملی تکراری است",
+              description: "این کد ملی قبلاً ثبت شده است. لطفاً کد ملی دیگری وارد کنید.",
+              type: "destructive",
+            });
+          } else if (typeof errorData.message === "object") {
+            console.log("Attempting to set Laravel validation errors:", errorData.message);
+            Object.keys(errorData.message).forEach((field) => {
+              const messages = (errorData.message as Record<string, string[]>)[field];
+              if (messages && messages.length > 0) {
+                form.setError(field as keyof StudentFormData, {
+                  type: "manual",
+                  message: messages[0],
+                });
+              }
+            });
+            sonnerToast.error("خطا در اعتبار سنجی اطلاعات وارد شده");
+          } else {
+            sonnerToast.error(errorData.message || "خطا در ذخیره اطلاعات دانش آموز");
+          }
+        } else {
+          sonnerToast.error("خطا در ذخیره اطلاعات دانش آموز");
+        }
+      } else {
+        sonnerToast.error("خطا در ارتباط با سرور");
+      }
       console.error(error);
     } finally {
       setLoading(false);
@@ -168,6 +310,7 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
         <div className="space-y-2">
           <Label htmlFor="Mellicode">کد ملی</Label>
           <Input
+          maxLength={10}
             id="Mellicode"
             {...form.register("Mellicode")}
             placeholder="کد ملی"
@@ -192,13 +335,63 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
             </p>
           )}
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="Entryday">تاریخ ورود</Label>
+          <DatePicker
+            onChange={(date: Date) => {
+              const d = new Date(date);
+              const yyyy = d.getFullYear();
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              form.setValue("Entryday", `${yyyy}-${mm}-${dd}`);
+            }}
+          />
+          {form.watch("Entryday") && (
+            <div className="text-xs text-gray-500 mt-2">
+              {form.watch("Entryday")}
+            </div>
+          )}
+        </div>
+
+      </div>
 
         <div className="space-y-2">
           <Label htmlFor="Ostan">استان</Label>
-          <Input id="Ostan" {...form.register("Ostan")} placeholder="استان" />
+          <SingleSelectCombobox
+            options={provinces.map(province => ({
+              value: province.name,
+              label: province.name
+            }))}
+            value={form.watch("Ostan")}
+            onChange={handleProvinceChange}
+            placeholder="استان را انتخاب کنید"
+            emptyMessage="استانی یافت نشد"
+            searchable={true}
+          />
           {form.formState.errors.Ostan && (
             <p className="text-sm text-red-500">
               {form.formState.errors.Ostan.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="City">شهر</Label>
+          <SingleSelectCombobox
+            options={cities.map(city => ({
+              value: city.name,
+              label: city.name
+            }))}
+            value={form.watch("City")}
+            onChange={handleCityChange}
+            placeholder="شهر را انتخاب کنید"
+            emptyMessage="شهری یافت نشد (ابتدا استان را انتخاب کنید)"
+            searchable={true}
+          />
+          {form.formState.errors.City && (
+            <p className="text-sm text-red-500">
+              {form.formState.errors.City.message}
             </p>
           )}
         </div>
@@ -208,19 +401,54 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
           <Select
             value={form.watch("status")}
             onValueChange={(value) =>
-              form.setValue("status", value as "active" | "inactive")
+              form.setValue(
+                "status",
+                value as
+                  | "در حال تحصیل"
+                  | "ترک تحصیل"
+                  | "فارغ التحصیل"
+                  | "انتقالی"
+                  | "اخراجی"
+              )
             }
           >
             <SelectTrigger>
               <SelectValue placeholder="انتخاب وضعیت" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">فعال</SelectItem>
-              <SelectItem value="inactive">غیرفعال</SelectItem>
+              <SelectItem value="در حال تحصیل">در حال تحصیل</SelectItem>
+              <SelectItem value="ترک تحصیل">ترک تحصیل</SelectItem>
+              <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
+              <SelectItem value="انتقالی">انتقالی</SelectItem>
+              <SelectItem value="اخراجی">اخراجی</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
+<div className="space-y-2">
+<Label htmlFor="Educating">پایه تحصیلی</Label>
+<Select value={form.watch("Educating") || ""}
+  onValueChange={(value) => {
+    form.setValue("Educating", value);
+  }}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="انتخاب پایه تحصیلی" />
+  </SelectTrigger>
+  <SelectContent>
+    {educationLevels.map((level) => (
+      <SelectItem key={level.value} value={level.value}>
+        {level.label}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+{form.formState.errors.Educating && (
+  <p className="text-sm text-red-500">
+    {form.formState.errors.Educating.message}
+  </p>
+)}
+</div>
         <div className="space-y-2">
           <Label htmlFor="Phone">شماره تماس</Label>
           <Input
@@ -239,16 +467,15 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="City">شهر</Label>
-          <Input id="City" {...form.register("City")} placeholder="شهر" />
-        </div>
+     
 
         <div className="space-y-2">
           <Label htmlFor="Adress">آدرس</Label>
           <Input id="Adress" {...form.register("Adress")} placeholder="آدرس" />
         </div>
       </div>
+
+  
 
       <div className="flex justify-end gap-2">
         <Button

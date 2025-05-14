@@ -25,8 +25,8 @@ export interface Applicant {
 export interface PaginatedResponse<T> {
     data: T[];
     links: {
-        first: string;
-        last: string;
+        first: string | null;
+        last: string | null;
         prev: string | null;
         next: string | null;
     };
@@ -73,26 +73,42 @@ export class ApplicantService {
             try {
                 const error = await response.json();
                 errorDetails = error.message || errorDetails;
-            } catch (e) {
+            } catch (_e) { // eslint-disable-line @typescript-eslint/no-unused-vars
                 errorDetails = response.statusText || errorDetails;
             }
             throw new Error(errorDetails);
         }
 
-        const backendResponse: any = await response.json();
+        const backendResponse: unknown = await response.json();
         console.log('Received backend response for applicants:', backendResponse);
 
-        let paginatorObject: any;
+        // Define a more specific type for what we expect from backendResponse or its .data property
+        type ExpectedPaginatorData = {
+            data?: Applicant[];
+            current_page?: unknown;
+            first_page_url?: unknown;
+            last_page_url?: unknown;
+            prev_page_url?: unknown;
+            next_page_url?: unknown;
+            from?: unknown;
+            last_page?: unknown;
+            path?: unknown;
+            per_page?: unknown;
+            to?: unknown;
+            total?: unknown;
+        };
 
-        // Scenario 1: Backend response matches { some_outer_key: '...', data: PAGINATOR_OBJECT }
-        if (backendResponse && typeof backendResponse.data === 'object' && backendResponse.data !== null && typeof backendResponse.data.current_page !== 'undefined') {
-            paginatorObject = backendResponse.data;
+        let paginatorObject: ExpectedPaginatorData | null = null;
+
+        // Check if backendResponse itself is the paginator or if it's nested under '.data'
+        const brAsRecord = backendResponse as Record<string, unknown>;
+
+        if (brAsRecord && typeof brAsRecord.data === 'object' && brAsRecord.data !== null && typeof (brAsRecord.data as Record<string, unknown>).current_page !== 'undefined') {
+            paginatorObject = brAsRecord.data as ExpectedPaginatorData;
         }
-        // Scenario 2: Backend response IS the PAGINATOR_OBJECT directly
-        else if (backendResponse && typeof backendResponse.current_page !== 'undefined') {
-            paginatorObject = backendResponse;
+        else if (brAsRecord && typeof brAsRecord.current_page !== 'undefined') {
+            paginatorObject = brAsRecord as ExpectedPaginatorData;
         }
-        // Scenario 3: Backend response is a simple array (handle as non-paginated data)
         else if (Array.isArray(backendResponse)) {
             console.warn('Backend returned a simple array for applicants. Pagination will be mocked. Please update backend to return a paginated response.');
             paginatorObject = {
@@ -100,7 +116,7 @@ export class ApplicantService {
                 current_page: 1,
                 from: 1,
                 last_page: 1,
-                path: queryParams.toString(), // Or some default path
+                path: queryParams.toString(),
                 per_page: backendResponse.length,
                 to: backendResponse.length,
                 total: backendResponse.length,
@@ -115,33 +131,41 @@ export class ApplicantService {
             throw new Error('Invalid response structure from server for applicants list.');
         }
 
-        // This check is now more about ensuring the identified/mocked paginatorObject is usable
-        if (!paginatorObject || !Array.isArray(paginatorObject.data) || typeof paginatorObject.current_page === 'undefined') {
-            console.error('Identified/mocked paginator object is malformed or missing essential fields:', paginatorObject);
-            throw new Error('Paginator data (real or mocked) is malformed or incomplete.');
+        if (!paginatorObject || !Array.isArray(paginatorObject.data) || typeof paginatorObject.current_page !== 'number') {
+            if (paginatorObject && typeof paginatorObject.current_page !== 'undefined' && paginatorObject.current_page !== null) {
+                paginatorObject.current_page = Number(paginatorObject.current_page);
+                if (isNaN(paginatorObject.current_page as number)) {
+                    console.error('Paginator current_page is not a valid number:', paginatorObject.current_page);
+                    throw new Error('Paginator data (real or mocked) current_page is malformed.');
+                }
+            } else {
+                console.error('Identified/mocked paginator object is malformed or missing essential fields (current_page, data array):', paginatorObject);
+                throw new Error('Paginator data (real or mocked) is malformed or incomplete.');
+            }
         }
 
         return {
             data: paginatorObject.data as Applicant[],
             links: {
-                first: paginatorObject.first_page_url || null,
-                last: paginatorObject.last_page_url || null,
-                prev: paginatorObject.prev_page_url || null,
-                next: paginatorObject.next_page_url || null,
+                first: (paginatorObject.first_page_url as string | null) || null,
+                last: (paginatorObject.last_page_url as string | null) || null,
+                prev: (paginatorObject.prev_page_url as string | null) || null,
+                next: (paginatorObject.next_page_url as string | null) || null,
             },
             meta: {
-                current_page: paginatorObject.current_page,
-                from: paginatorObject.from,
-                last_page: paginatorObject.last_page,
-                path: paginatorObject.path,
-                per_page: paginatorObject.per_page,
-                to: paginatorObject.to,
-                total: paginatorObject.total,
+                current_page: paginatorObject.current_page as number,
+                from: Number(paginatorObject.from) || 0,
+                last_page: Number(paginatorObject.last_page) || 0,
+                path: String(paginatorObject.path) || '',
+                per_page: Number(paginatorObject.per_page) || 0,
+                to: Number(paginatorObject.to) || 0,
+                total: Number(paginatorObject.total) || 0,
             }
         };
     }
 
     static async createApplicant(applicantData: Partial<Applicant> | FormData, token: string): Promise<{ data: Applicant }> {
+        // eslint-disable-next-line prefer-const
         let headers: Record<string, string> = {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'

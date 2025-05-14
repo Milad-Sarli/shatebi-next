@@ -11,6 +11,7 @@ import {
   optimizedClassService,
 } from "@/lib/services/optimizedClass.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
+import { ArrowLeft } from "lucide-react";
 
 interface Student {
   id: number;
@@ -47,41 +48,46 @@ export default function AddClassPage() {
     const fetchData = async () => {
       if (!accessToken) return;
       try {
-        const classes = await optimizedClassService.getAll(accessToken);
-        console.log('Classes data:', classes);
-        // Extract unique students from classes
-        const uniqueStudents = new Map();
-        classes.forEach((cls) => {
+        const classesResponse = await optimizedClassService.getAll(accessToken);
+        
+        // Extract unique students
+        const uniqueStudents = new Map<number, Student>();
+        classesResponse.forEach((cls) => {
           cls.optimized_class_items?.forEach((item) => {
             if (item.student) {
-              uniqueStudents.set(item.student.id, item.student);
+              uniqueStudents.set(item.student.id, {
+                id: item.student.id,
+                Fname: item.student.Fname || (item.student.name || '').split(' ')[0],
+                Lname: item.student.Lname || (item.student.name || '').split(' ')[1] || '',
+              });
             }
           });
         });
         setStudents(Array.from(uniqueStudents.values()));
 
-        // Extract unique lessons from classes
-        const uniqueLessons = new Map();
-        classes.forEach((cls) => {
+        // Extract unique lessons
+        const uniqueLessons = new Map<number, Lesson>();
+        classesResponse.forEach((cls) => {
           if (cls.dars) {
-            uniqueLessons.set(cls.dars.id, cls.dars);
+            uniqueLessons.set(cls.dars.id, {id: cls.dars.id, name: cls.dars.title});
           }
         });
         setLessons(Array.from(uniqueLessons.values()));
-
-        // Extract unique teachers from classes
-        const uniqueTeachers = new Map();
-        classes.forEach((cls) => {
-          cls.optimized_class_masters?.forEach((master) => {
-            if (master.master) {
-              uniqueTeachers.set(master.master.id, master.master);
+        
+        // Extract unique teachers
+        const uniqueTeachers = new Map<number, Teacher>();
+        classesResponse.forEach((cls) => {
+          cls.optimized_class_masters?.forEach((master_item) => {
+            if (master_item.master) {
+              uniqueTeachers.set(master_item.master.id, master_item.master);
             }
           });
         });
         setTeachers(Array.from(uniqueTeachers.values()));
+
       } catch (error) {
-        toast.error("Error loading data");
-        console.error(error);
+        toast.error("Error loading initial data for dropdowns");
+        console.error("Error fetching data for form:", error);
       }
     };
     fetchData();
@@ -91,17 +97,34 @@ export default function AddClassPage() {
     e.preventDefault();
     if (!accessToken) return;
 
+    if (formData.user_ids.length === 0) {
+      toast.error("Please select at least one student.");
+      return;
+    }
+    if (formData.droos_ids.length === 0) {
+      toast.error("Please select at least one lesson.");
+      return;
+    }
+    if (formData.teacher_ids.length === 0) {
+      toast.error("Please select at least one teacher.");
+      return;
+    }
+
+    const payload = {
+      tenant_id: formData.tenant_id,
+      user_id: formData.user_ids[0],
+      droos_id: formData.droos_ids[0],
+      status: formData.status as "active" | "inactive",
+      students: formData.user_ids,
+      masters: formData.teacher_ids.map(teacherId => ({
+        master_id: teacherId,
+        status: 1,
+      })),
+    };
+
     try {
       setLoading(true);
-      await optimizedClassService.create(
-        {
-          tenant_id: formData.tenant_id,
-          user_id: formData.user_ids[0] || 0,
-          droos_id: formData.droos_ids[0] || 0,
-          status: formData.status as "active" | "inactive",
-        },
-        accessToken
-      );
+      await optimizedClassService.create(payload, accessToken);
       toast.success("Class created successfully");
       router.push("/dashboard/optimizedClasses");
     } catch (error) {
@@ -114,15 +137,25 @@ export default function AddClassPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">افزودن کلاس جدید</h1>
-          <Button variant="outline" onClick={() => router.back()}>
-            بازگشت
-          </Button>
+      <div className="space-y-6 p-4 md:p-6">
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
+              افزودن کلاس جدید
+            </h1>
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+            >
+              <ArrowLeft className="ml-2 h-4 w-4" />
+              بازگشت به لیست کلاس‌ها
+            </Button>
+          </div>
         </div>
 
-        <Card>
+        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader>
             <CardTitle>اطلاعات کلاس</CardTitle>
           </CardHeader>
@@ -183,7 +216,6 @@ export default function AddClassPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="min-w-[100px]"
                 >
                   {loading ? "در حال ثبت..." : "ثبت"}
                 </Button>

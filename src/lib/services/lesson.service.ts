@@ -11,6 +11,8 @@ export interface Lesson {
   created_at?: string;
   updated_at?: string;
   is_one_grade?: boolean;
+  pages?: number | null;
+  start_page?: number | null;
   tenant?: {
     id: number;
     title: string;
@@ -45,9 +47,11 @@ export interface LessonResponse {
 export interface LessonCreateData {
   title: string;
   description?: string;
-  tenant_id?: number;
+  tenant_id: number;
   parent_id?: number | null;
   is_one_grade?: boolean;
+  pages?: number | null;
+  start_page?: number | null;
 }
 
 export interface LessonUpdateData extends Partial<LessonCreateData> { }

@@ -10,6 +10,7 @@ import { useTheme } from '@/lib/context/theme.context';
 import { Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import Image from "next/image";
 
 interface FormState {
   Fname: string;
@@ -70,7 +71,7 @@ interface ApiError extends Error {
 export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -135,18 +136,6 @@ export default function RegistrationForm() {
     });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm(prev => ({ ...prev, Aks: file } as FormState));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const validate = () => {
     const newErrors: Partial<Record<keyof FormState, string>> = {};
     if (!form.Fname) newErrors.Fname = 'نام الزامی است';
@@ -180,22 +169,35 @@ export default function RegistrationForm() {
     setLoading(true);
     try {
       const formData = new FormData();
+      // Correctly append form data, ensuring Aks is handled as File or string
       Object.entries(form).forEach(([key, value]) => {
-        if (key === 'Aks' && value instanceof File) {
-          // Send the File object directly
-          formData.append('Aks', value); 
-          console.log('Image data:', value); // Log File object
-        } else {
-          formData.append(key, value as string);
-          console.log(`${key}:`, value); // Log other form fields
+        if (key === 'Aks') {
+          if (value instanceof File) {
+            formData.append('Aks', value);
+            console.log('Image data (File):', value);
+          } else if (typeof value === 'string' && value.trim() !== '') {
+            // This case might not be hit if Aks is always File or empty string after selection
+            // but good to have if string URLs could be part of initial state or logic
+            // formData.append('Aks', value); 
+            // console.log('Image data (string):', value);
+            // For create, if Aks is a string path (e.g. from a previous upload not represented as File object), it's likely not submittable directly.
+            // The current logic with `setImagePreview` and `fileInputRef` seems to only handle new File uploads for `Aks`.
+            // So, if `value` is a string for `Aks` here, it might be an empty string or an old path.
+            // We should only append if it's a non-empty string that's meaningful to send. Given current setup, empty string means no new image.
+          } 
+          // If Aks is an empty string, we don't append it, backend handles missing Aks.
+        } else if (value !== null && value !== undefined) { // Ensure other fields are not null/undefined
+          formData.append(key, String(value)); // Convert boolean and number to string
+          console.log(`${key}:`, String(value));
         }
       });
+      
       formData.set('status', '1');
       formData.set('tenant_id', '1');
 
       // Log all FormData entries
       console.log('All FormData entries:');
-      for (let pair of formData.entries()) {
+      for (const pair of formData.entries()) {
         console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'File object' : pair[1]));
       }
 
@@ -210,7 +212,7 @@ export default function RegistrationForm() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      let message = apiError.message || 'خطا در ثبت نام';
+      const message = apiError.message || 'خطا در ثبت نام';
       if (message.includes('کد ملی') || message.includes('duplicate') || message.includes('تکراری')) {
         toast({
           title: 'کد ملی تکراری است',
@@ -477,7 +479,7 @@ export default function RegistrationForm() {
                       }
                       
                       // Create image element to get dimensions
-                      const img = new Image();
+                      const img = new window.Image();
                       img.src = URL.createObjectURL(file);
                       img.onload = () => {
                         // Create canvas for cropping
@@ -510,9 +512,11 @@ export default function RegistrationForm() {
 
                 {imagePreview && (
                   <div className="relative">
-                    <img 
+                    <Image 
                       src={imagePreview} 
                       alt="پیش‌نمایش عکس" 
+                      width={160}
+                      height={160}
                       className="mt-2 rounded-full w-40 h-40 object-cover border-2 border-gray-200 dark:border-gray-700 mx-auto"
                     />
                     <button

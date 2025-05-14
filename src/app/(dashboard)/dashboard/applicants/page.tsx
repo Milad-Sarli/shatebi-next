@@ -9,11 +9,12 @@ import { useAuth } from "@/lib/context/auth.context";
 import { useTheme } from "@/lib/context/theme.context";
 import { ApplicantService, Applicant, ApplicantFilters, PaginatedResponse } from "@/lib/services/applicant.service";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -205,7 +206,7 @@ export default function ApplicantsPage() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             {applicant.Aks ? (
-                              <img src={applicant.Aks} alt={`${applicant.Fname} ${applicant.Lname}`} className="h-10 w-10 rounded-full object-cover" />
+                              <Image src={applicant.Aks} alt={`${applicant.Fname} ${applicant.Lname}`} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
                             ) : (
                               <span className="text-xs font-medium text-red-500 dark:text-red-400">بدون عکس</span>
                             )}
@@ -414,7 +415,7 @@ export default function ApplicantsPage() {
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   {selectedApplicant.Aks ? (
-                    <img src={selectedApplicant.Aks} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
+                    <Image src={selectedApplicant.Aks} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} width={80} height={80} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">بدون عکس</span>

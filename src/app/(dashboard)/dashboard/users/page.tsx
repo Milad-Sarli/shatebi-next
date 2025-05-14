@@ -228,7 +228,7 @@ export default function UsersPage() {
               >
                 {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </Button>
-              <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+              {/* <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10">
                     <Plus className="ml-2 h-4 w-4" />
@@ -246,7 +246,7 @@ export default function UsersPage() {
                     }}
                   />
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
             </div>
           </div>
         </div>

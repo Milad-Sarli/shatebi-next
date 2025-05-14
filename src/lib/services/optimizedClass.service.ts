@@ -25,9 +25,17 @@ export interface CreateOptimizedClassDto {
   user_id: number;
   droos_id: number;
   status: "active" | "inactive";
+  students?: number[];
+  masters?: MasterDataItem[];
 }
 
 export interface UpdateOptimizedClassDto extends Partial<CreateOptimizedClassDto> { }
+
+export interface MasterDataItem {
+  master_id: number;
+  assistant_id?: number;
+  status: number; // Assuming integer status based on PHP, adjust if boolean
+}
 
 export interface LessonArea {
   id: number;

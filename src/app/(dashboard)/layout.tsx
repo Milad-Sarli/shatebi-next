@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Avatar className="h-8 w-8">
                   <AvatarImage
                     src="/avatars/default.svg"
-                    alt={user?.username}
+                    alt={user?.fname + " " + user?.lname}
                   />
                   <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
                     {getUserInitials(user?.username || "")}
@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Avatar>
                 <div className="space-y-0.5 text-sm">
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {user?.username}
+                    {user?.fname + " " + user?.lname}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {user?.phone}

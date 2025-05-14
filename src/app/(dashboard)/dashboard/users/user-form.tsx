@@ -97,7 +97,7 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
           <Input
             id="username"
             {...form.register("username")}
-            placeholder="نام کاربری"
+            placeholder="نام کاربری (کد ملی)" 
             className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
           />
           {form.formState.errors.username && (

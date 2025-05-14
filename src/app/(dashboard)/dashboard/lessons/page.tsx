@@ -63,19 +63,24 @@ export default function LessonsPage() {
 
   const fetchLessons = React.useCallback(async (searchTerm?: string) => {
     if (!accessToken) return;
-    if (searchInProgress.current) return;
+
+    // If a fetch is already in progress and this is not a new explicit search call, bail.
+    // A new explicit search (searchTerm is provided) should be allowed to proceed.
+    if (searchInProgress.current && searchTerm === undefined) { 
+      return;
+    }
 
     try {
       searchInProgress.current = true;
       setLoading(true);
       
-      const searchQuery = searchTerm !== undefined ? searchTerm : debouncedSearch;
+      const currentSearchQuery = searchTerm !== undefined ? searchTerm : debouncedSearch;
       
       const response = await LessonService.getLessons(
         {
           page: filters.page,
           per_page: filters.per_page,
-          search: searchQuery || undefined,
+          search: currentSearchQuery || undefined,
           parent_id: filters.parent_id !== undefined ? filters.parent_id : null,
         },
         accessToken
@@ -83,6 +88,15 @@ export default function LessonsPage() {
       setLessons(response.data || []);
       if (response.pagination) {
         setPagination(response.pagination);
+      } else {
+        setPagination({
+          current_page: 1,
+          last_page: 1,
+          total: response.data?.length || 0,
+          per_page: filters.per_page || 10,
+          from: 1,
+          to: response.data?.length || 0,
+        });
       }
     } catch (error) {
       toast.error("خطا در دریافت لیست دروس");
@@ -93,33 +107,17 @@ export default function LessonsPage() {
     }
   }, [accessToken, filters.page, filters.per_page, filters.parent_id, debouncedSearch]);
 
-  // Effect to handle page and per_page changes
   React.useEffect(() => {
-    // Only fetch if not triggered by a search change
-    if (!searchInProgress.current) {
-      fetchLessons();
-    }
-  }, [filters.page, filters.per_page, fetchLessons]);
-
-  // Effect for parent_id changes (navigation)
-  React.useEffect(() => {
-    if (filters.parent_id !== null && navigationPath.length > 0) {
-      // This is handled by handleNavigateToParent
-      return;
-    }
-    
     fetchLessons();
-  }, [filters.parent_id, navigationPath.length, fetchLessons]);
+  }, [filters.page, filters.per_page, filters.parent_id, debouncedSearch, fetchLessons]);
 
-  // Effect to handle debounced search changes
   React.useEffect(() => {
-    // Reset to first page when search changes
-    if (filters.page !== 1) {
-      setFilters(prev => ({ ...prev, page: 1 }));
-    } else {
-      fetchLessons();
+    if (debouncedSearch !== undefined) { 
+      if (filters.page !== 1) {
+        setFilters(prev => ({ ...prev, page: 1, search: debouncedSearch })); // Also update search in filter state if needed
+      }
     }
-  }, [debouncedSearch, fetchLessons, filters.page]);
+  }, [debouncedSearch, filters.page]);
 
   const fetchLessonById = React.useCallback(async (id: number) => {
     if (!accessToken) return null;
@@ -135,59 +133,31 @@ export default function LessonsPage() {
   }, [accessToken]);
 
   const handleNavigateToParent = React.useCallback(async (parentId: number | null) => {
-    try {
-      setLoading(true);
-      if (parentId === null) {
-        setFilters(prev => {
-          const newFilters = { ...prev, parent_id: null, page: 1 };
-          return newFilters;
-        });
-        setNavigationPath([]);
-        
-        // بارگذاری مستقیم دروس اصلی
-        const response = await LessonService.getLessonsByParent(null, accessToken!);
-        setLessons(response.data || []);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
-        return;
-      }
-
-      const parentLesson = await fetchLessonById(parentId);
-      if (parentLesson) {
-        setFilters(prev => {
-          const newFilters = { ...prev, parent_id: parentId, page: 1 };
-          return newFilters;
-        });
-
-        // Update navigation path
-        let newPath = [...navigationPath];
-        const existingIndex = newPath.findIndex(item => item.id === parentLesson.id);
-        
-        if (existingIndex >= 0) {
-          // If already in path, trim the path up to this point
-          newPath = newPath.slice(0, existingIndex + 1);
+    if (parentId === null) {
+      setFilters(prev => ({ ...prev, parent_id: null, page: 1 }));
+      setNavigationPath([]);
+    } else {
+      try {
+        const parentLesson = await fetchLessonById(parentId);
+        if (parentLesson) {
+          setFilters(prev => ({ ...prev, parent_id: parentId, page: 1 }));
+          let newPath = [...navigationPath];
+          const existingIndex = newPath.findIndex(item => item.id === parentLesson.id);
+          if (existingIndex >= 0) {
+            newPath = newPath.slice(0, existingIndex + 1);
+          } else {
+            newPath.push(parentLesson);
+          }
+          setNavigationPath(newPath);
         } else {
-          // Add to path
-          newPath.push(parentLesson);
+          toast.error("اطلاعات درس والد یافت نشد.");
         }
-        
-        setNavigationPath(newPath);
-        
-        // بارگذاری مستقیم زیردرس‌ها
-        const response = await LessonService.getLessonsByParent(parentId, accessToken!);
-        setLessons(response.data || []);
-        if (response.pagination) {
-          setPagination(response.pagination);
-        }
+      } catch (error) {
+        toast.error("خطا در به‌روزرسانی مسیر ناوبری");
+        console.error(error);
       }
-    } catch (error) {
-      toast.error("خطا در دریافت اطلاعات زیردرس‌ها");
-      console.error(error);
-    } finally {
-      setLoading(false);
     }
-  }, [fetchLessonById, navigationPath, accessToken]);
+  }, [fetchLessonById, navigationPath]); // accessToken is a dependency of fetchLessonById, so it's implicitly handled.
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -264,7 +234,7 @@ export default function LessonsPage() {
               </DialogTrigger>
               <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-zinc-900 dark:text-zinc-100">افزودن درس جدید</DialogTitle>
+                  <DialogTitle className="text-zinc-900 text-right mx-4 dark:text-zinc-100">افزودن درس جدید</DialogTitle>
                 </DialogHeader>
                 <LessonForm
                   parentId={filters.parent_id}
@@ -343,7 +313,6 @@ export default function LessonsPage() {
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">#</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عنوان</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">نوع</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">مرکز</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium"> تک نمره ای </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
@@ -377,17 +346,7 @@ export default function LessonsPage() {
                             {pagination.from ? pagination.from + index : index + 1}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.title}</td>
-                          <td className="whitespace-nowrap px-4 py-3">
-                            {lesson.children && lesson.children.length > 0 ? (
-                              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                سرفصل
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                درس
-                              </Badge>
-                            )}
-                          </td>
+                      
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.tenant?.title}</td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button

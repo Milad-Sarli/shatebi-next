@@ -71,9 +71,37 @@ export interface StudentFilters {
 }
 
 export class StudentService {
+  private static async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      const errorPayload: { data: { message?: string;[key: string]: unknown } | null; status: number; statusText: string } = {
+        data: null,
+        status: response.status,
+        statusText: response.statusText,
+      };
+      try {
+        errorPayload.data = await response.json() as { message?: string;[key: string]: unknown };
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      catch (_e) {
+        // If parsing fails, data can remain null or have a default message
+        errorPayload.data = { message: `Request failed with status ${response.status}. No parsable error details from server.` };
+      }
+
+      const errorMessage =
+        (errorPayload.data && typeof errorPayload.data.message === 'string')
+          ? errorPayload.data.message
+          : `Request failed: ${response.status} ${response.statusText}`;
+
+      const error: Error & { response?: typeof errorPayload } = new Error(errorMessage);
+      error.response = errorPayload; // Attach the structured payload
+      throw error;
+    }
+    return response.json() as Promise<T>;
+  }
+
   static async getStudents(filters: StudentFilters = {}, token: string): Promise<PaginatedResponse<Student>> {
     const queryParams = new URLSearchParams();
-    
+
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.with) queryParams.append('with', filters.with);
     if (filters.page) queryParams.append('page', filters.page.toString());
@@ -87,13 +115,7 @@ export class StudentService {
         'Accept': 'application/json'
       }
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error fetching students list');
-    }
-
-    return response.json();
+    return this.handleResponse<PaginatedResponse<Student>>(response);
   }
 
   static async createStudent(studentData: Partial<Student>, token: string): Promise<{ data: Student }> {
@@ -106,13 +128,7 @@ export class StudentService {
       },
       body: JSON.stringify(studentData)
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error creating student');
-    }
-
-    return response.json();
+    return this.handleResponse<{ data: Student }>(response);
   }
 
   static async getStudent(id: number, token: string): Promise<{ data: Student }> {
@@ -122,13 +138,7 @@ export class StudentService {
         'Accept': 'application/json'
       }
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error fetching student');
-    }
-
-    return response.json();
+    return this.handleResponse<{ data: Student }>(response);
   }
 
   static async updateStudent(id: number, studentData: Partial<Student>, token: string): Promise<{ data: Student }> {
@@ -141,13 +151,7 @@ export class StudentService {
       },
       body: JSON.stringify(studentData)
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error updating student');
-    }
-
-    return response.json();
+    return this.handleResponse<{ data: Student }>(response);
   }
 
   static async deleteStudent(id: number, token: string): Promise<{ message: string }> {
@@ -158,13 +162,7 @@ export class StudentService {
         'Accept': 'application/json'
       }
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error deleting student');
-    }
-
-    return response.json();
+    return this.handleResponse<{ message: string }>(response);
   }
 
   static async getStudentsByTenant(tenantId: number, token: string): Promise<PaginatedResponse<Student>> {
@@ -174,12 +172,6 @@ export class StudentService {
         'Accept': 'application/json'
       }
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error fetching students by tenant');
-    }
-
-    return response.json();
+    return this.handleResponse<PaginatedResponse<Student>>(response);
   }
 } 

@@ -9,12 +9,13 @@ import { useAuth } from "@/lib/context/auth.context";
 import { useTheme } from "@/lib/context/theme.context";
 import { MasterService, Master, MasterFilters, PaginationResponse } from "@/lib/services/master.service";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MasterForm } from "./master-form";
 import Image from "next/image";
+import Link from "next/link";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -52,7 +53,6 @@ export default function MastersPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddMasterOpen, setIsAddMasterOpen] = React.useState(false);
   const [masterToDelete, setMasterToDelete] = React.useState<number | null>(null);
   const [masterToEdit, setMasterToEdit] = React.useState<Master | null>(null);
 
@@ -172,25 +172,12 @@ export default function MastersPage() {
             >
               {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </Button>
-            <Dialog open={isAddMasterOpen} onOpenChange={setIsAddMasterOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                  <Plus className="ml-2 h-4 w-4" />
-                  افزودن استاد
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-zinc-900 dark:text-zinc-100">افزودن استاد جدید</DialogTitle>
-                </DialogHeader>
-                <MasterForm
-                  onSuccess={() => {
-                    setIsAddMasterOpen(false);
-                    fetchMasters();
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
+            <Link href="/dashboard/masters/add" passHref>
+              <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
+                <Plus className="ml-2 h-4 w-4" />
+                افزودن استاد
+              </Button>
+            </Link>
           </div>
         </div>
 

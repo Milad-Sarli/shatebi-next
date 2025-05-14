@@ -67,7 +67,7 @@ export interface MasterCreateData {
   user_id: number;
   mellicode: string;
   fullname: string;
-  aks: string;
+  aks?: File | string;
   phone: string;
   tenant_id: number;
 }
@@ -76,7 +76,7 @@ export interface MasterUpdateData {
   user_id?: number;
   mellicode?: string;
   fullname?: string;
-  aks?: string;
+  aks?: File | string | null;
   phone?: string;
   tenant_id?: number;
 }
@@ -111,21 +111,61 @@ export class MasterService {
   }
 
   static async createMaster(masterData: MasterCreateData, accessToken: string): Promise<{ status: string, message: string, data: Master }> {
-    const { data } = await axios.post(`${API_URL}/api/masters`, masterData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+    let payload: FormData | MasterCreateData = masterData;
+    const headers: { [key: string]: string } = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    if (masterData.aks instanceof File) {
+      const formData = new FormData();
+      Object.keys(masterData).forEach(key => {
+        const value = masterData[key as keyof MasterCreateData];
+        if (value !== undefined) {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      payload = formData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const { data } = await axios.post(`${API_URL}/api/masters`, payload, {
+      headers: headers
     });
     return data;
   }
 
   static async updateMaster(id: number, masterData: MasterUpdateData, accessToken: string): Promise<{ status: string, message: string, data: Master }> {
-    const { data } = await axios.put(`${API_URL}/api/masters/${id}`, masterData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
+    let payload: FormData | MasterUpdateData = masterData;
+    const headers: { [key: string]: string } = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    if (masterData.aks instanceof File) {
+      const formData = new FormData();
+      Object.keys(masterData).forEach(key => {
+        const value = masterData[key as keyof MasterUpdateData];
+        if (value !== undefined) {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else if (value === null) {
+            formData.append(key, '');
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      payload = formData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const { data } = await axios.put(`${API_URL}/api/masters/${id}`, payload, {
+      headers: headers
     });
     return data;
   }

@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from "next/link";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -70,13 +71,15 @@ export default function StudentsPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
-  const [isAddStudentOpen, setIsAddStudentOpen] = React.useState(false);
   const [studentToDelete, setStudentToDelete] = React.useState<number | null>(
     null
   );
   const [studentToEdit, setStudentToEdit] = React.useState<Student | null>(
     null
   );
+  const [statusFilter, setStatusFilter] = React.useState<
+    "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | undefined | "ترک تحصیل"
+  >(undefined);
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -93,11 +96,27 @@ export default function StudentsPage() {
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
 
+        let apiStatusFilter: 'active' | 'inactive' | undefined = undefined;
+        if (statusFilter) {
+          switch (statusFilter) {
+            case "در حال تحصیل":
+              apiStatusFilter = 'active';
+              break;
+            case "ترک تحصیل":
+            case "فارغ التحصیل":
+            case "انتقالی":
+              apiStatusFilter = 'inactive';
+              break;
+            // default: // If an unexpected Farsi status comes, it remains undefined
+          }
+        }
+
         const response: any = await StudentService.getStudents(
           {
             page: filters.page,
             per_page: filters.per_page,
             search: searchQuery || undefined,
+            status: apiStatusFilter,
           },
           accessToken
         );
@@ -125,7 +144,7 @@ export default function StudentsPage() {
         searchInProgress.current = false;
       }
     },
-    [accessToken, filters.page, filters.per_page, debouncedSearch]
+    [accessToken, filters.page, filters.per_page, debouncedSearch, statusFilter]
   );
 
   // Effect to handle page and per_page changes
@@ -143,6 +162,15 @@ export default function StudentsPage() {
       fetchStudents();
     }
   }, [debouncedSearch, fetchStudents, filters.page]);
+
+  // Effect to handle status filter changes
+  React.useEffect(() => {
+    if (filters.page !== 1) {
+      setFilters((prev) => ({ ...prev, page: 1 }));
+    } else {
+      fetchStudents();
+    }
+  }, [statusFilter, fetchStudents, filters.page]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -187,27 +215,12 @@ export default function StudentsPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             مدیریت دانش آموزان
           </h1>
-          <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                <Plus className="ml-2 h-4 w-4" />
-                افزودن دانش آموز
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                  افزودن دانش آموز جدید
-                </DialogTitle>
-              </DialogHeader>
-              <StudentForm
-                onSuccess={() => {
-                  setIsAddStudentOpen(false);
-                  fetchStudents();
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+          <Link href="/dashboard/students/add" passHref>
+            <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
+              <Plus className="ml-2 h-4 w-4" />
+              افزودن دانش آموز
+            </Button>
+          </Link>
         </div>
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
@@ -227,6 +240,24 @@ export default function StudentsPage() {
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
+              {/* <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value === "all" ? undefined : value as "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل");
+                  setFilters((prev) => ({ ...prev, page: 1 }));
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-auto border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                  <SelectValue placeholder="وضعیت" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-zinc-900">
+                  <SelectItem value="all">همه</SelectItem>
+                  <SelectItem value="انتقالی">انتقالی</SelectItem>
+                  <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
+                  <SelectItem value="در حال تحصیل">در حال تحصیل</SelectItem>
+                  <SelectItem value="ترک تحصیل">ترک تحصیل</SelectItem>
+                </SelectContent>
+              </Select> */}
               <Button
                 variant="outline"
                 size="default"
@@ -314,13 +345,15 @@ export default function StudentsPage() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Badge
-                              variant={
-                                student.status === "active"
-                                  ? "default"
-                                  : "destructive"
+                              className={
+                                student.status === "در حال تحصیل"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                  : student.status === "فارغ التحصیل"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                               }
                             >
-                              {student.status === "active" ? "فعال" : "غیرفعال"}
+                              {student.status}
                             </Badge>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
