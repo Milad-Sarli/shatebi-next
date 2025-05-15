@@ -72,6 +72,18 @@ const items = [
     icon: UserPlus,
     requiredRole: "admin"
   },
+  {
+    title: "مرخصی‌ها",
+    href: "/dashboard/leaves",
+    icon: BookOpen,
+    requiredRole: ["admin", "master"]
+  },
+  {
+    title: "درخواست مرخصی جدید",
+    href: "/dashboard/leaves/new",
+    icon: BookOpen,
+    requiredRole: ["admin", "master"]
+  },
 ];
 
 export function Sidebar({ className, ...props }: SidebarProps) {
