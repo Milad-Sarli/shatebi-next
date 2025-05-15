@@ -276,7 +276,29 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onInteractOutside={(e) => {
+          // Look for combobox elements
+          let targetElement = e.target as HTMLElement;
+          while (targetElement && targetElement !== document.body) {
+            // Check for any popover or command related attributes
+            if (
+              targetElement.hasAttribute('data-radix-popper-content-wrapper') || 
+              targetElement.hasAttribute('data-popover-content') ||
+              targetElement.hasAttribute('cmdk-list') ||
+              targetElement.hasAttribute('cmdk-group') ||
+              targetElement.hasAttribute('cmdk-item') ||
+              targetElement.getAttribute('role') === 'listbox' ||
+              targetElement.getAttribute('role') === 'option'
+            ) {
+              e.preventDefault();
+              return;
+            }
+            targetElement = targetElement.parentElement as HTMLElement;
+          }
+        }}
+      >
         <DialogHeader>
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1073,7 +1095,7 @@ export default function AddNumberPage() {
                         classItem.optimized_class_masters?.[0]?.master?.fullname ||
                         classItem.optimized_class_masters?.[0]?.users?.fullname ||
                         "بدون استاد"
-                      }-${classItem.id || "بدون درس"}`,
+                      }`,
                     }))}
                     value={selectedClass?.id.toString()}
                     onChange={(value: string) => handleClassChange(value)}

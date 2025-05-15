@@ -73,11 +73,27 @@ export function SingleSelectCombobox({
           </span>
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent 
+        className="w-full p-0" 
+        align="start" 
+        sideOffset={5}
+        style={{ 
+          zIndex: 9999, 
+          position: 'relative'
+        }}
+      >
         <Command className="text-right">
           {searchable && <CommandInput placeholder={placeholder} className="h-9 text-right" dir="rtl" />}
           <CommandEmpty className="text-right">{emptyMessage}</CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-y-auto">
+          <CommandGroup 
+            className="max-h-60 overflow-y-auto" 
+            vaul-drawer-wrapper=""
+            onWheel={(e) => {
+              e.stopPropagation();
+              const target = e.currentTarget;
+              target.scrollTop += e.deltaY;
+            }}
+          >
             {options.map((option) => (
               <CommandItem
                 key={option.value}
@@ -271,11 +287,28 @@ export function MultiSelectCombobox({
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-1" />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="p-0" style={containerWidth ? { width: `${containerWidth}px` } : {}} align="start">
+        <PopoverContent 
+          className="p-0" 
+          style={{ 
+            width: `${containerWidth}px`, 
+            zIndex: 9999,  
+            position: 'relative'
+          }} 
+          align="start"
+          sideOffset={5}
+        >
           <Command>
             {searchable && <CommandInput placeholder={placeholder} className="h-9" />}
             <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-y-auto">
+            <CommandGroup 
+              className="max-h-64 overflow-y-auto" 
+              vaul-drawer-wrapper=""
+              onWheel={(e) => {
+                e.stopPropagation();
+                const target = e.currentTarget;
+                target.scrollTop += e.deltaY;
+              }}
+            >
               {options.map((option) => {
                 const isSelected = value.includes(option.value)
                 return (
@@ -312,6 +345,20 @@ export function MultiSelectCombobox({
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        
+        /* Force Combobox dropdown command list to receive pointer events */
+        [data-radix-popper-content-wrapper] {
+          pointer-events: auto !important;
+        }
+        
+        /* Ensure Command list and Command group can receive wheel events */
+        [cmdk-list],
+        [cmdk-group] {
+          pointer-events: auto !important;
+          overflow-y: auto !important;
+          max-height: 300px !important; /* Increased max height */
+          touch-action: pan-y !important; /* Allow vertical touch scrolling */
         }
       `}</style>
     </div>
