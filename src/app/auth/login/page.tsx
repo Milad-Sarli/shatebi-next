@@ -20,16 +20,12 @@ import { OTPInput } from '@/components/ui/otp-input'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
 import Image from 'next/image'
 
-// Step 1: National ID and Phone Number
+// Step 1: National ID Only
 const loginFormSchema = z.object({
   username: z.string()
     .min(10, 'کد ملی باید ۱۰ رقم باشد')
     .max(10, 'کد ملی باید ۱۰ رقم باشد')
     .regex(/^\d+$/, 'کد ملی باید فقط شامل اعداد باشد'),
-  phone: z.string()
-    .min(11, 'شماره موبایل باید ۱۱ رقم باشد')
-    .max(11, 'شماره موبایل باید ۱۱ رقم باشد')
-    .regex(/^09\d{9}$/, 'شماره موبایل باید با ۰۹ شروع شود'),
 })
 
 // Step 2: OTP Verification
@@ -44,15 +40,15 @@ export default function LoginPage() {
   const { login, verifyOtp, resendOtp } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [showOTP, setShowOTP] = React.useState(false)
-  const [phoneNumber, setPhoneNumber] = React.useState('')
   const [countdown, setCountdown] = React.useState(0)
   const [otpToken, setOtpToken] = React.useState('')
+  const [otpInputKey, setOtpInputKey] = React.useState(0)
+  const [userPhone, setUserPhone] = React.useState('')
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       username: '',
-      phone: '',
     },
   })
 
@@ -63,19 +59,19 @@ export default function LoginPage() {
     },
   })
 
-  // Reset OTP form when switching to OTP screen
-  React.useEffect(() => {
-    if (showOTP) {
-      otpForm.reset({ otp: '' });
-    }
-  }, [showOTP, otpForm]);
-
   React.useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
       return () => clearTimeout(timer)
     }
   }, [countdown])
+
+  React.useEffect(() => {
+    if (showOTP) {
+      otpForm.reset({ otp: '' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showOTP]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -87,11 +83,12 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await login(values.username, values.phone)
-      setPhoneNumber(values.phone)
+      const response = await login(values.username)
       setOtpToken(response.token)
-      // Reset OTP form before showing OTP screen
+      setUserPhone(response.phone)
+      // Reset OTP form before showing OTP screen and force re-mount
       otpForm.reset({ otp: '' })
+      setOtpInputKey((k) => k + 1)
       setShowOTP(true)
       setCountdown(120) // 2 minutes countdown
     } catch (error) {
@@ -105,7 +102,9 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await verifyOtp(phoneNumber, values.otp, otpToken)
+      await verifyOtp(values.otp, otpToken, userPhone)
+      otpForm.reset({ otp: '' })
+      setOtpInputKey((k) => k + 1)
     } catch (error) {
       console.error('OTP verification error:', error)
     } finally {
@@ -118,7 +117,7 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const response = await resendOtp(phoneNumber, otpToken)
+      const response = await resendOtp(otpToken)
       setOtpToken(response.token)
       setCountdown(120) // Reset countdown to 2 minutes
     } catch (error) {
@@ -153,14 +152,14 @@ export default function LoginPage() {
               className="mb-8"
             >
               <Image 
-                src={`${process.env.NEXT_PUBLIC_API_URL}/public/assets/images/shatebi_logo.png`}
+                src={`${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi_logo-black.png`}
                 alt="Shatebi Logo"
                 width={200}
                 height={80}
                 className="block dark:hidden"
               />
               <Image
-                src={`${process.env.NEXT_PUBLIC_API_URL}/public/assets/images/shatebi_logo_white.png`} 
+                src={`${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi_logo-white.png`} 
                 alt="Shatebi Logo"
                 width={200}
                 height={80}
@@ -172,7 +171,7 @@ export default function LoginPage() {
             </h1>
           </div>
         </motion.div>
-        <SpotlightCard className="w-full max-w-fit "> 
+        <SpotlightCard className="w-full max-w-fit order-2 lg:order-none"> 
           {/* Login Form Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -212,8 +211,8 @@ export default function LoginPage() {
                 </h2>
                 <p className="pt-2 text-sm md:text-base text-slate-300">
                   {!showOTP 
-                    ? 'برای ورود به سامانه، کد ملی و شماره موبایل خود را وارد کنید'
-                    : 'کد تایید ارسال شده به شماره موبایل خود را وارد کنید'
+                    ? 'برای ورود به سامانه، کد ملی خود را وارد کنید'
+                    : 'کد تایید ارسال شده را وارد کنید'
                   }
                 </p>
               </motion.div>
@@ -245,32 +244,6 @@ export default function LoginPage() {
                                     dir="ltr"
                                     disabled={isLoading}
                                     placeholder="0123456789"
-                                    className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-slate-400 focus:border-primary/50 focus:ring-primary/50"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-xs text-red-400" />
-                              </FormItem>
-                            )}
-                          />
-                        </motion.div>
-                        <motion.div
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className="space-y-2"
-                        >
-                          <FormField
-                            control={loginForm.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-slate-200">شماره موبایل</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    dir="ltr"
-                                    disabled={isLoading}
-                                    placeholder="09123456789"
                                     className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-slate-400 focus:border-primary/50 focus:ring-primary/50"
                                     {...field}
                                   />
@@ -332,6 +305,7 @@ export default function LoginPage() {
                                 <FormLabel className="text-slate-200" dir="rtl">کد تایید</FormLabel>
                                 <FormControl>
                                   <OTPInput
+                                    key={otpInputKey}
                                     disabled={isLoading}
                                     maxLength={6}
                                     className="justify-center [&_input]:text-white [&_input]:bg-white/[0.06] [&_input]:border-white/[0.08] [&_input]:focus:border-blue-500 [&_input]:focus:ring-blue-500 [&_input]:placeholder-gray-400"
@@ -417,10 +391,10 @@ export default function LoginPage() {
                             disabled={isLoading}
                             onClick={() => {
                               setShowOTP(false)
-                              setPhoneNumber('')
                               setCountdown(0)
                               setOtpToken('')
-                              otpForm.reset()
+                              otpForm.reset({ otp: '' })
+                              setOtpInputKey((k) => k + 1)
                             }}
                           >
                             بازگشت

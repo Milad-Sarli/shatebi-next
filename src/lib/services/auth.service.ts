@@ -3,6 +3,7 @@ import { API_URL } from '@/lib/constants';
 export interface LoginResponse {
   message: string;
   token: string;
+  phone: string;
 }
 
 export interface VerifyOtpResponse {
@@ -44,14 +45,14 @@ export class AuthService {
     document.cookie = `app_roles=${encodeURIComponent(JSON.stringify(appRoles))}; path=/; secure; samesite=strict; max-age=86400`;
   }
 
-  static async login(username: string, phone: string): Promise<LoginResponse> {
+  static async login(username: string): Promise<LoginResponse> {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ username, phone }),
+      body: JSON.stringify({ username }),
       credentials: 'include',
     });
 
@@ -63,14 +64,14 @@ export class AuthService {
     return response.json();
   }
 
-  static async verifyOtp(phone: string, otp: string, token: string): Promise<VerifyOtpResponse> {
+  static async verifyOtp(otp: string, token: string, phone: string): Promise<VerifyOtpResponse> {
     const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ phone, otp, token }),
+      body: JSON.stringify({ otp, token, phone }),
       credentials: 'include',
     });
 
@@ -89,14 +90,14 @@ export class AuthService {
     return data;
   }
 
-  static async resendOtp(phone: string, token: string): Promise<ResendOtpResponse> {
+  static async resendOtp(token: string): Promise<ResendOtpResponse> {
     const response = await fetch(`${API_URL}/api/auth/resend-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ phone, token }),
+      body: JSON.stringify({ token }),
       credentials: 'include',
     });
 

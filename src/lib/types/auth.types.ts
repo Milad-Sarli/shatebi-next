@@ -38,6 +38,7 @@ export interface User {
 // If not, define them here based on actual API response
 export interface LoginResponse {
   token: string
+  phone: string
   // other login response fields if any
 }
 

@@ -11,10 +11,10 @@ interface AuthContextType {
   isAuthenticated: boolean
   user: User | null
   accessToken: string | null
-  login: (username: string, phone: string) => Promise<LoginResponse>
-  verifyOtp: (phone: string, otp: string, token: string) => Promise<void>
+  login: (username: string) => Promise<LoginResponse>
+  verifyOtp: (otp: string, token: string, phone: string) => Promise<void>
   logout: () => Promise<void>
-  resendOtp: (phone: string, token: string) => Promise<ResendOtpResponse>
+  resendOtp: (token: string) => Promise<ResendOtpResponse>
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -33,20 +33,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // _setState // Remove unused variable
   } = useAuthStore();
 
-  const login = React.useCallback(async (username: string, phone: string) => {
-    return storeLogin(username, phone)
+  const login = React.useCallback(async (username: string) => {
+    return storeLogin(username)
   }, [storeLogin])
 
-  const verifyOtp = React.useCallback(async (phone: string, otp: string, token: string) => {
-    await storeVerifyOtp(phone, otp, token, router)
+  const verifyOtp = React.useCallback(async (otp: string, token: string, phone: string) => {
+    await storeVerifyOtp(otp, token, phone, router)
   }, [storeVerifyOtp, router])
 
   const logout = React.useCallback(async () => {
     await storeLogout(router)
   }, [storeLogout, router])
 
-  const resendOtp = React.useCallback(async (phone: string, token: string) => {
-    return storeResendOtp(phone, token)
+  const resendOtp = React.useCallback(async (token: string) => {
+    return storeResendOtp(token)
   }, [storeResendOtp])
 
   const value = {

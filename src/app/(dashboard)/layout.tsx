@@ -155,6 +155,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* End wavy gradient background */}
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between mb-6">
+            <Link prefetch href="/dashboard" className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
               <GradientText
@@ -166,6 +167,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 دارالقرآن
               </GradientText>
             </div>
+            </Link>
+          
           </div>
           <Sidebar className="flex-1" />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">

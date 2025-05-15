@@ -6,7 +6,7 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'api.shatebiapp.ir',
         port: '',
-        pathname: '/public/assets/images/**', // Adjusted to match the new path structure
+        pathname: '/storage/**', // Adjusted to match the new path structure
       },
     ],
   },

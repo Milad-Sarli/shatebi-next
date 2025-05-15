@@ -12,10 +12,10 @@ interface AuthState {
 }
 
 interface AuthActions {
-  login: (username: string, phone: string) => Promise<LoginResponse>
-  verifyOtp: (phone: string, otp: string, token: string, router: AppRouterInstance) => Promise<void>
+  login: (username: string) => Promise<LoginResponse>
+  verifyOtp: (otp: string, token: string, phone: string, router: AppRouterInstance) => Promise<void>
   logout: (router: AppRouterInstance) => Promise<void>
-  resendOtp: (phone: string, token: string) => Promise<ResendOtpResponse>
+  resendOtp: (token: string) => Promise<ResendOtpResponse>
   _setState: (newState: Partial<AuthState>) => void
 }
 
@@ -31,10 +31,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       _setState: (newState) => set(newState),
 
       // Actions
-      login: async (username: string, phone: string) => {
+      login: async (username: string) => {
         try {
           // Login just gets the token for OTP, doesn't set authenticated state yet
-          const response = await AuthService.login(username, phone)
+          const response = await AuthService.login(username)
           return response
         } catch (error) {
           console.error('Login Error:', error)
@@ -42,9 +42,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      verifyOtp: async (phone: string, otp: string, token: string, router: AppRouterInstance) => {
+      verifyOtp: async (otp: string, token: string, phone: string, router: AppRouterInstance) => {
         try {
-          const response = await AuthService.verifyOtp(phone, otp, token)
+          const response = await AuthService.verifyOtp(otp, token, phone)
           const verifyResponse = response as VerifyOtpResponse;
 
           if (!verifyResponse.user || !verifyResponse.access_token) {
@@ -121,9 +121,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         router.refresh()
       },
 
-      resendOtp: async (phone: string, token: string) => {
+      resendOtp: async (token: string) => {
         try {
-          const response = await AuthService.resendOtp(phone, token)
+          const response = await AuthService.resendOtp(token)
           return response
         } catch (error) {
           console.error('Resend OTP Error:', error)
