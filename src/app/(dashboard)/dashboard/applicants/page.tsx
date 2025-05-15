@@ -172,7 +172,7 @@ export default function ApplicantsPage() {
                     <th className="whitespace-nowrap px-4 py-3 font-medium">نام</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">نام خانوادگی</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">کد ملی</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">شماره تماس</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">شماره موبایل داوطلب</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
                   </tr>
                 </thead>
@@ -206,7 +206,7 @@ export default function ApplicantsPage() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             {applicant.Aks ? (
-                              <Image src={applicant.Aks} alt={`${applicant.Fname} ${applicant.Lname}`} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
+                              <Image src={`/${applicant.Aks}`} alt={`${applicant.Fname} ${applicant.Lname}`} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
                             ) : (
                               <span className="text-xs font-medium text-red-500 dark:text-red-400">بدون عکس</span>
                             )}
@@ -275,7 +275,7 @@ export default function ApplicantsPage() {
                         )}
                         {applicant.Phone && (
                           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                            شماره تماس: {applicant.Phone}
+                            شماره موبایل داوطلب : {applicant.Phone}
                           </p>
                         )}
                         <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
@@ -415,7 +415,7 @@ export default function ApplicantsPage() {
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   {selectedApplicant.Aks ? (
-                    <Image src={selectedApplicant.Aks} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} width={80} height={80} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
+                    <Image src={`/${selectedApplicant.Aks}`} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} width={80} height={80} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">بدون عکس</span>
@@ -433,7 +433,7 @@ export default function ApplicantsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <p className="text-zinc-500 dark:text-zinc-400">شماره تماس:</p>
+                    <p className="text-zinc-500 dark:text-zinc-400">شماره موبایل داوطلب :</p>
                     <p className="text-zinc-900 dark:text-zinc-100">{selectedApplicant.Phone || '-'}</p>
                   </div>
                   {/* <div className="space-y-1">

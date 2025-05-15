@@ -208,12 +208,12 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       setLoading(true);
       if (student) {
         await StudentService.updateStudent(student.id, data, accessToken);
-        sonnerToast.success("دانش آموز با موفقیت ویرایش شد", {
+        sonnerToast.success("قرآن آموز با موفقیت ویرایش شد", {
           style: { background: '#22c55e', color: '#fff' }
         });
       } else {
         await StudentService.createStudent(data, accessToken);
-        sonnerToast.success("دانش آموز با موفقیت ایجاد شد", {
+        sonnerToast.success("قرآن آموز با موفقیت ایجاد شد", {
           style: { background: '#22c55e', color: '#fff' }
         });
       }
@@ -252,10 +252,10 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
             });
             sonnerToast.error("خطا در اعتبار سنجی اطلاعات وارد شده");
           } else {
-            sonnerToast.error(errorData.message || "خطا در ذخیره اطلاعات دانش آموز");
+            sonnerToast.error(errorData.message || "خطا در ذخیره اطلاعات قرآن آموز");
           }
         } else {
-          sonnerToast.error("خطا در ذخیره اطلاعات دانش آموز");
+          sonnerToast.error("خطا در ذخیره اطلاعات قرآن آموز");
         }
       } else {
         sonnerToast.error("خطا در ارتباط با سرور");

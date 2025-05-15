@@ -37,13 +37,13 @@ const items = [
     requiredRole: "admin"
   },
   {
-    title: "دانش آموزان",
+    title: "قرآن آموزان",
     href: "/dashboard/students",
     icon: GraduationCap,
     requiredRole: "admin"
   },
   {
-    title: "اساتید",
+    title: "اساتید و مربیان ",
     href: "/dashboard/masters",
     icon: Briefcase,
     requiredRole: "admin"
@@ -67,7 +67,7 @@ const items = [
     requiredRole: ["admin", "master"]
   },
   {
-    title: "متقاضیان", 
+    title: "متقاضیان ثبت نام", 
     href: "/dashboard/applicants",
     icon: UserPlus,
     requiredRole: "admin"

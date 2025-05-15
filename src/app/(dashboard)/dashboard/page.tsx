@@ -9,7 +9,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 
 const stats = [
   {
-    title: "تعداد کل دانش آموزان",
+    title: "تعداد کل قرآن آموزان",
     value: "345",
     change: "+20.1%",
     changeLabel: "نسبت به ماه گذشته",

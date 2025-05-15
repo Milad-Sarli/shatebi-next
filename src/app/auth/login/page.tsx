@@ -18,6 +18,7 @@ import * as motion from "motion/react-client"
 import { useAuth } from '@/lib/context/auth.context'
 import { OTPInput } from '@/components/ui/otp-input'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
+import Image from 'next/image'
 
 // Step 1: National ID and Phone Number
 const loginFormSchema = z.object({
@@ -149,14 +150,26 @@ export default function LoginPage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.3 }}
-              className=""
-            />
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-foreground mb-6">
-              سامانه شاطبی
+              className="mb-8"
+            >
+              <Image 
+                src={`${process.env.NEXT_PUBLIC_API_URL}/public/assets/images/shatebi_logo.png`}
+                alt="Shatebi Logo"
+                width={200}
+                height={80}
+                className="block dark:hidden"
+              />
+              <Image
+                src={`${process.env.NEXT_PUBLIC_API_URL}/public/assets/images/shatebi_logo_white.png`} 
+                alt="Shatebi Logo"
+                width={200}
+                height={80}
+                className="hidden dark:block"
+              />
+            </motion.div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-foreground mb-12">
+              <span className="block mb-6">سامانه جامع آموزشی</span> <span className="text-green-500 dark:text-green-400">دارالقرآن امام شاطبی (رح)</span> 
             </h1>
-            <p className="text-base md:text-lg lg:text-xl text-muted-foreground">
-              سیستم مدیریت یکپارچه اطلاعات
-            </p>
           </div>
         </motion.div>
         <SpotlightCard className="w-full max-w-fit "> 
@@ -327,6 +340,11 @@ export default function LoginPage() {
                                       console.log('Current OTP value:', value);
                                       field.onChange(value);
                                       otpForm.setValue('otp', value);
+                                      if (value.length === 6) {
+                                        // Automatically submit the form when OTP is complete
+                                        // Ensure that the form is valid before submitting
+                                        otpForm.handleSubmit(onOTPSubmit)();
+                                      }
                                     }}
                                   />
                                 </FormControl>

@@ -59,11 +59,13 @@ const educationLevels = [
   { value: 'هشتم', label: 'هشتم' },
   { value: 'نهم', label: 'نهم' },
   { value: 'دهم', label: 'دهم' },
-  { value: 'یازدهم', label: 'یازدهم' },
-  { value: 'دوازدهم', label: 'دوازدهم' },
-  { value: 'دانشگاه', label: 'دانشگاه' },
 ];
- 
+
+const healthStatusOptions = [
+  { value: 'سلامت کامل', label: 'سلامت کامل' },
+  { value: 'بیمار', label: 'بیمار' },
+];
+
 interface ApiError extends Error {
   message: string;
 }
@@ -80,6 +82,7 @@ export default function RegistrationForm() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isTypingHealthDetails, setIsTypingHealthDetails] = useState(false);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -142,11 +145,14 @@ export default function RegistrationForm() {
     if (!form.Lname) newErrors.Lname = 'نام خانوادگی الزامی است';
     if (!form.FatherName) newErrors.FatherName = 'نام پدر الزامی است';
     if (!form.Mellicode) newErrors.Mellicode = 'کد ملی الزامی است';
-    if (!form.Phone) newErrors.Phone = 'شماره موبایل الزامی است';
+    if (!form.Aks) newErrors.Aks = 'عکس الزامی است';
+    if (!form.Phone) newErrors.Phone = 'شماره موبایل داوطلب الزامی است';
+    if (!form.TelPhone) newErrors.TelPhone = 'شماره موبایل پدر یا مادر الزامی است';
     if (!form.Ostan) newErrors.Ostan = 'استان الزامی است';
     if (!form.City) newErrors.City = 'شهر الزامی است';
     if (!form.Degree) newErrors.Degree = 'پایه تحصیلی الزامی است';
-    if (form.TelPhone && form.TelPhone.length > 11) newErrors.TelPhone = 'شماره تلفن ثابت نباید بیشتر از 11 کاراکتر باشد';
+    if (form.TelPhone && form.TelPhone.length > 11) newErrors.TelPhone = 'شماره موبایل پدر یا مادر نباید بیشتر از 11 کاراکتر باشد';
+    if (form.Phone && form.Phone.length > 11) newErrors.Phone = 'شماره موبایل داوطلب نباید بیشتر از 11 کاراکتر باشد';
     return newErrors;
   };
 
@@ -309,156 +315,7 @@ export default function RegistrationForm() {
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                تاریخ تولد <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <div className="w-full">
-                <DatePicker 
-                  onChange={(date: Date) => {
-                    const d = new Date(date);
-                    const yyyy = d.getFullYear();
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
-                  }} 
-                />
-                {form.Birthday && (
-                  <div className="text-xs text-gray-500 mt-2">{form.Birthday}</div>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                شماره موبایل <span className="text-red-500">*</span>
-              </label>
-              <input 
-                name="Phone" 
-                maxLength={11} 
-                value={form.Phone} 
-                onChange={handleChange} 
-                placeholder="شماره موبایل را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-              {errors.Phone && <span className="text-red-500 text-xs mt-1">{errors.Phone}</span>}
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                تلفن ثابت <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <input 
-                name="TelPhone" 
-                value={form.TelPhone} 
-                onChange={handleChange} 
-                placeholder="تلفن ثابت را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                استان <span className="text-red-500">*</span>
-              </label>
-              <SingleSelectCombobox
-                options={provinces.map(province => ({
-                  value: province.name,
-                  label: province.name
-                }))}
-                value={form.Ostan}
-                onChange={handleProvinceChange}
-                placeholder="استان را انتخاب کنید"
-                emptyMessage="استانی یافت نشد"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                شهر <span className="text-red-500">*</span>
-              </label>
-              <SingleSelectCombobox
-                options={cities.map(city => ({
-                  value: city.name,
-                  label: city.name
-                }))}
-                value={form.City}
-                onChange={handleCityChange}
-                placeholder="شهر را انتخاب کنید"
-                emptyMessage="شهری یافت نشد"
-                searchable={true}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                روستا <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <input 
-                name="Vilage" 
-                value={form.Vilage} 
-                onChange={handleChange} 
-                placeholder="روستا را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-            </div>
-            <div className="flex flex-col gap-1 md:col-span-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                آدرس <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <input 
-                name="Adress" 
-                value={form.Adress} 
-                onChange={handleChange} 
-                placeholder="آدرس را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                پایه تحصیلی <span className="text-red-500">*</span>
-              </label>
-              <SingleSelectCombobox
-                options={educationLevels}
-                value={form.Degree}
-                onChange={(value) => setForm(prev => ({ ...prev, Degree: value }))}
-                placeholder="پایه تحصیلی را انتخاب کنید"
-                emptyMessage="پایه تحصیلی یافت نشد"
-              />
-              {errors.Degree && <span className="text-red-500 text-xs mt-1">{errors.Degree}</span>}
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                معرف <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <input 
-                name="Referer" 
-                value={form.Referer} 
-                onChange={handleChange} 
-                placeholder="نام معرف را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                وضعیت سلامت <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <input 
-                name="Health" 
-                value={form.Health} 
-                onChange={handleChange} 
-                placeholder="وضعیت سلامت را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
-              />
-            </div>
-            <div className="flex flex-col gap-1 md:col-span-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                توضیحات <span className="text-gray-400">(اختیاری)</span>
-              </label>
-              <textarea 
-                name="Description" 
-                value={form.Description} 
-                onChange={handleChange} 
-                placeholder="توضیحات را وارد کنید" 
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition min-h-[60px]" 
-              />
-            </div>
-            <div className="flex flex-col gap-1 md:col-span-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                عکس <span className="text-gray-400">(اختیاری)</span>
+                عکس <span className="text-red-500">*</span>
               </label>
               <div className="flex flex-col gap-2">
                 <input
@@ -533,7 +390,192 @@ export default function RegistrationForm() {
                   </div>
                 )}
               </div>
+              {errors.Aks && <span className="text-red-500 text-xs mt-1">{errors.Aks}</span>}
             </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                تاریخ تولد <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <div className="w-full">
+                <DatePicker 
+                  onChange={(date: Date) => {
+                    const d = new Date(date);
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
+                  }} 
+                />
+                {form.Birthday && (
+                  <div className="text-xs text-gray-500 mt-2">{form.Birthday}</div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                شماره موبایل داوطلب<span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="Phone" 
+                maxLength={11} 
+                value={form.Phone} 
+                onChange={handleChange} 
+                placeholder="شماره موبایل داوطلب را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+              {errors.Phone && <span className="text-red-500 text-xs mt-1">{errors.Phone}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                 شماره موبایل پدر یا مادر <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="TelPhone" 
+                maxLength={11}
+                value={form.TelPhone} 
+                onChange={handleChange} 
+                placeholder="شماره موبایل پدر یا مادر را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                استان <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={provinces.map(province => ({
+                  value: province.name,
+                  label: province.name
+                }))}
+                value={form.Ostan}
+                onChange={handleProvinceChange}
+                placeholder="استان را انتخاب کنید"
+                emptyMessage="استانی یافت نشد"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                شهر <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={cities.map(city => ({
+                  value: city.name,
+                  label: city.name
+                }))}
+                value={form.City}
+                onChange={handleCityChange}
+                placeholder="شهر را انتخاب کنید"
+                emptyMessage="شهری یافت نشد"
+                searchable={true}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                روستا <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Vilage" 
+                value={form.Vilage} 
+                onChange={handleChange} 
+                placeholder="روستا را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                وضعیت سلامت <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              {isTypingHealthDetails ? (
+                <div className="flex items-start gap-2">
+                  <input
+                    name="Health"
+                    value={form.Health}
+                    onChange={handleChange}
+                    placeholder="توضیحات بیماری را وارد کنید"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsTypingHealthDetails(false);
+                      setForm(prev => ({ ...prev, Health: '' })); // Reset health or set to a default like 'سلامت کامل'
+                    }}
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500 px-2 py-3 mt-0.5" // Adjusted padding and margin for alignment
+                  >
+                    لغو
+                  </Button>
+                </div>
+              ) : (
+                <SingleSelectCombobox
+                  options={healthStatusOptions}
+                  value={form.Health === 'سلامت کامل' ? 'سلامت کامل' : ''}
+                  onChange={(value) => {
+                    if (value === 'بیمار') {
+                      setForm(prev => ({ ...prev, Health: '' }));
+                      setIsTypingHealthDetails(true);
+                    } else { // 'سلامت کامل'
+                      setForm(prev => ({ ...prev, Health: value }));
+                      setIsTypingHealthDetails(false);
+                    }
+                  }}
+                  placeholder="وضعیت سلامت را انتخاب کنید"
+                  emptyMessage="گزینه ای یافت نشد"
+                />
+              )}
+            </div>
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                آدرس <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Adress" 
+                value={form.Adress} 
+                onChange={handleChange} 
+                placeholder="آدرس را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                پایه تحصیلی <span className="text-red-500">*</span>
+              </label>
+              <SingleSelectCombobox
+                options={educationLevels}
+                value={form.Degree}
+                onChange={(value) => setForm(prev => ({ ...prev, Degree: value }))}
+                placeholder="پایه تحصیلی را انتخاب کنید"
+                emptyMessage="پایه تحصیلی یافت نشد"
+              />
+              {errors.Degree && <span className="text-red-500 text-xs mt-1">{errors.Degree}</span>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                معرف <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <input 
+                name="Referer" 
+                value={form.Referer} 
+                onChange={handleChange} 
+                placeholder="نام معرف را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition" 
+              />
+            </div>
+          
+            <div className="flex flex-col gap-1 md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                توضیحات <span className="text-gray-400">(اختیاری)</span>
+              </label>
+              <textarea 
+                name="Description" 
+                value={form.Description} 
+                onChange={handleChange} 
+                placeholder="توضیحات را وارد کنید" 
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition min-h-[60px]" 
+              />
+            </div>
+     
             <div className="md:col-span-2">
               <button 
                 type="submit" 

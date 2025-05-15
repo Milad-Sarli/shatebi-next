@@ -136,7 +136,7 @@ export default function StudentsPage() {
           });
         }
       } catch (error) {
-        toast.error("خطا در دریافت لیست دانش آموزان");
+        toast.error("خطا در دریافت لیست قرآن آموزان");
         console.error(error);
         setStudents([]);
       } finally {
@@ -185,10 +185,10 @@ export default function StudentsPage() {
 
     try {
       await StudentService.deleteStudent(studentToDelete, accessToken);
-      toast.success("دانش آموز با موفقیت حذف شد");
+      toast.success("قرآن آموز با موفقیت حذف شد");
       fetchStudents();
     } catch (error) {
-      toast.error("خطا در حذف دانش آموز");
+      toast.error("خطا در حذف قرآن آموز");
       console.error(error);
     } finally {
       setStudentToDelete(null);
@@ -213,12 +213,12 @@ export default function StudentsPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            مدیریت دانش آموزان
+            مدیریت قرآن آموزان
           </h1>
           <Link href="/dashboard/students/add" passHref>
             <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
               <Plus className="ml-2 h-4 w-4" />
-              افزودن دانش آموز
+              افزودن قرآن آموز
             </Button>
           </Link>
         </div>
@@ -226,7 +226,7 @@ export default function StudentsPage() {
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">
-              لیست دانش آموزان
+              لیست قرآن آموزان
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,7 +313,7 @@ export default function StudentsPage() {
                           colSpan={7}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
-                          هیچ دانش آموزی یافت نشد
+                          هیچ قرآن آموزی یافت نشد
                         </td>
                       </tr>
                     ) : (
@@ -393,7 +393,7 @@ export default function StudentsPage() {
                   </div>
                 ) : !Array.isArray(students) || students.length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
-                    هیچ دانش آموزی یافت نشد
+                    هیچ قرآن آموزی یافت نشد
                   </div>
                 ) : (
                   students.map((student, index) => (
@@ -461,7 +461,7 @@ export default function StudentsPage() {
                     </span>
                     <span className="hidden sm:inline mx-2">|</span>
                     نمایش {pagination.from} تا {pagination.to} از{" "}
-                    {pagination.total} دانش آموز
+                    {pagination.total} قرآن آموز
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -593,7 +593,7 @@ export default function StudentsPage() {
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                ویرایش دانش آموز
+                ویرایش قرآن آموز
               </DialogTitle>
             </DialogHeader>
             <StudentForm
@@ -613,12 +613,12 @@ export default function StudentsPage() {
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
             <DialogHeader>
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                تایید حذف دانش آموز
+                تایید حذف قرآن آموز
               </DialogTitle>
             </DialogHeader>
             <div className="py-4">
               <p className="text-zinc-600 dark:text-zinc-400">
-                آیا از حذف این دانش آموز اطمینان دارید؟
+                آیا از حذف این قرآن آموز اطمینان دارید؟
               </p>
             </div>
             <div className="flex justify-end gap-2">

@@ -25,7 +25,7 @@ export default function AddStudentPage() {
           
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
-              افزودن دانش آموز جدید
+              افزودن قرآن آموز جدید
             </h1>
             <Button
               variant="ghost"
@@ -33,7 +33,7 @@ export default function AddStudentPage() {
               className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
             >
               <ArrowLeft className="ml-2 h-4 w-4" />
-              بازگشت به لیست دانش آموزان
+              بازگشت به لیست قرآن آموزان
             </Button>
           </div>
         </div>

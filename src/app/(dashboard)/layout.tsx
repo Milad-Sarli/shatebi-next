@@ -58,22 +58,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         className="fixed inset-y-0 right-0 z-50 w-72 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 shadow-xl md:hidden"
       >
         <div className="flex h-full flex-col p-4">
-          <Link href="/dashboard">
-            <div className="flex items-center justify-between mb-6">
-                <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
-                <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                  دارالقرآن
-                </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(false)}
-                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </Link>
+          <div className="flex items-center justify-between mb-6">
+            <Link prefetch href="/dashboard" className="flex items-center gap-2">
+              <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
+              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                دارالقرآن
+              </span>
+            </Link>
+            <Button
+              variant="ghost" 
+              size="icon"
+              onClick={() => setSidebarOpen(false)}
+              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
           <Sidebar className="flex-1" />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
