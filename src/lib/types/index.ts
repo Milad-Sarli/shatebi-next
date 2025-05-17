@@ -1,3 +1,10 @@
+export interface MorakhasiFilters {
+  page: number;
+  per_page: number;
+  search: string;
+  type: string;
+}
+
 export interface Permission {
   id: number;
   name: string;
@@ -7,7 +14,7 @@ export interface Permission {
   pivot?: {
     role_id: number;
     permission_id: number;
-  };
+    };
 }
 
 export interface Role {
@@ -66,4 +73,58 @@ export interface AppRole {
     name: string;
     // Add other user fields as needed
   };
-} 
+}
+
+export interface Morakhasi {
+    id: number;
+    user_id: number;
+    fullname: string;
+    dalil: string;
+    guardmessage: null;
+    datetime: null;
+    dayli_date: string | null;
+    fromtime_1: string | null;
+    totime_1: string | null;
+    fromdate: string | null;
+    todate: string | null;
+    fromtime_2: string | null;
+    totime_2: string | null;
+    status: number | null;
+    sms_sent: null;
+    reject_dalil: null;
+    exit_ok: null;
+    accepted_by: null;
+    checked: null;
+    late: null;
+    late_time: null;
+    type: number;
+    tenant_id: number;
+    deleted_at: null;
+    created_at: string;
+    updated_at: string;
+    user: {
+        id: number;
+        username: string;
+        fname: string;
+        name: null;
+        lname: string;
+        avatar: string;
+        send_sms: boolean;
+        phone: string;
+        email: string;
+        tenant_id: number;
+        deleted_at: null;
+        created_at: string;
+        updated_at: string;
+    };
+    tenant: {
+        id: number;
+        name: string;
+        title: string;
+        expire_date: string;
+        status: number;
+        deleted_at: null;
+        created_at: string;
+        updated_at: string;
+    };
+}

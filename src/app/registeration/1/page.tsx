@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import DatePicker from '@/components/ui/DatePicker';
 import { ApplicantService } from '@/lib/services/applicant.service';
 import { useAuth } from '@/lib/context/auth.context';
 import { locationService, Province, City } from '@/lib/services/location.service';
@@ -11,6 +10,9 @@ import { Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import Image from "next/image";
+import persian_fa from 'react-date-object/locales/persian_fa';
+import persian from 'react-date-object/calendars/persian';
+import DatePicker, { DateObject } from 'react-multi-date-picker';
 
 interface FormState {
   Fname: string;
@@ -398,17 +400,21 @@ export default function RegistrationForm() {
               </label>
               <div className="w-full">
                 <DatePicker 
-                  onChange={(date: Date) => {
-                    const d = new Date(date);
-                    const yyyy = d.getFullYear();
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
+                  onChange={(date: DateObject | null) => {
+                    if (date) {
+                      const d = new Date(date.toDate());
+                      const yyyy = d.getFullYear();
+                      const mm = String(d.getMonth() + 1).padStart(2, '0');
+                      const dd = String(d.getDate()).padStart(2, '0');
+                      setForm({ ...form, Birthday: `${yyyy}-${mm}-${dd}` });
+                    }
                   }} 
+                  locale={persian_fa}
+                  calendar={persian}
+                    calendarPosition="bottom-right"
+                    style={{ width: "100%" }}
+                    inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
                 />
-                {form.Birthday && (
-                  <div className="text-xs text-gray-500 mt-2">{form.Birthday}</div>
-                )}
               </div>
             </div>
             <div className="flex flex-col gap-1">

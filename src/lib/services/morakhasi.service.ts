@@ -56,11 +56,21 @@ export interface MorakhasiFilters {
   per_page?: number;
   tenant_id?: number;
   status?: number;
+  type?: string;
 }
 
 export class MorakhasiService {
-  static async getMorakhasiList(token: string): Promise<Morakhasi[]> {
-    const response = await fetch(`${API_URL}/api/morakhasi`, {
+  static async getMorakhasiList(token: string, filters: MorakhasiFilters = {}): Promise<{ status: string, data: PaginatedResponse<Morakhasi> }> {
+    const queryParams = new URLSearchParams();
+    if (filters.page) queryParams.append('page', filters.page.toString());
+    if (filters.per_page) queryParams.append('per_page', filters.per_page.toString());
+    if (filters.search) queryParams.append('search', filters.search);
+    if (filters.with) queryParams.append('with', filters.with);
+    if (filters.tenant_id) queryParams.append('tenant_id', filters.tenant_id.toString());
+    if (filters.status !== undefined) queryParams.append('status', filters.status.toString());
+    if (filters.type) queryParams.append('type', filters.type);
+
+    const response = await fetch(`${API_URL}/api/morakhasi?${queryParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
@@ -155,4 +165,4 @@ export class MorakhasiService {
     }
     return response.json();
   }
-} 
+}

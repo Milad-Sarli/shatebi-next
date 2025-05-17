@@ -16,7 +16,6 @@ import {
 } from "@/lib/services/optimizedClass.service";
 import { format, subHours } from "date-fns-jalali";
 import { SingleSelectCombobox } from "@/components/ui/Combobox";
-import DatePicker from "@/components/ui/DatePicker";
 import { Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
 import RotatingText from "@/components/reactbit/texts/RotatingText";
@@ -36,6 +35,9 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import Image from "next/image";
 import { UseFormReturn } from "react-hook-form";
+import DatePicker, { DateObject } from "react-multi-date-picker";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
 
 interface Course {
   id: number;
@@ -836,7 +838,7 @@ export default function AddNumberPage() {
   const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
   const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = React.useState<DateObject | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -866,14 +868,16 @@ export default function AddNumberPage() {
       if (!accessToken || !selectedClass || !selectedDate) return;
 
       try {
+        const jsDate = selectedDate ? selectedDate.toDate() : null;
+        if (!jsDate) return;
         const response = await optimizedClassService.getStudents(
           selectedClass.id,
-          selectedDate,
+          jsDate,
           accessToken
         );
 
         const gradesMap: Record<number, Grade[]> = {};
-        const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+        const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
 
         response.data.forEach((student) => {
           const todayGrades = student.grades.filter(
@@ -977,6 +981,9 @@ export default function AddNumberPage() {
         payload.end_joze = parseInt(data.end_joze as string);
       }
 
+      const jsDate = selectedDate ? selectedDate.toDate() : null;
+      if (!jsDate) return;
+
       await optimizedNumberService.create(payload, accessToken);
       toast.success("نمره با موفقیت ثبت شد");
       setIsModalOpen(false);
@@ -984,11 +991,11 @@ export default function AddNumberPage() {
       
       const response = await optimizedClassService.getStudents(
         selectedClass.id,
-        selectedDate,
+        jsDate,
         accessToken
       );
       
-      const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+      const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
       const student = response.data.find(s => s.student.id === selectedStudent.id);
       if (student) {
         const todayGrades = student.grades.filter(
@@ -1107,7 +1114,12 @@ export default function AddNumberPage() {
                 )}
               </div>
               <div className="flex-1 w-full mx-auto">
-                <DatePicker onChange={(date: Date) => setSelectedDate(date)} />
+                <DatePicker onChange={setSelectedDate} 
+                  calendar={persian}
+                  locale={persian_fa}
+                  calendarPosition="bottom-right"
+                  style={{ width: "100%" }}
+                  inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"/>
               </div>
             </div>
 

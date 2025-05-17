@@ -18,9 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import DatePicker from "@/components/ui/DatePicker";
 import { locationService, Province, City } from '@/lib/services/location.service';
 import { SingleSelectCombobox } from '@/components/ui/Combobox';
+import DateObject from "react-date-object";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import DatePicker from "react-multi-date-picker";
 
 const educationLevels = [
   { value: "پنجم", label: "پنجم" },
@@ -338,14 +341,19 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="Entryday">تاریخ ورود</Label>
-          <DatePicker
-            onChange={(date: Date) => {
-              const d = new Date(date);
+          <DatePicker 
+            onChange={(date: DateObject) => {
+              const d = new Date(date.toDate());
               const yyyy = d.getFullYear();
               const mm = String(d.getMonth() + 1).padStart(2, '0');
               const dd = String(d.getDate()).padStart(2, '0');
               form.setValue("Entryday", `${yyyy}-${mm}-${dd}`);
             }}
+            calendar={persian}
+            locale={persian_fa}
+            calendarPosition="bottom-right"
+            style={{ width: "100%" }}
+            inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
           />
           {form.watch("Entryday") && (
             <div className="text-xs text-gray-500 mt-2">
