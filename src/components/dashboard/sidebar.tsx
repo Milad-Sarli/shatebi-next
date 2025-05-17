@@ -76,13 +76,24 @@ const items = [
     title: "مرخصی‌ها",
     href: "/dashboard/leaves",
     icon: BookOpen,
-    requiredRole: ["admin", "master"]
   },
   {
     title: "درخواست مرخصی جدید",
     href: "/dashboard/leaves/new",
     icon: BookOpen,
     requiredRole: ["admin", "master"]
+  },
+  {
+    title: "گزارشات و آمار ها",
+    href: "/dashboard/reports",
+    icon: BookOpen,
+    requiredRole: "admin"
+  },
+  {
+    title: "مرخصی‌های در انتظار تایید",
+    href: "/dashboard/waiting-morakhasi",
+    icon: BookOpen,
+    requiredRole: "admin"
   },
 ];
 

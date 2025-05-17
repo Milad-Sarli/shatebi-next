@@ -98,7 +98,7 @@ const chartData = {
 };
 
 export default function LeavesListPage() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [leaves, setLeaves] = React.useState<Morakhasi[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -122,23 +122,38 @@ export default function LeavesListPage() {
   const [statistics, setStatistics] = React.useState<Statistics | null>(null);
 
   React.useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || !user) return;
     setLoading(true);
     setError(null);
-    MorakhasiService.getMorakhasiList(accessToken, { ...filters, search: debouncedSearch, type: selectedType })
-      .then((res) => {
-        const api = res.data;
+
+    const isAdmin = user.app_roles?.some((role: { name: string }) => role.name === 'admin');
+    
+    const apiFilters: MorakhasiFilters = {
+      ...filters,
+      search: debouncedSearch,
+      type: selectedType,
+    };
+
+    if (!isAdmin && user.id) {
+      apiFilters.user_id = user.id;
+    }
+    
+    MorakhasiService.getMorakhasiList(accessToken, apiFilters)
+      .then((responseFromServer) => {
+        const paginatedPayload = responseFromServer.data;
+
         let leavesArr: Morakhasi[] = [];
         let pag = {
           current_page: 1,
           last_page: 1,
           total: 0,
-          per_page: 10,
+          per_page: filters.per_page,
           from: 0,
           to: 0,
         };
-        if (api) {
-          type Paginated = {
+
+        if (paginatedPayload && typeof paginatedPayload === 'object') {
+          type LaravelPaginatedResponse = {
             current_page?: number;
             last_page?: number;
             total?: number;
@@ -146,32 +161,44 @@ export default function LeavesListPage() {
             from?: number;
             to?: number;
             data?: Morakhasi[];
-            statistics?: Statistics;
           };
-          const paginated = api as Paginated;
-          leavesArr = Array.isArray(paginated.data) ? paginated.data : [];
+          
+          const laravelData = paginatedPayload as LaravelPaginatedResponse;
+          leavesArr = Array.isArray(laravelData.data) ? laravelData.data : [];
           pag = {
-            current_page: paginated.current_page ?? 1,
-            last_page: paginated.last_page ?? 1,
-            total: paginated.total ?? 0,
-            per_page: paginated.per_page ?? 10,
-            from: paginated.from ?? 0,
-            to: paginated.to ?? 0,
+            current_page: laravelData.current_page ?? 1,
+            last_page: laravelData.last_page ?? 1,
+            total: laravelData.total ?? 0,
+            per_page: laravelData.per_page ?? filters.per_page,
+            from: laravelData.from ?? 0,
+            to: laravelData.to ?? 0,
           };
-          // Set statistics if available
-          if ('statistics' in res && res.statistics) setStatistics(res.statistics);
-          else if ('statistics' in api && api.statistics) setStatistics(api.statistics);
-          else if (paginated.statistics) setStatistics(paginated.statistics);
         }
         setLeaves(leavesArr);
         setPagination(pag);
+
+        if (responseFromServer && 'statistics' in responseFromServer && responseFromServer.statistics) {
+          setStatistics(responseFromServer.statistics as Statistics);
+        } else {
+          setStatistics(null);
+        }
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message || "خطا در دریافت لیست مرخصی‌ها");
+        setLeaves([]);
+        setStatistics(null);
+        setPagination({
+          current_page: 1,
+          last_page: 1,
+          total: 0,
+          per_page: filters.per_page,
+          from: 0,
+          to: 0,
+        });
         setLoading(false);
       });
-  }, [accessToken, filters, debouncedSearch, selectedType]);
+  }, [accessToken, user, filters, debouncedSearch, selectedType]);
 
   // Define columns for TanStack Table
   const columns = React.useMemo<ColumnDef<Morakhasi>[]>(() => [
@@ -231,6 +258,8 @@ export default function LeavesListPage() {
     },
   });
 
+  const currentUserIsAdmin = user?.app_roles?.some((role: { name: string }) => role.name === 'admin');
+
   return (
     <PageTransition>
       <div className="space-y-4 relative">
@@ -248,7 +277,7 @@ export default function LeavesListPage() {
             </Link>
           </div>
         </div>
-        {statistics && (
+        {statistics && currentUserIsAdmin && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             {/* Growth Rate */}
             <motion.div

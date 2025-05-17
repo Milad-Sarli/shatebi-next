@@ -57,6 +57,14 @@ export interface MorakhasiFilters {
   tenant_id?: number;
   status?: number;
   type?: string;
+  user_id?: number;
+}
+
+export interface PendingMorakhasiFilters {
+  search?: string;
+  type?: string;
+  per_page?: number;
+  page?: number;
 }
 
 export class MorakhasiService {
@@ -69,6 +77,7 @@ export class MorakhasiService {
     if (filters.tenant_id) queryParams.append('tenant_id', filters.tenant_id.toString());
     if (filters.status !== undefined) queryParams.append('status', filters.status.toString());
     if (filters.type) queryParams.append('type', filters.type);
+    if (filters.user_id) queryParams.append('user_id', filters.user_id.toString());
 
     const response = await fetch(`${API_URL}/api/morakhasi?${queryParams.toString()}`, {
       headers: {
@@ -81,7 +90,7 @@ export class MorakhasiService {
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
-      } catch {} // ignore
+      } catch { } // ignore
       throw new Error(errorDetails);
     }
     return response.json();
@@ -99,7 +108,7 @@ export class MorakhasiService {
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
-      } catch {} // ignore
+      } catch { } // ignore
       throw new Error(errorDetails);
     }
     return response.json();
@@ -120,7 +129,7 @@ export class MorakhasiService {
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
-      } catch {} // ignore
+      } catch { } // ignore
       throw new Error(errorDetails);
     }
     return response.json();
@@ -141,7 +150,7 @@ export class MorakhasiService {
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
-      } catch {} // ignore
+      } catch { } // ignore
       throw new Error(errorDetails);
     }
     return response.json();
@@ -160,7 +169,31 @@ export class MorakhasiService {
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
-      } catch {} // ignore
+      } catch { } // ignore
+      throw new Error(errorDetails);
+    }
+    return response.json();
+  }
+
+  static async getPendingAcceptanceMorakhasiList(token: string, filters: PendingMorakhasiFilters = {}): Promise<{ status: string, data: PaginatedResponse<Morakhasi> }> {
+    const queryParams = new URLSearchParams();
+    if (filters.page) queryParams.append('page', filters.page.toString());
+    if (filters.per_page) queryParams.append('per_page', filters.per_page.toString());
+    if (filters.search) queryParams.append('search', filters.search);
+    if (filters.type) queryParams.append('type', filters.type);
+
+    const response = await fetch(`${API_URL}/api/morakhasi/pending-acceptance?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      let errorDetails = 'Error fetching pending acceptance morakhasi list';
+      try {
+        const error = await response.json();
+        errorDetails = error.message || errorDetails;
+      } catch { } // ignore
       throw new Error(errorDetails);
     }
     return response.json();
