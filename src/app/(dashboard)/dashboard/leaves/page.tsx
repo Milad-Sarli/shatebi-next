@@ -304,7 +304,7 @@ export default function LeavesListPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </motion.div>
+            </motion.div> 
             {/* Most Common Reason */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}

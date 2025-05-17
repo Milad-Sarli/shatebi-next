@@ -312,7 +312,7 @@ const WaitingMorakhasiPage: React.FC = () => {
                     
                     {morakhasi.type === 1 && ( // ساعتی
                       <>
-                        <p className="text-sm text-gray-600 dark:text-gray-300"><strong>تاریخ:</strong> {formatDate(morakhasi.dayli_date)}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300"><strong>تاریخ:</strong> {formatDate(morakhasi.created_at as string)}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
                           <strong>ساعت:</strong> {formatTime(morakhasi.fromtime_1)} الی {formatTime(morakhasi.totime_1)}
                         </p>
