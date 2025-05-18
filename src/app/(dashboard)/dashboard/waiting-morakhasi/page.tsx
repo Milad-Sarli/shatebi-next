@@ -12,6 +12,9 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { Textarea } from '@/components/ui/textarea';
+import dayjs from 'dayjs';
+import jalaliday from 'jalaliday';
+dayjs.extend(jalaliday);
 
 // Define a basic User interface based on expected properties
 interface User {
@@ -195,57 +198,46 @@ const WaitingMorakhasiPage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeZone: 'Asia/Tehran' }).format(new Date(dateString));
-    } catch {
-      return dateString; 
-    }
+
+  function toJalali(date: string | undefined) {
+    if (!date) return '-';
+    return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
   }
 
-  const formatTime = (timeString?: string) => {
-    if (!timeString) return '';
-    // Assuming timeString is HH:MM:SS or HH:MM
-    const parts = timeString.split(':');
-    if (parts.length >= 2) {
-        return `${parts[0]}:${parts[1]}`;
-    }
-    return timeString;
-  }
+
 
   return (
     <PageTransition>
-      <div className="container mx-auto p-4">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">مرخصی‌های در انتظار تایید</h1>
+      <div className="container mx-auto max-w-6xl p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">مرخصی‌های در انتظار تایید</h1>
           <div className="relative w-full sm:w-auto sm:max-w-xs">
-            <SearchIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               type="text"
               placeholder="جستجو (نام، دلیل...)"
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
-              className="pr-9 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 rounded-md shadow-sm"
+              className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-transparent focus:border-blue-400 dark:focus:border-blue-500 rounded-full shadow-sm transition placeholder:text-gray-400 text-gray-900 dark:text-white"
             />
+            <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
         {isLoading && morakhasiList.length === 0 && (
-          <div className="flex flex-col justify-center items-center h-[calc(100vh-200px)]">
-            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-            <p className="text-xl text-gray-600 dark:text-gray-300">در حال بارگذاری اطلاعات...</p>
+          <div className="flex flex-col justify-center items-center h-[calc(100vh-250px)]">
+            <Loader2 className="w-14 h-14 text-blue-500 animate-spin mb-4" />
+            <p className="text-lg text-gray-500 dark:text-gray-300 font-medium">در حال بارگذاری اطلاعات...</p>
           </div>
         )}
 
         {!isLoading && error && (
-          <div className="flex flex-col justify-center items-center h-[calc(100vh-200px)] p-4 text-center text-red-600 dark:text-red-400">
-            <AlertTriangle className="w-12 h-12 mb-4" />
-            <p className="text-lg mb-2">خطا در دریافت اطلاعات</p>
+          <div className="flex flex-col justify-center items-center h-[calc(100vh-250px)] p-4 text-center text-red-500 dark:text-red-400">
+            <AlertTriangle className="w-10 h-10 mb-3" />
+            <p className="text-base mb-1 font-semibold">خطا در دریافت اطلاعات</p>
             <p className="text-sm mb-4">{error}</p>
             <button
               onClick={fetchWaitingMorakhasi}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="px-5 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition-colors font-medium"
             >
               تلاش مجدد
             </button>
@@ -253,9 +245,9 @@ const WaitingMorakhasiPage: React.FC = () => {
         )}
 
         {!isLoading && !error && morakhasiList.length === 0 && (
-          <div className="flex flex-col justify-center items-center h-[calc(100vh-200px)] p-4 text-center">
-            <Info className="w-12 h-12 text-gray-500 dark:text-gray-400 mb-4" />
-            <p className="text-xl text-gray-700 dark:text-gray-200">
+          <div className="flex flex-col justify-center items-center h-[calc(100vh-250px)] p-4 text-center">
+            <Info className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-3" />
+            <p className="text-lg text-gray-600 dark:text-gray-200 font-medium">
               {debouncedSearch ? `هیچ مرخصی با جستجوی "${debouncedSearch}" یافت نشد.` : 'در حال حاضر هیچ مرخصی در انتظار تاییدی وجود ندارد.'}
             </p>
           </div>
@@ -263,7 +255,7 @@ const WaitingMorakhasiPage: React.FC = () => {
 
         {!error && morakhasiList.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {morakhasiList.map((morakhasi, index) => (
                 <motion.div
                   key={morakhasi.id}
@@ -274,79 +266,75 @@ const WaitingMorakhasiPage: React.FC = () => {
                     delay: index * 0.05,
                     ease: [0.4, 0, 0.2, 1],
                   }}
-                  className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-5 border border-gray-200 dark:border-gray-700 flex flex-col justify-between"
+                  className="bg-white dark:bg-gray-900 shadow-md rounded-xl p-3 flex flex-col justify-between min-h-[170px] border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-shadow"
                 >
                   <div>
-                    <div className="flex items-center mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden mr-3 shrink-0">
+                    <div className="flex items-center mb-2">
+                      <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden mr-2 shrink-0 border border-gray-200 dark:border-gray-700">
                         {(morakhasi.user as User)?.aks ? (
                           <Image
                             src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${(morakhasi.user as User)?.aks}`}
                             alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
-                            width={48}
-                            height={48}
+                            width={36}
+                            height={36}
                             className="w-full h-full object-cover"
                             onError={(e) => { e.currentTarget.src = '/images/default-avatar.png'; }}
                           />
                         ) : (
-                          <span className="text-xl font-semibold text-gray-500 dark:text-gray-400">
-                           {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                          <span className="text-sm font-bold text-gray-400 dark:text-gray-500">
+                            {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-100 leading-tight">
+                        <h2 className="text-xs font-semibold text-gray-900 dark:text-white leading-tight mx-2">
                           {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
                         </h2>
                         {(morakhasi.user as User)?.personnel_code && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                             کد پرسنلی: {(morakhasi.user as User)?.personnel_code}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                      <strong>دلیل مرخصی:</strong> {morakhasi.dalil || <span className="text-gray-400 dark:text-gray-500 italic">ثبت نشده</span>}
+                    <p className="text-xs text-gray-500 dark:text-gray-300 mb-1">
+                      <span className="font-medium">دلیل:</span> {morakhasi.dalil || <span className="text-gray-300 dark:text-gray-600 italic">ثبت نشده</span>}
                     </p>
-                    
-                    {morakhasi.type === 1 && ( // ساعتی
+                    {morakhasi.type === 1 && (
                       <>
-                        <p className="text-sm text-gray-600 dark:text-gray-300"><strong>تاریخ:</strong> {formatDate(morakhasi.created_at as string)}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <strong>ساعت:</strong> {formatTime(morakhasi.fromtime_1)} الی {formatTime(morakhasi.totime_1)}
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          <span className="font-medium">تاریخ:</span> <span className="text-blue-500 dark:text-blue-400 font-semibold">{toJalali(morakhasi.fromtime_1)}</span>
+                        </p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          <span className="font-medium">تا:</span> <span className="text-red-500 dark:text-red-400 font-semibold">{toJalali(morakhasi.totime_1)}</span>
                         </p>
                       </>
                     )}
-                    {morakhasi.type === 2 && ( // روزانه
+                    {morakhasi.type === 2 && (
                       <>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          <strong>از تاریخ:</strong> {formatDate(morakhasi.fromdate)} <br /><strong>تا تاریخ:</strong> {formatDate(morakhasi.todate)}
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            <span className="font-medium">از:</span> <span className="text-blue-500 dark:text-blue-400 font-semibold">{toJalali(morakhasi.fromtime_1)}</span> <span className="mx-1">|</span> <span className="font-medium">تا:</span> <span className="text-red-500 dark:text-red-400 font-semibold">{toJalali(morakhasi.totime_1)}</span>
                         </p>
-                        {(morakhasi.fromtime_2 && morakhasi.totime_2 && morakhasi.fromtime_2 !== "00:00:00" && morakhasi.totime_2 !== "00:00:00")  && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                            <strong>ساعات خاص:</strong> {formatTime(morakhasi.fromtime_2)} الی {formatTime(morakhasi.totime_2)}
-                          </p>
-                        )}
                       </>
                     )}
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">شناسه: {morakhasi.id}</p>
+                    <p className="text-[9px] text-gray-200 dark:text-gray-700 mt-1">#{morakhasi.id}</p>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 space-x-reverse">
+                  <div className="mt-2 flex justify-end gap-1">
                     <button
                       onClick={() => openModal('reject', morakhasi.id)}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 disabled:opacity-50 flex items-center gap-1"
+                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800 transition font-medium disabled:opacity-50 shadow-sm text-xs"
                     >
-                      <XCircle size={18} /> رد
+                      <XCircle size={14} /> رد
                     </button>
                     <button
                       onClick={() => openModal('approve', morakhasi.id)}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 disabled:opacity-50 flex items-center gap-1"
+                      className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800 transition font-medium disabled:opacity-50 shadow-sm text-xs"
                     >
-                      <CheckCircle size={18} /> تایید
+                      <CheckCircle size={14} /> تایید
                     </button>
                   </div>
                 </motion.div>
@@ -354,23 +342,26 @@ const WaitingMorakhasiPage: React.FC = () => {
             </div>
 
             {pagination && pagination.lastPage > 1 && (
-              <div className="mt-8 flex justify-center items-center space-x-2 space-x-reverse">
+              <div className="mt-10 flex justify-center items-center gap-4">
                 <button
                   onClick={() => handlePageChange(pagination.currentPage - 1)}
                   disabled={pagination.currentPage === 1 || isLoading}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
+                  aria-label="قبلی"
                 >
-                   قبلی
+                  <span className="text-lg">&#8594;</span>
+
                 </button>
-                <span className="text-gray-700 dark:text-gray-200">
-                  صفحه {pagination.currentPage} از {pagination.lastPage} (کل: {pagination.total})
+                <span className="text-gray-700 dark:text-gray-200 text-sm font-medium">
+                  صفحه {pagination.currentPage} از {pagination.lastPage}
                 </span>
                 <button
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={pagination.currentPage === pagination.lastPage || isLoading}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
+                  aria-label="بعدی"
                 >
-                  بعدی
+                  <span className="text-lg">&#8592;</span>
                 </button>
               </div>
             )}
@@ -385,10 +376,10 @@ const WaitingMorakhasiPage: React.FC = () => {
         onConfirm={handleReject}
         title="رد مرخصی"
         confirmText="رد درخواست"
-        isConfirmDisabled={isLoading || !modalState.message} // Disable if no message for reject
+        isConfirmDisabled={isLoading || !modalState.message}
       >
-        <div className="space-y-2">
-            <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="space-y-3">
+            <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               دلیل رد مرخصی (الزامی):
             </label>
             <Textarea
@@ -397,7 +388,7 @@ const WaitingMorakhasiPage: React.FC = () => {
                 onChange={(e) => setModalState(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="مثال: عدم هماهنگی با سرپرست واحد"
                 rows={3}
-                className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400"
+                className="w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white"
             />
         </div>
       </ConfirmationModal>
@@ -409,8 +400,8 @@ const WaitingMorakhasiPage: React.FC = () => {
         title="تایید مرخصی"
         confirmText="تایید و ارسال پیام"
       >
-         <div className="space-y-2">
-            <label htmlFor="guardMessage" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+         <div className="space-y-3">
+            <label htmlFor="guardMessage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               پیام به نگهبان (اختیاری):
             </label>
             <Textarea
@@ -419,9 +410,9 @@ const WaitingMorakhasiPage: React.FC = () => {
                 onChange={(e) => setModalState(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="مثال: لطفا در صورت خروج همکاری لازم صورت پذیرد."
                 rows={3}
-                className="w-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400"
+                className="w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 می‌توانید این فیلد را خالی بگذارید و فقط مرخصی را تایید کنید.
             </p>
         </div>

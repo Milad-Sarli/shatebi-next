@@ -14,8 +14,12 @@ import { MorakhasiFilters } from "@/lib/types";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { motion } from "framer-motion";
 import dayjs from "dayjs";
+import jalaliday from "jalaliday";
+import "dayjs/locale/fa";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { TrendingUp, CalendarCheck, Clock, Info } from "lucide-react";
+
+dayjs.extend(jalaliday);
 
 const leaveTypes = [
   { value: "all", label: "همه انواع" },
@@ -39,9 +43,7 @@ function getStatusLabel(status: number | string | undefined) {
 
 function toJalali(date: string | undefined) {
   if (!date) return '-';
-  // Try to parse as ISO or YYYY-MM-DD
-  const d = dayjs(date);
-  return d.locale('fa').format('YYYY/MM/DD');
+  return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
 }
 
 function getLeaveTimeDisplay(leave: Morakhasi) {
@@ -49,8 +51,8 @@ function getLeaveTimeDisplay(leave: Morakhasi) {
   if (leave.fromtime_1 && leave.totime_1 && leave.dayli_date) {
     return (
       <span className="font-mono">
-        {toJalali(leave.dayli_date)}
-        ({leave.fromtime_1} تا {leave.totime_1})
+        {/* {toJalali(leave.dayli_date)} */}
+        ({toJalali(leave.fromtime_1)}  تا {toJalali(leave.totime_1)})
       </span>
     );
   }
@@ -68,7 +70,7 @@ function getLeaveTimeDisplay(leave: Morakhasi) {
   if (leave.dayli_date) {
     return (
       <span className="font-mono">
-        {toJalali(leave.dayli_date)}
+        {/* {toJalali(leave.dayli_date)} */}
       </span>
     );
   }
