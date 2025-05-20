@@ -30,6 +30,11 @@ export interface Morakhasi {
   [key: string]: unknown;
 }
 
+export interface GuardUpdatePayload {
+  exit_ok?: 0 | 1;
+  checked?: 0 | 1;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   links: {
@@ -61,6 +66,13 @@ export interface MorakhasiFilters {
 }
 
 export interface PendingMorakhasiFilters {
+  search?: string;
+  type?: string;
+  per_page?: number;
+  page?: number;
+}
+
+export interface ListForGuardFilters {
   search?: string;
   type?: string;
   per_page?: number;
@@ -175,6 +187,7 @@ export class MorakhasiService {
     return response.json();
   }
 
+
   static async getPendingAcceptanceMorakhasiList(token: string, filters: PendingMorakhasiFilters = {}): Promise<{ status: string, data: PaginatedResponse<Morakhasi> }> {
     const queryParams = new URLSearchParams();
     if (filters.page) queryParams.append('page', filters.page.toString());
@@ -190,6 +203,51 @@ export class MorakhasiService {
     });
     if (!response.ok) {
       let errorDetails = 'Error fetching pending acceptance morakhasi list';
+      try {
+        const error = await response.json();
+        errorDetails = error.message || errorDetails;
+      } catch { } // ignore
+      throw new Error(errorDetails);
+    }
+    return response.json();
+  }
+
+  static async updateMorakhasiByGuard(id: number, data: GuardUpdatePayload, token: string): Promise<Morakhasi> {
+    const response = await fetch(`${API_URL}/api/morakhasi/${id}/guard`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      let errorDetails = 'Error updating morakhasi by guard';
+      try {
+        const error = await response.json();
+        errorDetails = error.message || errorDetails;
+      } catch { } // ignore
+      throw new Error(errorDetails);
+    }
+    return response.json();
+  }
+
+  static async listMorakhasiForGuard(token: string, filters: ListForGuardFilters = {}): Promise<{ status: string, data: PaginatedResponse<Morakhasi> }> {
+    const queryParams = new URLSearchParams();
+    if (filters.page) queryParams.append('page', filters.page.toString());
+    if (filters.per_page) queryParams.append('per_page', filters.per_page.toString());
+    if (filters.search) queryParams.append('search', filters.search);
+    if (filters.type) queryParams.append('type', filters.type);
+
+    const response = await fetch(`${API_URL}/api/morakhasi/list-for-guard?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      let errorDetails = 'Error fetching morakhasi list for guard';
       try {
         const error = await response.json();
         errorDetails = error.message || errorDetails;
