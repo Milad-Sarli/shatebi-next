@@ -147,7 +147,6 @@ export default function RegistrationForm() {
     if (!form.Lname) newErrors.Lname = 'نام خانوادگی الزامی است';
     if (!form.FatherName) newErrors.FatherName = 'نام پدر الزامی است';
     if (!form.Mellicode) newErrors.Mellicode = 'کد ملی الزامی است';
-    if (!form.Aks) newErrors.Aks = 'عکس الزامی است';
     if (!form.Phone) newErrors.Phone = 'شماره موبایل داوطلب الزامی است';
     if (!form.TelPhone) newErrors.TelPhone = 'شماره موبایل پدر یا مادر الزامی است';
     if (!form.Ostan) newErrors.Ostan = 'استان الزامی است';
@@ -317,7 +316,7 @@ export default function RegistrationForm() {
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                عکس <span className="text-red-500">*</span>
+                عکس <span className="text-gray-400">(اختیاری)</span>
               </label>
               <div className="flex flex-col gap-2">
                 <input
