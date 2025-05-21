@@ -17,7 +17,7 @@ import dayjs from "dayjs";
 import jalaliday from "jalaliday";
 import "dayjs/locale/fa";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { TrendingUp, CalendarCheck, Clock, Info } from "lucide-react";
+import { CalendarCheck, Clock, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 dayjs.extend(jalaliday);

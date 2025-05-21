@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { MorakhasiService, type Morakhasi, type ListForGuardFilters, type GuardUpdatePayload } from '@/lib/services/morakhasi.service';
+import { MorakhasiService, type Morakhasi, type ListForGuardFilters } from '@/lib/services/morakhasi.service';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, CheckCircle, XCircle, AlertTriangle, Info, Loader2, LogOut, LogIn } from 'lucide-react';
+import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
