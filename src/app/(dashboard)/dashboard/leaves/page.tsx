@@ -18,6 +18,7 @@ import jalaliday from "jalaliday";
 import "dayjs/locale/fa";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { TrendingUp, CalendarCheck, Clock, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 dayjs.extend(jalaliday);
 
@@ -37,8 +38,19 @@ function getTypeLabel(type: number | string | undefined) {
 
 function getStatusLabel(status: number | string | undefined) {
   if (status === 1 || status === "تایید شده") return "تایید شده";
-  if (status === 2 || status === "رد شده") return "رد شده";
+  if (status === 2 || status === "در انتظار تایید") return "در انتظار تایید";
+  if (status === 3 || status === "منقضی شده") return "منقضی شده";
+  if (status === 4 || status === "رد شده") return "رد شده";
+  if (status === 5 || status === "استفاده شده") return "استفاده شده";
   return "در انتظار تایید";
+}
+
+function getStatusWithLateTime(leave: Morakhasi) {
+  const status = getStatusLabel(leave.status);
+  if (leave.late_time) {
+    return `${status} (${leave.late_time} دقیقه تاخیر)`;
+  }
+  return status;
 }
 
 function toJalali(date: string | undefined) {
@@ -122,6 +134,8 @@ export default function LeavesListPage() {
     to: 0,
   });
   const [statistics, setStatistics] = React.useState<Statistics | null>(null);
+  const [isLateLeavesModalOpen, setIsLateLeavesModalOpen] = React.useState(false);
+  const [lateLeaves, setLateLeaves] = React.useState<Morakhasi[]>([]);
 
   React.useEffect(() => {
     if (!accessToken || !user) return;
@@ -232,9 +246,13 @@ export default function LeavesListPage() {
           ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200 px-3 py-1 rounded-full text-xs font-bold'
           : getStatusLabel(info.getValue() as string | number | undefined) === 'رد شده'
           ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200 px-3 py-1 rounded-full text-xs font-bold'
+          : getStatusLabel(info.getValue() as string | number | undefined) === 'منقضی شده'
+          ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-xs font-bold'
+          : getStatusLabel(info.getValue() as string | number | undefined) === 'استفاده شده'
+          ? 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-xs font-bold'
           : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-xs font-bold'
       }>
-        {getStatusLabel(info.getValue() as string | number | undefined)}
+        {getStatusWithLateTime(info.row.original)}
       </span>
     ) },
   ], [filters.page, filters.per_page]);
@@ -262,6 +280,14 @@ export default function LeavesListPage() {
 
   const currentUserIsAdmin = user?.app_roles?.some((role: { name: string }) => role.name === 'admin');
 
+  // Add this function to handle late leaves modal
+  const handleLateLeavesClick = () => {
+    // Filter leaves that have late_time
+    const lateLeavesList = leaves.filter(leave => leave.late_time);
+    setLateLeaves(lateLeavesList);
+    setIsLateLeavesModalOpen(true);
+  };
+
   return (
     <PageTransition>
       <div className="space-y-4 relative">
@@ -281,32 +307,35 @@ export default function LeavesListPage() {
         </div>
         {statistics && currentUserIsAdmin && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {/* Growth Rate */}
+            {/* Late Leaves Widget - Updated design */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05, duration: 0.5, type: "spring" }}
               whileHover={{ scale: 1.04 }}
-              className="relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-tr from-indigo-500 to-blue-400 dark:from-indigo-700 dark:to-blue-800 flex flex-col"
+              onClick={handleLateLeavesClick}
+              className="relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-tr from-orange-500 to-red-400 dark:from-orange-700 dark:to-red-800 flex flex-col cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-white text-sm font-medium mb-1">نرخ رشد</div>
-                  <div className="text-2xl font-bold text-white">{statistics.growth_rate?.value ?? '-'}</div>
-                  <div className="text-xs text-blue-100 mt-1">{statistics.growth_rate?.period}</div>
+                  <div className="text-white text-sm font-medium mb-1">تاخیرهای 7 روز گذشته</div>
+                  <div className="text-2xl font-bold text-white">
+                    {leaves.filter(leave => leave.late_time).length}
+                  </div>
+                  <div className="text-xs text-red-100 mt-1">تعداد تاخیرها</div>
                 </div>
                 <div className="bg-white/20 rounded-full p-2">
-                  <TrendingUp className="w-6 h-6 text-white" />
+                  <Clock className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div className="mt-auto h-10">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData.growth}>
+                  <LineChart data={chartData.late}>
                     <Line type="monotone" dataKey="value" stroke="#fff" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </motion.div> 
+            </motion.div>
             {/* Most Common Reason */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -456,9 +485,13 @@ export default function LeavesListPage() {
                             ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200 px-3 py-1 rounded-full text-xs font-bold'
                             : getStatusLabel(leave.status) === 'رد شده'
                             ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200 px-3 py-1 rounded-full text-xs font-bold'
+                            : getStatusLabel(leave.status) === 'منقضی شده'
+                            ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-xs font-bold'
+                            : getStatusLabel(leave.status) === 'استفاده شده'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-xs font-bold'
                             : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-xs font-bold'
                         }>
-                          {getStatusLabel(leave.status)}
+                          {getStatusWithLateTime(leave)}
                         </span>
                       </td>
                     </tr>
@@ -498,8 +531,12 @@ export default function LeavesListPage() {
                           ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200 px-2 py-0.5 rounded-full font-bold'
                           : getStatusLabel(leave.status) === 'رد شده'
                           ? 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200 px-2 py-0.5 rounded-full font-bold'
+                          : getStatusLabel(leave.status) === 'منقضی شده'
+                          ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full font-bold'
+                          : getStatusLabel(leave.status) === 'استفاده شده'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full font-bold'
                           : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded-full font-bold'
-                      }>{getStatusLabel(leave.status)}</span>
+                      }>{getStatusWithLateTime(leave)}</span>
                     </span>
                   </div>
                 </div>
@@ -554,6 +591,46 @@ export default function LeavesListPage() {
             </div>
           )}
         </div>
+
+        {/* Late Leaves Modal */}
+        <Dialog open={isLateLeavesModalOpen} onOpenChange={setIsLateLeavesModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold mt-6 text-right">لیست تاخیرهای 7 روز گذشته</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              {lateLeaves.length === 0 ? (
+                <div className="text-center text-zinc-500 dark:text-zinc-400 py-8">
+                  هیچ تاخیری در 7 روز گذشته ثبت نشده است
+                </div>
+              ) : (
+                lateLeaves.map((leave) => (
+                  <div
+                    key={leave.id}
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {leave.fullname || '-'}
+                      </span>
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {typeof leave.created_at === 'string' ? toJalali(leave.created_at) : '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-600 dark:text-zinc-300">
+                        {getTypeLabel(leave.type)}
+                      </span>
+                      <span className="bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200 px-3 py-1 rounded-full text-xs font-bold">
+                        {leave.late_time} دقیقه تاخیر
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageTransition>
   );
