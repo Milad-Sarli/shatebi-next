@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ApplicantService } from '@/lib/services/applicant.service';
-import { useAuth } from '@/lib/context/auth.context';
 import { locationService, Province, City } from '@/lib/services/location.service';
 import { SingleSelectCombobox } from '@/components/ui/Combobox';
 import { useTheme } from '@/lib/context/theme.context';
@@ -13,6 +12,7 @@ import Image from "next/image";
 import persian_fa from 'react-date-object/locales/persian_fa';
 import persian from 'react-date-object/calendars/persian';
 import DatePicker, { DateObject } from 'react-multi-date-picker';
+import { useParams } from 'next/navigation';
 
 interface FormState {
   Fname: string;
@@ -75,7 +75,6 @@ interface ApiError extends Error {
 export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const { accessToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -85,6 +84,8 @@ export default function RegistrationForm() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isTypingHealthDetails, setIsTypingHealthDetails] = useState(false);
+  const params = useParams();
+  const id = params?.id as string;
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -164,14 +165,14 @@ export default function RegistrationForm() {
       setErrors(validationErrors);
       return;
     }
-    if (!accessToken) {
-      toast({
-        title: 'خطا',
-        description: 'شما وارد نشده‌اید.',
-        type: 'destructive',
-      });
-      return;
-    }
+    // if (!accessToken) {
+    //   toast({
+    //     title: 'خطا',
+    //     description: 'شما وارد نشده‌اید.',
+    //     type: 'destructive',
+    //   });
+    //   return;
+    // }
     setErrors({});
     setLoading(true);
     try {
@@ -200,7 +201,7 @@ export default function RegistrationForm() {
       });
       
       formData.set('status', '1');
-      formData.set('tenant_id', '1');
+      formData.set('tenant_id', id);
 
       // Log all FormData entries
       console.log('All FormData entries:');
@@ -208,7 +209,7 @@ export default function RegistrationForm() {
         console.log(pair[0] + ': ' + (pair[1] instanceof File ? 'File object' : pair[1]));
       }
 
-      await ApplicantService.createApplicant(formData, accessToken);
+      await ApplicantService.createApplicant(formData);
       toast({
         title: 'ثبت نام موفق',
         description: 'ثبت نام شما با موفقیت انجام شد.',

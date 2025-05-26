@@ -164,10 +164,9 @@ export class ApplicantService {
         };
     }
 
-    static async createApplicant(applicantData: Partial<Applicant> | FormData, token: string): Promise<{ data: Applicant }> {
+    static async createApplicant(applicantData: Partial<Applicant> | FormData): Promise<{ data: Applicant }> {
         // eslint-disable-next-line prefer-const
         let headers: Record<string, string> = {
-            'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
         };
         let body: BodyInit;

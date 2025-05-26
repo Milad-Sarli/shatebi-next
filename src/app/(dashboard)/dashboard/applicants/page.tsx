@@ -206,7 +206,7 @@ export default function ApplicantsPage() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             {applicant.Aks ? (
-                              <Image src={`/${applicant.Aks}`} alt={`${applicant.Fname} ${applicant.Lname}`} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
+                              <Image src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${applicant.Aks}`} alt={`${applicant.Fname} ${applicant.Lname}`} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
                             ) : (
                               <span className="text-xs font-medium text-red-500 dark:text-red-400">بدون عکس</span>
                             )}
