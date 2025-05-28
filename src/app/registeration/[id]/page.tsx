@@ -86,6 +86,15 @@ export default function RegistrationForm() {
   const [isTypingHealthDetails, setIsTypingHealthDetails] = useState(false);
   const params = useParams();
   const id = params?.id as string;
+  const [dynamicTitle, setDynamicTitle] = useState('دارالقرآن امام شاطبی (رح)');
+
+  useEffect(() => {
+    if (id === '7') {
+      setDynamicTitle('مسجد و مکتبخانه رحمت');
+    } else {
+      setDynamicTitle('دارالقرآن امام شاطبی (رح)');
+    }
+  }, [id]);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -250,7 +259,7 @@ export default function RegistrationForm() {
       <div className="w-full max-w-md sm:max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6 sm:mb-8">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
-            فرم ثبت نام <span className="text-green-600 dark:text-green-400">دارالقرآن امام شاطبی (رح)</span>
+            فرم ثبت نام <span className="text-green-600 dark:text-green-400">{dynamicTitle}</span>
           </h2>
           <Button
             variant="ghost"

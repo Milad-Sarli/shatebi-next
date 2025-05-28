@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // List of public routes that don't require authentication
-const publicRoutes = ['/auth/login', '/auth/register', '/registeration/1']
+const publicRoutes = ['/auth/login', '/auth/register', '/registeration/']
 
 // List of admin-only routes
 const adminRoutes = ['/dashboard/roles']
