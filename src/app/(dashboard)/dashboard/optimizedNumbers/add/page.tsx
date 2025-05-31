@@ -14,6 +14,7 @@ import {
   Grade,
   Dars
 } from "@/lib/services/optimizedClass.service";
+import { MasterService, Master } from "@/lib/services/master.service";
 import { format, subHours } from "date-fns-jalali";
 import { SingleSelectCombobox } from "@/components/ui/Combobox";
 import { Edit2 } from "lucide-react";
@@ -846,6 +847,26 @@ export default function AddNumberPage() {
   const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
   const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
   const [formRefs, setFormRefs] = React.useState<FormRefs | null>(null);
+  const [masterData, setMasterData] = React.useState<Master | null>(null);
+
+  React.useEffect(() => {
+    const fetchMasterData = async () => {
+      if (!accessToken || !user?.username) return;
+      
+      try {
+        const response = await MasterService.getMasters({}, accessToken);
+        const foundMaster = response.data.data.find(
+          (master) => master.mellicode === user.username
+        );
+        setMasterData(foundMaster || null);
+      } catch (error) {
+        console.error("Error fetching master data:", error);
+        toast.error("خطا در دریافت اطلاعات مربی");
+      }
+    };
+
+    fetchMasterData();
+  }, [accessToken, user?.username]);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -967,6 +988,7 @@ export default function AddNumberPage() {
         user_id: 0,
         tenant_id: 0,
       };
+      console.log(payload)
 
       if (data.type === 'page') {
         payload.start_page = parseInt(data.start_page as string);
@@ -1094,23 +1116,31 @@ export default function AddNumberPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                {user?.app_roles?.some(role => role.name === 'admin') ? (
+                {!user?.app_roles?.some(role => role.name === 'master') ? (
+                  <div className="text-center text-red-500">شما نقش مربی ندارید</div>
+                ) : !masterData ? (
+                  <div className="text-center text-red-500">برای شما هیچ کلاسی ثبت نشده است</div>
+                ) : (
                   <SingleSelectCombobox
-                    options={classes.map((classItem) => ({
-                      value: classItem.id.toString(),
-                      label: `${classItem.dars?.title || "بدون نام"} - ${
-                        classItem.optimized_class_masters?.[0]?.master?.fullname ||
-                        classItem.optimized_class_masters?.[0]?.users?.fullname ||
-                        "بدون استاد"
-                      }`,
-                    }))}
+                    options={classes
+                      .filter(classItem => 
+                        classItem.optimized_class_masters?.some(master => 
+                          master.master?.id === masterData.id
+                        )
+                      )
+                      .map((classItem) => ({
+                        value: classItem.id.toString(),
+                        label: `${classItem.dars?.title || "بدون نام"} - ${
+                          classItem.optimized_class_masters?.[0]?.master?.fullname ||
+                          classItem.optimized_class_masters?.[0]?.users?.fullname ||
+                          "بدون استاد"
+                        }`,
+                      }))}
                     value={selectedClass?.id.toString()}
                     onChange={(value: string) => handleClassChange(value)}
                     placeholder="انتخاب کلاس"
                     className="w-full"
                   />
-                ) : (
-                  <div className="text-center text-red-500">شما دسترسی به مشاهده کلاس‌ها ندارید</div>
                 )}
               </div>
               <div className="flex-1 w-full mx-auto">

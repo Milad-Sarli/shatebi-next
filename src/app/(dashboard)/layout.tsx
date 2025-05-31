@@ -62,7 +62,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Link prefetch href="/dashboard" className="flex items-center gap-2">
               <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
               <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                دارالقرآن
+                سامانه جامع آموزشی
+                <br />
+                <span className="text-sm">دارالقرآن امام شاطبی (رح)</span>
               </span>
             </Link>
             <Button
@@ -164,7 +166,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 showBorder={false}
                 className="text-xl font-bold"
               >
-                دارالقرآن
+                سامانه جامع آموزشی
+                <br />
+                <span className="text-base">دارالقرآن امام شاطبی (رح)</span>
               </GradientText>
             </div>
             </Link>

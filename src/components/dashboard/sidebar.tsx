@@ -199,6 +199,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
                           "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground w-full",
                           isSubActive ? "bg-accent text-accent-foreground" : "transparent"
                         )}
+                      
                       >
                         <SubIcon className="ml-2 h-4 w-4" />
                         <span className="text-right">{subItem.title}</span>

@@ -78,7 +78,7 @@ export default function MastersPage() {
         },
         accessToken
       );
-      
+      console.log(response)
       // Update masters state with the data array from the response
       if (response.data) {
         setMasters(response.data.data);
