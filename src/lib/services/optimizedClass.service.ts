@@ -56,6 +56,7 @@ export interface Dars {
 }
 
 export interface Grade {
+  id: number;
   hefz: number;
   details: number;
   tajvid: number;
@@ -65,6 +66,7 @@ export interface Grade {
   description: string | null;
   master_teacher: string | null;
   droos_id: Dars;
+  dars: Dars;
   lesson_area: LessonArea;
   created_at: string;
 }
@@ -132,7 +134,7 @@ export const optimizedClassService = {
     });
   },
 
-  async getStudents(id: number, date: Date | null, accessToken: string): Promise<StudentsResponse> {
+  async getStudents(id: number, date: string, accessToken: string): Promise<StudentsResponse> {
     const response = await axios.get(`${API_URL}/api/optimized-classes/${id}/students?date=${date}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,

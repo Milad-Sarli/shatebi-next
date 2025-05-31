@@ -94,7 +94,7 @@ export default function RolesPage() {
 
   const handleRemoveRole = async (roleId: number, userId: number) => {
     try {
-      await AppRoleService.removeRole(
+      await AppRoleService.removeRoleFromUser(
         {
           role_id: roleId,
           user_id: userId,

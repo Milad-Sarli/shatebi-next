@@ -39,6 +39,7 @@ import { UseFormReturn } from "react-hook-form";
 import DatePicker, { DateObject } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
+import { useState } from "react";
 
 interface Course {
   id: number;
@@ -833,6 +834,66 @@ interface FormField {
   end_joze?: number;
 }
 
+interface EditingGrade extends Grade {
+  studentId: number;
+}
+
+interface EditGradeModalProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  grade: Grade;
+  onSubmit: (form: Record<string, string | number>) => void;
+}
+
+function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModalProps) {
+  const [form, setForm] = React.useState({
+    hefz: grade.hefz,
+    tajvid: grade.tajvid,
+    sout: grade.sout,
+    details: grade.details,
+    start_page: grade.lesson_area?.start_page || '',
+    end_page: grade.lesson_area?.end_page || '',
+    start_surah: grade.lesson_area?.start_surah?.id?.toString() || '',
+    start_verse: grade.lesson_area?.start_verse || '',
+    end_surah: grade.lesson_area?.end_surah?.id?.toString() || '',
+    end_verse: grade.lesson_area?.end_verse || '',
+    start_joze: grade.lesson_area?.start_joze || '',
+    end_joze: grade.lesson_area?.end_joze || '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit(form);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">ویرایش نمره</DialogTitle>
+          <DialogDescription className="text-center">مقادیر را ویرایش و ذخیره کنید</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
+          <div className="grid grid-cols-2 gap-4">
+            <Input name="hefz" type="number" value={form.hefz} onChange={handleChange} placeholder="نمره حفظ" />
+            <Input name="tajvid" type="number" value={form.tajvid} onChange={handleChange} placeholder="نمره تجوید" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input name="sout" type="number" value={form.sout} onChange={handleChange} placeholder="نمره صوت" />
+            <Input name="details" type="number" value={form.details} onChange={handleChange} placeholder="نمره تفاصیل" />
+          </div>
+          {/* Optionally add fields for page/surah/joze if needed */}
+          <Button type="submit" className="w-full">ذخیره تغییرات</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
@@ -848,6 +909,8 @@ export default function AddNumberPage() {
   const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
   const [formRefs, setFormRefs] = React.useState<FormRefs | null>(null);
   const [masterData, setMasterData] = React.useState<Master | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingGrade, setEditingGrade] = useState<EditingGrade | null>(null);
 
   React.useEffect(() => {
     const fetchMasterData = async () => {
@@ -890,10 +953,11 @@ export default function AddNumberPage() {
 
       try {
         const jsDate = selectedDate ? selectedDate.toDate() : null;
+        const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
         if (!jsDate) return;
         const response = await optimizedClassService.getStudents(
           selectedClass.id,
-          jsDate,
+          jsDateStr!,
           accessToken
         );
 
@@ -988,7 +1052,6 @@ export default function AddNumberPage() {
         user_id: 0,
         tenant_id: 0,
       };
-      console.log(payload)
 
       if (data.type === 'page') {
         payload.start_page = parseInt(data.start_page as string);
@@ -1004,6 +1067,7 @@ export default function AddNumberPage() {
       }
 
       const jsDate = selectedDate ? selectedDate.toDate() : null;
+      const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
       if (!jsDate) return;
 
       await optimizedNumberService.create(payload, accessToken);
@@ -1013,7 +1077,7 @@ export default function AddNumberPage() {
       
       const response = await optimizedClassService.getStudents(
         selectedClass.id,
-        jsDate,
+        jsDateStr!,
         accessToken
       );
       
@@ -1080,10 +1144,50 @@ export default function AddNumberPage() {
     return gradeDate > twentyFourHoursAgo;
   };
 
-  const handleEditGrade = async (studentId: number, grade: Grade) => {
-    console.log("Editing grade for student", studentId, grade);
+  const handleEditGrade = (studentId: number, grade: Grade) => {
+    setEditingGrade({ ...grade, studentId });
+    console.log(grade)
+    setEditModalOpen(true);
   };
   
+  const handleEditModalSubmit = async (form: Record<string, string | number>) => {
+    if (!editingGrade) return;
+    try {
+      setLoading(true);
+      const updated = await optimizedNumberService.update(editingGrade.id, {
+        hefz: parseFloat(form.hefz as string),
+        tajvid: parseFloat(form.tajvid as string),
+        sout: parseFloat(form.sout as string),
+        details: parseFloat(form.details as string),
+        // Add other fields as needed
+      }, accessToken!);
+      toast.success("نمره با موفقیت ویرایش شد");
+      // Update local state
+      setExistingGrades(prev => {
+        const grades = prev[editingGrade.studentId]?.map((g: Grade) => {
+          if (g.id === updated.id) {
+            // Only update the fields that are safe to update
+            return {
+              ...g,
+              hefz: updated.hefz,
+              tajvid: updated.tajvid,
+              sout: updated.sout,
+              details: updated.details,
+            };
+          }
+          return g;
+        }) || [];
+        return { ...prev, [editingGrade.studentId]: grades };
+      });
+      setEditModalOpen(false);
+      setEditingGrade(null);
+    } catch {
+      toast.error("خطا در ویرایش نمره");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PageTransition>
       <div className="space-y-4 min-h-[80vh]">
@@ -1116,15 +1220,31 @@ export default function AddNumberPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                {!user?.app_roles?.some(role => role.name === 'master') ? (
+                {user?.app_roles?.some(role => role.name === 'admin') ? (
+                  <SingleSelectCombobox
+                    options={classes.map((classItem) => ({
+                      value: classItem.id.toString(),
+                      label: `${classItem.dars?.title || "بدون نام"} - ${
+                        classItem.optimized_class_masters?.[0]?.master?.fullname ||
+                        classItem.optimized_class_masters?.[0]?.users?.fullname ||
+                        "بدون استاد"
+                      }`,
+                    }))}
+                    value={selectedClass?.id.toString()}
+                    onChange={(value: string) => handleClassChange(value)}
+                    placeholder="انتخاب کلاس"
+                    className="w-full"
+                  />
+                ) :
+                !user?.app_roles?.some(role => role.name === 'master') ? (
                   <div className="text-center text-red-500">شما نقش مربی ندارید</div>
                 ) : !masterData ? (
                   <div className="text-center text-red-500">برای شما هیچ کلاسی ثبت نشده است</div>
                 ) : (
                   <SingleSelectCombobox
                     options={classes
-                      .filter(classItem => 
-                        classItem.optimized_class_masters?.some(master => 
+                      .filter(classItem =>
+                        classItem.optimized_class_masters?.some(master =>
                           master.master?.id === masterData.id
                         )
                       )
@@ -1236,7 +1356,7 @@ export default function AddNumberPage() {
                       {existingGrades[studentData.student.id] && (
                         <div className="grid grid-cols-1 gap-2">
                           {existingGrades[studentData.student.id].map((grade, gradeIndex) => {
-                            const totalScore = grade.hefz + grade.tajvid + grade.sout + grade.details;
+                            const totalScore = Number(grade.hefz) + Number(grade.tajvid) + Number(grade.sout) + Number(grade.details);
                             const isNegative = totalScore < 80;
                             
                             return (
@@ -1255,7 +1375,7 @@ export default function AddNumberPage() {
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                    {grade.droos_id?.title || "بدون نام"}
+                                    {grade.dars?.title || "بدون نام"}
                                   </span>
                                   <div className="flex items-center gap-2">
                                     <div className="flex items-center gap-1">
@@ -1284,45 +1404,6 @@ export default function AddNumberPage() {
                                         <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                                       </Button>
                                     )}
-                                  </div>
-                                </div>
-                                
-                                <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-zinc-900 p-3 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 z-10 w-full left-0 top-full mt-1">
-                                  <div className="grid grid-cols-4 gap-2 text-xs">
-                                    <div className="flex flex-col">
-                                      <span className="text-zinc-500 dark:text-zinc-400">حفظ</span>
-                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.hefz}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-zinc-500 dark:text-zinc-400">تجوید</span>
-                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.tajvid}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-zinc-500 dark:text-zinc-400">صوت</span>
-                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.sout}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-zinc-500 dark:text-zinc-400">تفاصیل</span>
-                                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{grade.details}</span>
-                                    </div>
-                                  </div>
-                                  {grade.lesson_area && (
-                                    <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-                                      {grade.lesson_area.start_page && grade.lesson_area.end_page ? (
-                                        <span>صفحه {grade.lesson_area.start_page} تا {grade.lesson_area.end_page}</span>
-                                      ) : grade.lesson_area.start_surah?.titleAr && grade.lesson_area.end_surah?.titleAr ? (
-                                        <span>
-                                          سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.start_surah.titleAr}</span> آیه {grade.lesson_area.start_verse} تا سوره <span className="text-amber-600 dark:text-amber-400 mx-1">{grade.lesson_area.end_surah.titleAr}</span> آیه {grade.lesson_area.end_verse}
-                                        </span>
-                                      ) : grade.lesson_area.start_joze && grade.lesson_area.end_joze ? (
-                                        <span>
-                                          جز {grade.lesson_area.start_joze} تا {grade.lesson_area.end_joze}
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  )}
-                                  <div className="mt-2 text-[10px] text-zinc-400 dark:text-zinc-500">
-                                    {format(new Date(grade.created_at), "HH:mm - yyyy/MM/dd")}
                                   </div>
                                 </div>
                               </motion.div>
@@ -1365,6 +1446,15 @@ export default function AddNumberPage() {
             onFormRefsChange={setFormRefs}
           />
         </>
+      )}
+
+      {editModalOpen && editingGrade && (
+        <EditGradeModal
+          isOpen={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          grade={editingGrade}
+          onSubmit={handleEditModalSubmit}
+        />
       )}
     </PageTransition>
   );
