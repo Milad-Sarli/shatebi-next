@@ -156,19 +156,20 @@ export class AppRoleService {
         return response.json();
     }
 
-    static async removeRole(data: RoleAssignmentData, token: string): Promise<RoleAssignmentResponse> {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/${data.role_id}`, {
-            method: "DELETE",
+    static async removeRoleFromUser(data: RoleAssignmentData, token: string): Promise<RoleAssignmentResponse> {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-roles/remove`, {
+            method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/json",
                 "Content-Type": "application/json",
-            }
+            },
+            body: JSON.stringify(data),
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || "Failed to remove role");
+            throw new Error(error.message || "Failed to remove role from user");
         }
 
         return response.json();
@@ -184,4 +185,4 @@ export class AppRoleService {
             return false;
         }
     }
-} 
+}

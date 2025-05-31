@@ -12,6 +12,7 @@ interface AuthContextType {
   user: User | null
   accessToken: string | null
   login: (username: string) => Promise<LoginResponse>
+  loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
   verifyOtp: (otp: string, token: string, phone: string) => Promise<void>
   logout: () => Promise<void>
   resendOtp: (token: string) => Promise<ResendOtpResponse>
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyOtp: storeVerifyOtp,
     logout: storeLogout,
     resendOtp: storeResendOtp,
+    loginWithUsernameAndPassword: loginWithUsernameAndPasswordStore,
     // _setState // Remove unused variable
   } = useAuthStore();
 
@@ -49,11 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return storeResendOtp(token)
   }, [storeResendOtp])
 
+  const loginWithUsernameAndPassword = React.useCallback(async (username: string, password: string) => {
+    await loginWithUsernameAndPasswordStore(username, password)
+  }, [loginWithUsernameAndPasswordStore])
+
   const value = {
     isAuthenticated,
     user,
     accessToken,
     login,
+    loginWithUsernameAndPassword,
     verifyOtp,
     logout,
     resendOtp,

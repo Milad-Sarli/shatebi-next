@@ -17,6 +17,7 @@ interface AuthActions {
   logout: (router: AppRouterInstance) => Promise<void>
   resendOtp: (token: string) => Promise<ResendOtpResponse>
   _setState: (newState: Partial<AuthState>) => void
+  loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -72,7 +73,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
               id: verifyResponse.user.id,
               username: verifyResponse.user.username,
               phone: verifyResponse.user.phone,
-              tenant_id: verifyResponse.user.tenant_id,
+              tenant_id: verifyResponse.user.tenant_id ? Number(verifyResponse.user.tenant_id) : undefined,
             }
             Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions)
 
@@ -128,6 +129,56 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         } catch (error) {
           console.error('Resend OTP Error:', error)
           throw error
+        }
+      },
+
+      loginWithUsernameAndPassword: async (username: string, password: string) => {
+        try {
+          const response = await AuthService.loginWithUsernameAndPassword(username, password);
+
+          if (!response.user || !response.access_token) {
+            throw new Error('Invalid response format from server during admin login');
+          }
+
+          set({
+            isAuthenticated: true,
+            user: {
+              ...response.user,
+              tenant_id: response.user.tenant_id ? Number(response.user.tenant_id) : undefined,
+            },
+            accessToken: response.access_token,
+          });
+
+          // Set cookies (same as verifyOtp)
+          try {
+            const cookieOptions = {
+              expires: 1, // 1 day
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'strict' as const,
+            };
+            Cookies.set('access_token', response.access_token, cookieOptions);
+
+            const userDataToStore = {
+              id: response.user.id,
+              username: response.user.username,
+              phone: response.user.phone,
+              tenant_id: response.user.tenant_id ? Number(response.user.tenant_id) : undefined,
+            };
+            Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions);
+
+            if (response.user.app_roles) {
+              Cookies.set('app_roles', encodeURIComponent(JSON.stringify(response.user.app_roles)), cookieOptions);
+            }
+          } catch (cookieError) {
+            console.error('Error setting cookies during admin login:', cookieError);
+          }
+        } catch (error) {
+          console.error('Admin login error in store:', error);
+          set({ isAuthenticated: false, user: null, accessToken: null });
+          Cookies.remove('access_token');
+          Cookies.remove('user');
+          Cookies.remove('app_roles');
+          throw error;
         }
       },
     }),

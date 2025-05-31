@@ -34,6 +34,28 @@ export interface AppRole {
   updated_at: string;
 }
 
+export interface LoginWithPasswordResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: number;
+    username: string;
+    fname: string;
+    name: string | null;
+    lname: string;
+    avatar: string | null;
+    phone: string;
+    email: string | null;
+    tenant_id: string;
+    send_sms: boolean;
+    is_superuser: boolean | null;
+    is_admin: boolean | null;
+    created_at: string;
+    updated_at: string;
+    app_roles?: AppRole[];
+  };
+}
+
 export class AuthService {
   private static setAccessTokenCookie(token: string) {
     // Set cookie with secure options
@@ -125,5 +147,32 @@ export class AuthService {
     }
 
     return response.json();
+  }
+
+  static async loginWithUsernameAndPassword(username: string, password: string): Promise<LoginWithPasswordResponse> {
+    const response = await fetch(`${API_URL}/api/auth/login-pass`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'خطا در ورود با نام کاربری و رمز عبور');
+    }
+
+    const data: LoginWithPasswordResponse = await response.json();
+    console.log(data);
+    if (data.access_token) {
+      this.setAccessTokenCookie(data.access_token);
+    }
+    if (data.user && Array.isArray(data.user.app_roles)) {
+      this.setAppRolesCookie(data.user.app_roles);
+    }
+    return data;
   }
 } 

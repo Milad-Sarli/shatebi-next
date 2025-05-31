@@ -24,21 +24,13 @@ const ROLE_COLOR_MAP: Record<string, string> = {
   user: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
-const allRoles = [
-  { value: "all", label: "همه نقش‌ها" },
-  { value: "admin", label: "مدیر" },
-  { value: "master", label: "مربی" },
-  { value: "superuser", label: "کاربر ویژه" },
-  { value: "user", label: "کاربر عادی" },
-];
-
 // نقش‌ها به فارسی
 const ROLE_FA_MAP: Record<string, string> = {
   admin: "مدیر",
   master: "مربی",
   storekeeper: "انباردار",
   guard: "نگهبان",
-  assistant_master: "معاون مربی",
+  assistant_master: "کمک مربی",
   ejraee_deputy: "معاون اجرایی",
   amoozeshi_deputy: "معاون آموزشی",
   farhangi_deputy: "معاون فرهنگی",
@@ -86,12 +78,7 @@ export default function UsersPage() {
   const searchInProgress = React.useRef(false);
   const [attachRoleUser, setAttachRoleUser] = React.useState<User | null>(null);
   const [isAttachRoleOpen, setIsAttachRoleOpen] = React.useState(false);
-  const [availableRoles, setAvailableRoles] = React.useState([
-    { value: "admin", label: "مدیر" },
-    { value: "master", label: "مربی" },
-    { value: "superuser", label: "کاربر ویژه" },
-    { value: "user", label: "کاربر عادی" },
-  ]);
+  const [roleOptions, setRoleOptions] = React.useState([{ value: "all", label: "همه نقش‌ها" }]);
   const [selectedAttachRole, setSelectedAttachRole] = React.useState("");
   const [attachLoading, setAttachLoading] = React.useState(false);
 
@@ -205,10 +192,10 @@ export default function UsersPage() {
           label: ROLE_FA_MAP[item.name] || item.name,
           name: item.name,
         }));
-        setAvailableRoles(roles);
+        setRoleOptions([{ value: "all", label: "همه نقش‌ها" }, ...roles]);
       } catch (e) {
         toast.error("خطا در دریافت نقش‌ها");
-        setAvailableRoles([]);
+        setRoleOptions([{ value: "all", label: "همه نقش‌ها" }]);
       }
     }
     setIsAttachRoleOpen(true);
@@ -223,7 +210,7 @@ export default function UsersPage() {
     setAttachLoading(true);
     try {
       // پیدا کردن role_id از روی value
-      const selectedRoleObj = availableRoles.find((r) => r.value === selectedAttachRole);
+      const selectedRoleObj = roleOptions.find((r) => r.value === selectedAttachRole);
       if (!selectedRoleObj) throw new Error("نقش انتخاب شده یافت نشد");
       await AppRoleService.assignRole({ user_id: attachRoleUser.id, role_id: Number(selectedRoleObj.value) }, accessToken);
       toast.success("نقش با موفقیت به کاربر اضافه شد");
@@ -236,6 +223,44 @@ export default function UsersPage() {
       setAttachLoading(false);
     }
   };
+
+  const handleRemoveRoleFromUser = async (roleId: number) => {
+    if (!accessToken || !attachRoleUser) return;
+    setAttachLoading(true);
+    try {
+      await AppRoleService.removeRoleFromUser({ user_id: attachRoleUser.id, role_id: roleId }, accessToken);
+      toast.success("نقش با موفقیت حذف شد");
+      // آپدیت نقش‌های کاربر در مودال بدون بستن مودال:
+      setAttachRoleUser((prev) => prev ? ({
+        ...prev,
+        app_roles: prev.app_roles ? prev.app_roles.filter((r) => r.id !== roleId) : [],
+      }) : prev);
+      // همچنین لیست اصلی کاربران را هم آپدیت کن
+      fetchUsers();
+    } catch (error) {
+      toast.error("خطا در حذف نقش");
+      console.error(error);
+    } finally {
+      setAttachLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const fetchRoles = async () => {
+      if (!accessToken) return;
+      try {
+        const res = await AppRoleService.getAppRoles({}, accessToken);
+        const roles = res.data.map((role) => ({
+          value: role.name,
+          label: ROLE_FA_MAP[role.name] || role.name,
+        }));
+        setRoleOptions([{ value: "all", label: "همه نقش‌ها" }, ...roles]);
+      } catch (e) {
+        toast.error("خطا در دریافت نقش‌ها");
+      }
+    };
+    fetchRoles();
+  }, [accessToken]);
 
   return (
     <PageTransition>
@@ -292,21 +317,12 @@ export default function UsersPage() {
                     <SelectValue placeholder="نقش" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allRoles.map((role) => (
+                    {roleOptions.map((role) => (
                       <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-                  <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
-                    <SelectValue placeholder="مرکز" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">همه مراکز</SelectItem>
-                    <SelectItem value="1">دارالقرآن امام شاطبی (رح)</SelectItem>
-                    <SelectItem value="7">مکتب خانه رحمت</SelectItem>
-                  </SelectContent>
-                </Select>
+        
               </div>
             </div>
 
@@ -646,12 +662,32 @@ export default function UsersPage() {
               <div className="text-zinc-700 dark:text-zinc-200 font-medium">
                 کاربر: {attachRoleUser ? getUserFullName(attachRoleUser) : ""}
               </div>
+              {/* نمایش نقش‌های فعلی کاربر با دکمه حذف */}
+              {attachRoleUser && attachRoleUser.app_roles && attachRoleUser.app_roles.length > 0 && (
+                <div className="space-y-2">
+                  <div className="font-semibold text-zinc-700 dark:text-zinc-200">نقش‌های فعلی:</div>
+                  {attachRoleUser.app_roles.map((role) => (
+                    <div key={role.id} className="flex items-center justify-between bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-1 mb-1">
+                      <span>{ROLE_FA_MAP[role.name] || role.name}</span>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveRoleFromUser(role.id)}
+                        className="ml-2"
+                        disabled={attachLoading}
+                      >
+                        حذف
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <Select value={selectedAttachRole} onValueChange={setSelectedAttachRole}>
                 <SelectTrigger className="w-full border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
                   <SelectValue placeholder="نقش را انتخاب کنید" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableRoles.map((role) => (
+                  {roleOptions.map((role) => (
                     <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                   ))}
                 </SelectContent>
