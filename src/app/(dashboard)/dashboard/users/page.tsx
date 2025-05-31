@@ -17,11 +17,11 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppRoleService } from "@/lib/services/approle.service";
 
-const ROLE_MAP: Record<string, { fa: string; color: string; icon: React.ReactNode }> = {
-  admin: { fa: "مدیر", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", icon: <Shield className="inline w-4 h-4 mr-1" /> },
-  master: { fa: "مربی", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", icon: <Crown className="inline w-4 h-4 mr-1" /> },
-  superuser: { fa: "کاربر ویژه", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", icon: <Star className="inline w-4 h-4 mr-1" /> },
-  user: { fa: "کاربر عادی", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300", icon: <UserIcon className="inline w-4 h-4 mr-1" /> },
+const ROLE_COLOR_MAP: Record<string, string> = {
+  admin: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  master: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  superuser: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  user: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
 const allRoles = [
@@ -31,6 +31,18 @@ const allRoles = [
   { value: "superuser", label: "کاربر ویژه" },
   { value: "user", label: "کاربر عادی" },
 ];
+
+// نقش‌ها به فارسی
+const ROLE_FA_MAP: Record<string, string> = {
+  admin: "مدیر",
+  master: "مربی",
+  storekeeper: "انباردار",
+  guard: "نگهبان",
+  assistant_master: "معاون مربی",
+  ejraee_deputy: "معاون اجرایی",
+  amoozeshi_deputy: "معاون آموزشی",
+  farhangi_deputy: "معاون فرهنگی",
+};
 
 // Custom debounce hook (copy from students/page.tsx)
 function useDebounce<T>(value: T, delay: number): T {
@@ -181,9 +193,24 @@ export default function UsersPage() {
     return `${user.fname || ''} ${user.lname || ''}`.trim() || user.username;
   };
 
-  const openAttachRoleModal = (user: User) => {
+  const openAttachRoleModal = async (user: User) => {
     setAttachRoleUser(user);
     setSelectedAttachRole("");
+    if (accessToken) {
+      try {
+        const res = await AppRoleService.getAppRoles({}, accessToken);
+        // Map to { value, label, name } for Select
+        const roles = res.data.map((item) => ({
+          value: String(item.id),
+          label: ROLE_FA_MAP[item.name] || item.name,
+          name: item.name,
+        }));
+        setAvailableRoles(roles);
+      } catch (e) {
+        toast.error("خطا در دریافت نقش‌ها");
+        setAvailableRoles([]);
+      }
+    }
     setIsAttachRoleOpen(true);
   };
   const closeAttachRoleModal = () => {
@@ -195,7 +222,10 @@ export default function UsersPage() {
     if (!accessToken || !attachRoleUser || !selectedAttachRole) return;
     setAttachLoading(true);
     try {
-      await AppRoleService.createAppRole({ name: selectedAttachRole, user_id: attachRoleUser.id }, accessToken);
+      // پیدا کردن role_id از روی value
+      const selectedRoleObj = availableRoles.find((r) => r.value === selectedAttachRole);
+      if (!selectedRoleObj) throw new Error("نقش انتخاب شده یافت نشد");
+      await AppRoleService.assignRole({ user_id: attachRoleUser.id, role_id: Number(selectedRoleObj.value) }, accessToken);
       toast.success("نقش با موفقیت به کاربر اضافه شد");
       closeAttachRoleModal();
       fetchUsers();
@@ -329,18 +359,17 @@ export default function UsersPage() {
                             <div className="flex flex-wrap items-center gap-1">
                               {(user.app_roles && user.app_roles.length > 0) ? (
                                 user.app_roles.map((role, idx) => {
-                                  const roleInfo = ROLE_MAP[role.name] || ROLE_MAP["user"];
+                                  const color = ROLE_COLOR_MAP[role.name] || ROLE_COLOR_MAP["user"];
+                                  const faName = ROLE_FA_MAP[role.name] || role.name;
                                   return (
-                                    <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${roleInfo.color}`}>
-                                      {roleInfo.icon}
-                                      {roleInfo.fa}
+                                    <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
+                                      {faName}
                                     </span>
                                   );
                                 })
                               ) : (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_MAP["user"].color}`}>
-                                  {ROLE_MAP["user"].icon}
-                                  {ROLE_MAP["user"].fa}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR_MAP["user"]}`}>
+                                  {ROLE_FA_MAP["user"]}
                                 </span>
                               )}
                               <Button
@@ -409,18 +438,17 @@ export default function UsersPage() {
                           <div className="flex gap-1 items-center">
                             {(user.app_roles && user.app_roles.length > 0) ? (
                               user.app_roles.map((role, idx) => {
-                                const roleInfo = ROLE_MAP[role.name] || ROLE_MAP["user"];
+                                const color = ROLE_COLOR_MAP[role.name] || ROLE_COLOR_MAP["user"];
+                                const faName = ROLE_FA_MAP[role.name] || role.name;
                                 return (
-                                  <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleInfo.color}`}>
-                                    {roleInfo.icon}
-                                    {roleInfo.fa}
+                                  <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
+                                    {faName}
                                   </span>
                                 );
                               })
                             ) : (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_MAP["user"].color}`}>
-                                {ROLE_MAP["user"].icon}
-                                {ROLE_MAP["user"].fa}
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR_MAP["user"]}`}>
+                                {ROLE_FA_MAP["user"]}
                               </span>
                             )}
                             <Button

@@ -93,21 +93,9 @@ export default function ApplicantsPage() {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const handleViewApplicantDetails = async (applicantId: number) => {
-    if (!accessToken) return;
-    try {
-      setLoading(true);
-      const response = await ApplicantService.getApplicant(applicantId, accessToken);
-      // console.log("Applicant details response:", response); // Kept for now
-      // console.log("Applicant data:", response.data); // Kept for now
-      setSelectedApplicant(response.data);
-      setIsViewApplicantOpen(true);
-    } catch (error) {
-      toast.error("خطا در دریافت اطلاعات متقاضی");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleViewApplicantDetails = (applicant: Applicant) => {
+    setSelectedApplicant(applicant);
+    setIsViewApplicantOpen(true);
   };
   
   const handleSearch = () => {
@@ -199,7 +187,7 @@ export default function ApplicantsPage() {
                           exit={{ opacity: 0, y: -20 }}
                           transition={{ duration: 0.2 }}
                           className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 cursor-pointer"
-                          onClick={() => handleViewApplicantDetails(applicant.id)}
+                          onClick={() => handleViewApplicantDetails(applicant)}
                         >
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                             {pagination.from ? pagination.from + index : index + 1}
@@ -221,7 +209,7 @@ export default function ApplicantsPage() {
                               variant="ghost" 
                               size="sm" 
                               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={(e) => { e.stopPropagation(); handleViewApplicantDetails(applicant.id);}}
+                              onClick={(e) => { e.stopPropagation(); handleViewApplicantDetails(applicant);}}
                             >
                               <Eye className="h-4 w-4 ml-1" />
                               مشاهده
@@ -255,7 +243,7 @@ export default function ApplicantsPage() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden cursor-pointer"
-                      onClick={() => handleViewApplicantDetails(applicant.id)}
+                      onClick={() => handleViewApplicantDetails(applicant)}
                     >
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -283,7 +271,7 @@ export default function ApplicantsPage() {
                             variant="ghost" 
                             size="sm" 
                             className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                             onClick={(e) => { e.stopPropagation(); handleViewApplicantDetails(applicant.id);}}
+                             onClick={(e) => { e.stopPropagation(); handleViewApplicantDetails(applicant);}}
                           >
                             <Eye className="h-4 w-4 ml-1" />
                             مشاهده جزئیات
@@ -415,13 +403,13 @@ export default function ApplicantsPage() {
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   {selectedApplicant.Aks ? (
-                    <Image src={`/${selectedApplicant.Aks}`} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} width={80} height={80} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
+                    <Image src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${selectedApplicant.Aks}`} alt={`${selectedApplicant.Fname} ${selectedApplicant.Lname}`} width={80} height={80} className="h-20 w-20 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">بدون عکس</span>
                     </div>
                   )}
-                  <div>
+                  <div className="mx-5">
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                       {selectedApplicant.Fname} {selectedApplicant.Lname}
                     </h3>
@@ -457,6 +445,14 @@ export default function ApplicantsPage() {
                     }>
                       {selectedApplicant.status === 1 ? 'فعال' : 'بررسی نشده'}
                     </Badge>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-zinc-500 dark:text-zinc-400">استان:</p>
+                    <p className="text-zinc-900 dark:text-zinc-100">{selectedApplicant.Ostan || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-zinc-500 dark:text-zinc-400">شهر:</p>
+                    <p className="text-zinc-900 dark:text-zinc-100">{selectedApplicant.City || '-'}</p>
                   </div>
                   <div className="space-y-1 sm:col-span-2">
                     <p className="text-zinc-500 dark:text-zinc-400">آدرس:</p>
