@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Search } from "lucide-react";
+import { X, Search, Loader2 } from "lucide-react";
 
 interface Option {
   label: string;
@@ -13,6 +13,9 @@ interface MultiSelectComboBoxProps {
   placeholder?: string;
   label?: string;
   disabled?: boolean;
+  onSearch?: (searchTerm: string) => Promise<void> | void;
+  searchLoading?: boolean;
+  debounceMs?: number;
 }
 
 export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
@@ -22,11 +25,15 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
   placeholder = "انتخاب کنید...",
   label,
   disabled = false,
+  onSearch,
+  searchLoading = false,
+  debounceMs = 500,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,6 +45,28 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Debounced search effect
+  useEffect(() => {
+    if (onSearch && inputValue.trim()) {
+      // Clear previous timeout
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      
+      // Set new timeout
+      debounceRef.current = setTimeout(() => {
+        onSearch(inputValue.trim());
+      }, debounceMs);
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [inputValue, onSearch, debounceMs]);
+
   const normalizeText = (text: string) => {
     return text
       .toLowerCase()
@@ -46,11 +75,14 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
       .replace(/\s+/g, " ");
   };
 
-  const filteredOptions = options.filter(
-    (opt) =>
-      normalizeText(opt.label).includes(normalizeText(inputValue)) &&
-      !value.includes(opt.value)
-  );
+  // If onSearch is provided, show all options (API will filter), otherwise filter locally
+  const filteredOptions = onSearch 
+    ? options.filter((opt) => !value.includes(opt.value))
+    : options.filter(
+        (opt) =>
+          normalizeText(opt.label).includes(normalizeText(inputValue)) &&
+          !value.includes(opt.value)
+      );
 
   const handleSelect = (val: string | number) => {
     onChange([...value, val]);
@@ -87,7 +119,11 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
         onClick={() => !disabled && setIsOpen(true)}
         style={{ direction: "rtl" }}
       >
-        <Search className="w-4 h-4 text-zinc-400 absolute right-3" />
+        {searchLoading ? (
+          <Loader2 className="w-4 h-4 text-zinc-400 absolute right-3 animate-spin" />
+        ) : (
+          <Search className="w-4 h-4 text-zinc-400 absolute right-3" />
+        )}
         {value.length > 0 &&
           value.map((val, index) => {
             const opt = options.find((o) => o.value === val);
@@ -134,7 +170,12 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
           className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-900 border rounded-md shadow-lg max-h-56 overflow-auto left-0 right-0"
           style={{ direction: "rtl" }}
         >
-          {filteredOptions.length > 0 ? (
+          {searchLoading ? (
+            <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 text-center flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              در حال جستجو...
+            </div>
+          ) : filteredOptions.length > 0 ? (
             filteredOptions.map((opt) => (
               <div
                 key={opt.value}
@@ -146,7 +187,7 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
             ))
           ) : (
             <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-              نتیجه‌ای یافت نشد
+              {inputValue.trim() ? "نتیجه‌ای یافت نشد" : "برای جستجو تایپ کنید"}
             </div>
           )}
         </div>
