@@ -65,8 +65,11 @@ export default function EditClassPage() {
         let classesArray: OptimizedClass[] = [];
         
         try {
-          // Try paginated API first
-          const classesResponse = await optimizedClassService.getAll(accessToken);
+          // Try paginated API first with a large per_page to get all classes
+          const classesResponse = await optimizedClassService.getAll(accessToken, {
+            page: 1,
+            per_page: 1000 // Set a large number to get all classes
+          });
           
           // Handle the paginated response structure
           if (classesResponse && classesResponse.data && Array.isArray(classesResponse.data.data)) {

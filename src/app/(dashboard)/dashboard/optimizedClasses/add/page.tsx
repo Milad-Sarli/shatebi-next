@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import {
   optimizedClassService,
+  OptimizedClass,
 } from "@/lib/services/optimizedClass.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { ArrowLeft } from "lucide-react";
@@ -41,7 +42,6 @@ export default function AddClassPage() {
     user_ids: [] as number[],
     droos_ids: [] as number[],
     teacher_ids: [] as number[],
-    status: "active",
   });
 
   React.useEffect(() => {
@@ -50,10 +50,13 @@ export default function AddClassPage() {
       try {
         const classesResponse = await optimizedClassService.getAll(accessToken);
         
+        // Get the data array from the paginated response
+        const classesArray = classesResponse.data.data;
+        
         // Extract unique students
         const uniqueStudents = new Map<number, Student>();
-        classesResponse.forEach((cls) => {
-          cls.optimized_class_items?.forEach((item) => {
+        classesArray.forEach((cls: OptimizedClass) => {
+          cls.optimized_class_items?.forEach((item: any) => {
             if (item.student) {
               uniqueStudents.set(item.student.id, {
                 id: item.student.id,
@@ -67,7 +70,7 @@ export default function AddClassPage() {
 
         // Extract unique lessons
         const uniqueLessons = new Map<number, Lesson>();
-        classesResponse.forEach((cls) => {
+        classesArray.forEach((cls: OptimizedClass) => {
           if (cls.dars) {
             uniqueLessons.set(cls.dars.id, {id: cls.dars.id, name: cls.dars.title});
           }
@@ -76,8 +79,8 @@ export default function AddClassPage() {
         
         // Extract unique teachers
         const uniqueTeachers = new Map<number, Teacher>();
-        classesResponse.forEach((cls) => {
-          cls.optimized_class_masters?.forEach((master_item) => {
+        classesArray.forEach((cls: OptimizedClass) => {
+          cls.optimized_class_masters?.forEach((master_item: any) => {
             if (master_item.master) {
               uniqueTeachers.set(master_item.master.id, master_item.master);
             }
@@ -110,12 +113,16 @@ export default function AddClassPage() {
       return;
     }
 
+    // Get the first student as the main user_id
+    const mainStudentId = formData.user_ids[0];
+    // Get the remaining students for the students array
+    const additionalStudents = formData.user_ids.slice(1);
+
     const payload = {
       tenant_id: formData.tenant_id,
-      user_id: formData.user_ids[0],
+      user_id: mainStudentId,
       droos_id: formData.droos_ids[0],
-      status: formData.status as "active" | "inactive",
-      students: formData.user_ids,
+      students: additionalStudents,
       masters: formData.teacher_ids.map(teacherId => ({
         master_id: teacherId,
         status: 1,

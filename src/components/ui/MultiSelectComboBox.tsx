@@ -89,12 +89,12 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
       >
         <Search className="w-4 h-4 text-zinc-400 absolute right-3" />
         {value.length > 0 &&
-          value.map((val) => {
+          value.map((val, index) => {
             const opt = options.find((o) => o.value === val);
             if (!opt) return null;
             return (
               <span
-                key={val}
+                key={`${val}-${index}`}
                 className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-1 text-xs text-zinc-700 dark:text-zinc-200 ml-1 mb-1"
                 style={{ direction: "rtl" }}
               >

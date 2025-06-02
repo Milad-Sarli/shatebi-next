@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <Sidebar className="flex-1" />
+          <Sidebar className="flex-1" setSidebarOpen={setSidebarOpen} />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
           
           </div>
-          <Sidebar className="flex-1" />
+          <Sidebar className="flex-1" setSidebarOpen={setSidebarOpen} />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -246,10 +246,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(true)}
-            className="ml-auto text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
             <Menu className="h-5 w-5" />
           </Button>
+          {/* Add Logo and Title here for mobile view */}
+          <div className="flex items-center gap-2 mx-auto">
+            <Image src="/fav-icon.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
+            <span className="text-base font-semibold text-blue-600 dark:text-blue-400">
+              سامانه جامع آموزشی دارالقرآن امام شاطبی (رح)
+            </span>
+          </div>
         </div>
 
         <div className="p-4 md:p-6 relative">

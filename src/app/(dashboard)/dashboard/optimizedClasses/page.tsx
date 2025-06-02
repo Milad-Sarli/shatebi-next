@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +75,10 @@ export default function OptimizedClassesPage() {
   const debouncedSearch = useDebounce(searchInput, 500);
   const [classToDelete, setClassToDelete] = React.useState<number | null>(null);
   const [isClientSidePagination, setIsClientSidePagination] = React.useState(false);
+  const [showStudentsModal, setShowStudentsModal] = React.useState(false);
+  const [selectedClassMasterName, setSelectedClassMasterName] = React.useState<string | null>(null);
+  const [selectedClassStudents, setSelectedClassStudents] = React.useState<any[]>([]);
+  const [fetchingStudents, setFetchingStudents] = React.useState(false);
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -252,6 +257,38 @@ export default function OptimizedClassesPage() {
     }
   };
 
+  const fetchStudentsForClass = React.useCallback(async (classId: number) => {
+    if (!accessToken) {
+      console.log('No access token available');
+      return;
+    }
+    setFetchingStudents(true);
+    try {
+      // Need a date for the getStudents API, using today's date for now.
+      // You might need to adjust this based on your application's logic.
+      const today = new Date().toISOString().split('T')[0];
+      const response = await optimizedClassService.getStudents(classId, today, accessToken);
+      if (response && response.data && Array.isArray(response.data)) {
+        setSelectedClassStudents(response.data);
+        setShowStudentsModal(true);
+      } else {
+        console.error('Invalid students API response structure:', response);
+        setSelectedClassStudents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast.error("خطا در بارگذاری قرآن آموزان");
+      setSelectedClassStudents([]);
+    } finally {
+      setFetchingStudents(false);
+    }
+  }, [accessToken]);
+
+  const handleOpenStudentsModal = React.useCallback((classItem: OptimizedClass) => {
+    setSelectedClassMasterName(classItem.optimized_class_masters?.[0]?.master?.fullname || null);
+    fetchStudentsForClass(classItem.id);
+  }, [fetchStudentsForClass]);
+
   return (
     <PageTransition>
       <div className="space-y-4">
@@ -308,13 +345,13 @@ export default function OptimizedClassesPage() {
                       #
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      دانش‌آموزان
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
                       استاد
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      وضعیت
+                      نوع کلاس
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      قرآن آموزان
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       عملیات
@@ -359,21 +396,6 @@ export default function OptimizedClassesPage() {
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                               {pagination.from ? pagination.from + index : (pagination.current_page - 1) * pagination.per_page + index + 1}
                             </td>
-                            <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              <div className="flex flex-col gap-1">
-                                {classItem.optimized_class_items?.map(
-                                  (item) =>
-                                    item.student && (
-                                      <span key={item.id}>
-                                        {item.student.Fname}{" "}
-                                        {item.student.Lname}
-                                        {item.student.juz &&
-                                          ` (جزء ${item.student.juz})`}
-                                      </span>
-                                    )
-                                )}
-                              </div>
-                            </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
                               {classItem.optimized_class_masters?.[0]?.master
                                 ?.fullname ? (
@@ -395,19 +417,17 @@ export default function OptimizedClassesPage() {
                                 </Badge>
                               )}
                             </td>
-                            <td className="whitespace-nowrap px-4 py-3">
-                              <Badge
+                            <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                              {classItem.dars?.title}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                              <Button
                                 variant="outline"
-                                className={
-                                  classItem.status === "active"
-                                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                    : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                }
+                                size="sm"
+                                onClick={() => handleOpenStudentsModal(classItem)}
                               >
-                                {classItem.status === "active"
-                                  ? "فعال"
-                                  : "غیرفعال"}
-                              </Badge>
+                                نمایش قرآن آموزان
+                              </Button>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3">
                               <Button
@@ -468,32 +488,17 @@ export default function OptimizedClassesPage() {
                             <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
                               کلاس #{classItem.id}
                             </h3>
-                            <Badge
-                              variant="outline"
-                              className={
-                                classItem.status === "active"
-                                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                  : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                              }
-                            >
-                              {classItem.status === "active"
-                                ? "فعال"
-                                : "غیرفعال"}
-                            </Badge>
                           </div>
                           <div className="space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
                             <p>
-                              دانشآموزان:{" "}
-                              {classItem.optimized_class_items?.map(
-                                (item) =>
-                                  item.student && (
-                                    <span key={item.id}>
-                                      {item.student.Fname} {item.student.Lname}
-                                      {item.student.juz &&
-                                        ` (جزء ${item.student.juz})`}
-                                    </span>
-                                  )
-                              )}
+                              قرآن آموزان:{" "}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenStudentsModal(classItem)}
+                              >
+                                نمایش قرآن آموزان
+                              </Button>
                             </p>
                             <p>
                               استاد:{" "}
@@ -516,6 +521,10 @@ export default function OptimizedClassesPage() {
                                   بدون استاد
                                 </Badge>
                               )}
+                            </p>
+                            <p>
+                              نوع کلاس:{" "}
+                              {classItem.dars?.title}
                             </p>
                           </div>
                           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
@@ -709,6 +718,34 @@ export default function OptimizedClassesPage() {
                 className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               >
                 حذف
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showStudentsModal} onOpenChange={setShowStudentsModal}>
+          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-zinc-900 text-center mx-auto dark:text-zinc-100">لیست قرآن آموزان {selectedClassMasterName ? <>کلاس <span className="text-blue-600 dark:text-blue-400 font-semibold">{selectedClassMasterName}</span></> : ''}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 max-h-[400px] overflow-y-auto">
+              {fetchingStudents ? (
+                <div className="text-center text-zinc-500 dark:text-zinc-400">در حال بارگذاری...</div>
+              ) : selectedClassStudents.length === 0 ? (
+                <div className="text-center text-zinc-500 dark:text-zinc-400">هیچ قرآن آموزی در این کلاس وجود ندارد</div>
+              ) : (
+                <ul className="space-y-2 text-zinc-600 dark:text-zinc-400">
+                  {selectedClassStudents.map((studentData, index) => (
+                    <li key={`${studentData.student.id}-${index}`} className="border-b last:border-b-0 pb-2">
+                      {studentData.student.name} ({studentData.student.father_name})
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowStudentsModal(false)} className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                بستن
               </Button>
             </div>
           </DialogContent>

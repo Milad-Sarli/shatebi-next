@@ -48,7 +48,7 @@ export interface CreateOptimizedClassDto {
   tenant_id: number;
   user_id: number;
   droos_id: number;
-  status: "active" | "inactive";
+  status?: "active" | "inactive";
   students?: number[];
   masters?: MasterDataItem[];
 }
@@ -116,7 +116,7 @@ export interface StudentsResponse {
 export const optimizedClassService = {
   async getAll(accessToken: string, params?: GetOptimizedClassesParams): Promise<PaginatedResponse<OptimizedClass>> {
     const queryParams = new URLSearchParams();
-    
+
     if (params?.page) {
       queryParams.append('page', params.page.toString());
     }
@@ -130,7 +130,7 @@ export const optimizedClassService = {
     const url = `${API_URL}/api/optimized-classes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     console.log('Making paginated request to:', url);
     console.log('Access token:', accessToken ? 'Present' : 'Missing');
-    
+
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -156,13 +156,13 @@ export const optimizedClassService = {
     const url = `${API_URL}/api/optimized-classes`;
     console.log('Making simple request to:', url);
     console.log('Access token:', accessToken ? 'Present' : 'Missing');
-    
+
     const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    
+
     console.log('Simple API response status:', response.status);
     console.log('Simple API response data:', response.data);
     return response.data.data;

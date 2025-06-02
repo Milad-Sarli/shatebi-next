@@ -18,7 +18,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+  setSidebarOpen?: (open: boolean) => void;
+}
 
 // Define a type for nav items
 interface NavItem {
@@ -122,7 +124,7 @@ const items: NavItem[] = [
   },
 ];
 
-export function Sidebar({ className, ...props }: SidebarProps) {
+export function Sidebar({ className, setSidebarOpen, ...props }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
@@ -195,6 +197,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
                       <Link
                         key={subItem.href}
                         href={subItem.href!}
+                        onClick={() => setSidebarOpen && setSidebarOpen(false)}
                         className={cn(
                           "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground w-full",
                           isSubActive ? "bg-accent text-accent-foreground" : "transparent"
@@ -216,6 +219,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setSidebarOpen && setSidebarOpen(false)}
               className={cn(
                 "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
                 isActive ? "bg-accent text-accent-foreground" : "transparent"
