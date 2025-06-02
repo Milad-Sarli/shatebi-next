@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import {
   optimizedClassService,
-  OptimizedClass,
 } from "@/lib/services/optimizedClass.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { ArrowLeft } from "lucide-react";
@@ -28,6 +27,31 @@ interface Lesson {
 interface Teacher {
   id: number;
   fullname: string;
+}
+
+interface OptimizedClassItem {
+  student: {
+    id: number;
+    Fname?: string;
+    Lname?: string;
+    name?: string;
+  };
+}
+
+interface OptimizedClassMaster {
+  master: {
+    id: number;
+    fullname: string;
+  };
+}
+
+interface OptimizedClassData {
+  optimized_class_items?: OptimizedClassItem[];
+  optimized_class_masters?: OptimizedClassMaster[];
+  dars?: {
+    id: number;
+    title: string;
+  };
 }
 
 export default function AddClassPage() {
@@ -55,8 +79,8 @@ export default function AddClassPage() {
         
         // Extract unique students
         const uniqueStudents = new Map<number, Student>();
-        classesArray.forEach((cls: OptimizedClass) => {
-          cls.optimized_class_items?.forEach((item: any) => {
+        classesArray.forEach((cls: OptimizedClassData) => {
+          cls.optimized_class_items?.forEach((item: OptimizedClassItem) => {
             if (item.student) {
               uniqueStudents.set(item.student.id, {
                 id: item.student.id,
@@ -70,7 +94,7 @@ export default function AddClassPage() {
 
         // Extract unique lessons
         const uniqueLessons = new Map<number, Lesson>();
-        classesArray.forEach((cls: OptimizedClass) => {
+        classesArray.forEach((cls: OptimizedClassData) => {
           if (cls.dars) {
             uniqueLessons.set(cls.dars.id, {id: cls.dars.id, name: cls.dars.title});
           }
@@ -79,8 +103,8 @@ export default function AddClassPage() {
         
         // Extract unique teachers
         const uniqueTeachers = new Map<number, Teacher>();
-        classesArray.forEach((cls: OptimizedClass) => {
-          cls.optimized_class_masters?.forEach((master_item: any) => {
+        classesArray.forEach((cls: OptimizedClassData) => {
+          cls.optimized_class_masters?.forEach((master_item: OptimizedClassMaster) => {
             if (master_item.master) {
               uniqueTeachers.set(master_item.master.id, master_item.master);
             }

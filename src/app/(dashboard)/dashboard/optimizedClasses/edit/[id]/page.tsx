@@ -10,7 +10,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { optimizedClassService, OptimizedClass } from "@/lib/services/optimizedClass.service";
 import { Student } from "@/lib/services/student.service";
 import { LessonService, Lesson } from "@/lib/services/lesson.service";
-import { Master } from "@/lib/services/master.service";
+import { MasterService, Master } from "@/lib/services/master.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { ArrowLeft } from "lucide-react";
 import {
@@ -71,6 +71,7 @@ interface ClassMaster {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  fullname: string;
 }
 
 interface ClassItem {
@@ -176,39 +177,37 @@ export default function EditClassPage() {
     
     try {
       setMasterSearchLoading(true);
-      const response = await fetch(`${API_URL}/api/masters/search?q=${encodeURIComponent(searchTerm)}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json'
-        }
-      });
+      const response = await MasterService.getMasters(
+        { 
+          search: searchTerm,
+          per_page: 100 // Adjust this number based on your needs
+        }, 
+        accessToken
+      );
       
-      if (response.ok) {
-        const data = await response.json();
-        const searchResults: MasterOption[] = (data.data || []).map((master: Master) => ({
-          label: master.fullname,
-          value: master.id,
-        }));
+      const searchResults: MasterOption[] = (response.data.data || []).map((master: Master) => ({
+        label: master.fullname,
+        value: master.id,
+      }));
+      
+      // Replace previous search results with new ones
+      // Keep only the initially loaded masters from current class and add new search results
+      setMasterOptions(prev => {
+        // Get the initial masters (those that are currently selected in the form)
+        const initialMasters = prev.filter(opt => formData.teacher_ids.includes(opt.value as number));
         
-        // Replace previous search results with new ones
-        // Keep only the initially loaded masters from current class and add new search results
-        setMasterOptions(prev => {
-          // Get the initial masters (those that are currently selected in the form)
-          const initialMasters = prev.filter(opt => formData.teacher_ids.includes(opt.value as number));
-          
-          // Create a comprehensive list combining initial masters and new search results
-          const allOptions = [...initialMasters, ...searchResults];
-          
-          // Remove duplicates by creating a Map with unique IDs
-          const uniqueOptionsMap = new Map();
-          allOptions.forEach(option => {
-            uniqueOptionsMap.set(option.value, option);
-          });
-          
-          // Convert back to array
-          return Array.from(uniqueOptionsMap.values());
+        // Create a comprehensive list combining initial masters and new search results
+        const allOptions = [...initialMasters, ...searchResults];
+        
+        // Remove duplicates by creating a Map with unique IDs
+        const uniqueOptionsMap = new Map();
+        allOptions.forEach(option => {
+          uniqueOptionsMap.set(option.value, option);
         });
-      }
+        
+        // Convert back to array
+        return Array.from(uniqueOptionsMap.values());
+      });
     } catch (error) {
       console.error("Error searching masters:", error);
     } finally {
@@ -254,7 +253,7 @@ export default function EditClassPage() {
           (classResponse.optimized_class_masters as ClassMasterItem[]).forEach((masterItem) => {
             if (masterItem.master) {
               currentMasters.push({
-                label: `${masterItem.master.Fname} ${masterItem.master.Lname}`,
+                label: masterItem.master.fullname,
                 value: masterItem.master.id,
               });
             }

@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Edit,
   Trash2,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +36,60 @@ import {
 } from "@/lib/services/optimizedClass.service";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/constants";
+
+interface Student {
+  student: {
+    id: number;
+    name: string;
+    father_name: string;
+    student_code: string;
+    phone: string;
+    parent_phone: string;
+  };
+  grades: Grade[];
+}
+
+interface Grade {
+  id: number;
+  hefz: number;
+  details: number;
+  tajvid: number;
+  sout: number;
+  number: number | null;
+  practice_count: number | null;
+  description: string | null;
+  master_teacher: string | null;
+  droos_id: Dars;
+  dars: Dars;
+  lesson_area: LessonArea;
+  created_at: string;
+}
+
+interface Dars {
+  id: number;
+  title: string;
+  is_one_grade?: boolean;
+}
+
+interface LessonArea {
+  id: number;
+  start_surah: { id: number; title: string; titleAr: string } | null;
+  start_verse: number | null;
+  end_surah: { id: number; title: string; titleAr: string } | null;
+  end_verse: number | null;
+  start_page: number | null;
+  end_page: number | null;
+  start_joze: number | null;
+  end_joze: number | null;
+}
+
+interface ErrorResponse {
+  response?: {
+    data?: unknown;
+    status?: number;
+    statusText?: string;
+  };
+}
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -77,7 +130,7 @@ export default function OptimizedClassesPage() {
   const [isClientSidePagination, setIsClientSidePagination] = React.useState(false);
   const [showStudentsModal, setShowStudentsModal] = React.useState(false);
   const [selectedClassMasterName, setSelectedClassMasterName] = React.useState<string | null>(null);
-  const [selectedClassStudents, setSelectedClassStudents] = React.useState<any[]>([]);
+  const [selectedClassStudents, setSelectedClassStudents] = React.useState<Student[]>([]);
   const [fetchingStudents, setFetchingStudents] = React.useState(false);
 
   // Reference to track if a search is already in progress
@@ -159,8 +212,8 @@ export default function OptimizedClassesPage() {
               // Search in students names
               const studentMatch = classItem.optimized_class_items?.some((item) =>
                 item.student && (
-                  item.student.Fname?.toLowerCase().includes(searchLower) ||
-                  item.student.Lname?.toLowerCase().includes(searchLower)
+                  item.student.name.toLowerCase().includes(searchLower) ||
+                  item.student.father_name.toLowerCase().includes(searchLower)
                 )
               );
               
@@ -198,7 +251,7 @@ export default function OptimizedClassesPage() {
         console.error('Error details:', {
           message: error instanceof Error ? error.message : 'Unknown error',
           stack: error instanceof Error ? error.stack : undefined,
-          response: (error as any)?.response
+          response: (error as ErrorResponse)?.response
         });
         toast.error("خطا در بارگذاری کلاس‌ها");
         setClasses([]);

@@ -934,13 +934,17 @@ export default function AddNumberPage() {
   React.useEffect(() => {
     const fetchClasses = async () => {
       if (!accessToken) return;
-
       try {
-        const data = await optimizedClassService.getAll(accessToken);
-        setClasses(data);
+        const response = await optimizedClassService.getAll(accessToken);
+        if (response?.data?.data) {
+          setClasses(response.data.data);
+        } else {
+          setClasses([]);
+        }
       } catch (error) {
         console.error(error);
         toast.error("Error loading classes");
+        setClasses([]);
       }
     };
 
