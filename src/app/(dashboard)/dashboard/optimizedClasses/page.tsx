@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ClassForm } from "./class-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +35,7 @@ import {
   OptimizedClass,
 } from "@/lib/services/optimizedClass.service";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/constants";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -73,9 +73,7 @@ export default function OptimizedClassesPage() {
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
   const [classToDelete, setClassToDelete] = React.useState<number | null>(null);
-  const [classToEdit, setClassToEdit] = React.useState<OptimizedClass | null>(
-    null
-  );
+  const [isClientSidePagination, setIsClientSidePagination] = React.useState(false);
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -84,7 +82,10 @@ export default function OptimizedClassesPage() {
 
   const fetchClasses = React.useCallback(
     async (searchTerm?: string) => {
-      if (!accessToken) return;
+      if (!accessToken) {
+        console.log('No access token available');
+        return;
+      }
       if (searchInProgress.current) return;
 
       try {
@@ -93,25 +94,109 @@ export default function OptimizedClassesPage() {
 
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
-        console.log(searchQuery);
+        console.log('Search query:', searchQuery);
+        console.log('Access token exists:', !!accessToken);
+        console.log('API URL:', API_URL);
 
-        const response = await optimizedClassService.getAll(accessToken);
+        try {
+          // Try paginated API first
+          const response = await optimizedClassService.getAll(accessToken, {
+            page: filters.page,
+            per_page: filters.per_page,
+            search: searchQuery || undefined,
+          });
 
-        setClasses(response);
-        // Note: Since the service doesn't support pagination yet, we'll handle it client-side
-        const total = response.length;
-        const lastPage = Math.ceil(total / filters.per_page);
-        setPagination({
-          current_page: filters.page,
-          last_page: lastPage,
-          total,
-          per_page: filters.per_page,
-          from: (filters.page - 1) * filters.per_page + 1,
-          to: Math.min(filters.page * filters.per_page, total),
-        });
+          console.log('Paginated API Response:', response);
+          console.log('Response type:', typeof response);
+          console.log('Response keys:', Object.keys(response || {}));
+
+          // Handle the response structure similar to students page
+          if (response && response.data) {
+            setClasses(Array.isArray(response.data.data) ? response.data.data : []);
+            setIsClientSidePagination(false);
+            
+            // Use the pagination data from response.data (not response.meta)
+            if (response.data.current_page !== undefined) {
+              setPagination({
+                current_page: response.data.current_page,
+                last_page: response.data.last_page,
+                total: response.data.total,
+                per_page: response.data.per_page,
+                from: response.data.from,
+                to: response.data.to,
+              });
+            }
+          } else {
+            console.error('Invalid paginated API response structure:', response);
+            throw new Error('Invalid response structure');
+          }
+        } catch (paginationError) {
+          console.log('Paginated API failed, falling back to simple API:', paginationError);
+          
+          // Fallback to simple API and implement client-side pagination
+          const response = await optimizedClassService.getAllSimple(accessToken);
+          console.log('Simple API Response:', response);
+          console.log('Simple response type:', typeof response);
+          console.log('Simple response is array:', Array.isArray(response));
+          
+          if (!Array.isArray(response)) {
+            console.error('Simple API response is not an array:', response);
+            setClasses([]);
+            return;
+          }
+
+          // Filter classes based on search query
+          let filteredClasses = response;
+          if (searchQuery && searchQuery.trim()) {
+            filteredClasses = response.filter((classItem) => {
+              const searchLower = searchQuery.toLowerCase();
+              
+              // Search in students names
+              const studentMatch = classItem.optimized_class_items?.some((item) =>
+                item.student && (
+                  item.student.Fname?.toLowerCase().includes(searchLower) ||
+                  item.student.Lname?.toLowerCase().includes(searchLower)
+                )
+              );
+              
+              // Search in master name
+              const masterMatch = classItem.optimized_class_masters?.[0]?.master?.fullname
+                ?.toLowerCase().includes(searchLower);
+              
+              // Search in status
+              const statusMatch = (classItem.status === "active" ? "فعال" : "غیرفعال")
+                .includes(searchQuery);
+              
+              return studentMatch || masterMatch || statusMatch;
+            });
+          }
+
+          console.log('Filtered classes:', filteredClasses);
+          console.log('Filtered classes length:', filteredClasses.length);
+          setClasses(filteredClasses);
+          setIsClientSidePagination(true);
+          
+          // Calculate pagination for filtered results
+          const total = filteredClasses.length;
+          const lastPage = Math.ceil(total / filters.per_page);
+          setPagination({
+            current_page: filters.page,
+            last_page: lastPage,
+            total,
+            per_page: filters.per_page,
+            from: total > 0 ? (filters.page - 1) * filters.per_page + 1 : 0,
+            to: Math.min(filters.page * filters.per_page, total),
+          });
+        }
       } catch (error) {
-        toast.error("Error loading classes");
-        console.error(error);
+        console.error('Error fetching classes:', error);
+        console.error('Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          response: (error as any)?.response
+        });
+        toast.error("خطا در بارگذاری کلاس‌ها");
+        setClasses([]);
       } finally {
         setLoading(false);
         searchInProgress.current = false;
@@ -149,19 +234,16 @@ export default function OptimizedClassesPage() {
 
     try {
       await optimizedClassService.delete(classToDelete, accessToken);
-      toast.success("Class deleted successfully");
+      toast.success("کلاس با موفقیت حذف شد");
       fetchClasses();
     } catch (error) {
-      toast.error("Error deleting class");
+      toast.error("خطا در حذف کلاس");
       console.error(error);
     } finally {
       setClassToDelete(null);
     }
   };
 
-  const handleEditClass = (classItem: OptimizedClass) => {
-    setClassToEdit(classItem);
-  };
   const handleSearch = () => {
     if (filters.page !== 1) {
       setFilters((prev) => ({ ...prev, page: 1 }));
@@ -250,7 +332,7 @@ export default function OptimizedClassesPage() {
                           در حال بارگذاری...
                         </td>
                       </tr>
-                    ) : classes.length === 0 ? (
+                    ) : (Array.isArray(classes) ? classes : []).length === 0 ? (
                       <tr>
                         <td
                           colSpan={5}
@@ -260,10 +342,10 @@ export default function OptimizedClassesPage() {
                         </td>
                       </tr>
                     ) : (
-                      classes
+                      (Array.isArray(classes) ? classes : [])
                         .slice(
-                          (filters.page - 1) * filters.per_page,
-                          filters.page * filters.per_page
+                          isClientSidePagination ? (filters.page - 1) * filters.per_page : 0,
+                          isClientSidePagination ? filters.page * filters.per_page : classes.length
                         )
                         .map((classItem, index) => (
                           <motion.tr
@@ -275,7 +357,7 @@ export default function OptimizedClassesPage() {
                             className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                           >
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                              {pagination.from + index}
+                              {pagination.from ? pagination.from + index : (pagination.current_page - 1) * pagination.per_page + index + 1}
                             </td>
                             <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
                               <div className="flex flex-col gap-1">
@@ -332,7 +414,7 @@ export default function OptimizedClassesPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                                onClick={() => handleEditClass(classItem)}
+                                onClick={() => router.push(`/dashboard/optimizedClasses/edit/${classItem.id}`)}
                               >
                                 <Edit className="h-4 w-4 ml-1" />
                                 ویرایش
@@ -362,15 +444,15 @@ export default function OptimizedClassesPage() {
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...
                   </div>
-                ) : classes.length === 0 ? (
+                ) : (Array.isArray(classes) ? classes : []).length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     کلاسی یافت نشد
                   </div>
                 ) : (
-                  classes
+                  (Array.isArray(classes) ? classes : [])
                     .slice(
-                      (filters.page - 1) * filters.per_page,
-                      filters.page * filters.per_page
+                      isClientSidePagination ? (filters.page - 1) * filters.per_page : 0,
+                      isClientSidePagination ? filters.page * filters.per_page : classes.length
                     )
                     .map((classItem, index) => (
                       <motion.div
@@ -441,7 +523,7 @@ export default function OptimizedClassesPage() {
                               variant="ghost"
                               size="sm"
                               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleEditClass(classItem)}
+                              onClick={() => router.push(`/dashboard/optimizedClasses/edit/${classItem.id}`)}
                             >
                               <Edit className="h-4 w-4 ml-1" />
                               ویرایش
@@ -463,7 +545,7 @@ export default function OptimizedClassesPage() {
               </AnimatePresence>
             </div>
 
-            {!loading && classes.length > 0 && pagination.last_page > 1 && (
+            {!loading && (Array.isArray(classes) ? classes : []).length > 0 && pagination.last_page > 1 && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -597,27 +679,6 @@ export default function OptimizedClassesPage() {
             )}
           </CardContent>
         </Card>
-
-        <Dialog
-          open={classToEdit !== null}
-          onOpenChange={(open: boolean) => !open && setClassToEdit(null)}
-        >
-          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                ویرایش کلاس
-              </DialogTitle>
-            </DialogHeader>
-            <ClassForm
-              initialData={classToEdit || undefined}
-              classId={classToEdit?.id}
-              onSuccess={() => {
-                setClassToEdit(null);
-                fetchClasses();
-              }}
-            />
-          </DialogContent>
-        </Dialog>
 
         <Dialog
           open={classToDelete !== null}

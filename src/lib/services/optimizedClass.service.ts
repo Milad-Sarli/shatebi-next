@@ -20,6 +20,30 @@ export interface OptimizedClass {
   optimized_class_items?: any[];
 }
 
+export interface PaginatedResponse<T> {
+  data: {
+    data: T[];
+    current_page: number;
+    from: number;
+    last_page: number;
+    per_page: number;
+    to: number;
+    total: number;
+  };
+  links?: {
+    first: string;
+    last: string;
+    prev: string | null;
+    next: string | null;
+  };
+}
+
+export interface GetOptimizedClassesParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+}
+
 export interface CreateOptimizedClassDto {
   tenant_id: number;
   user_id: number;
@@ -90,12 +114,57 @@ export interface StudentsResponse {
 }
 
 export const optimizedClassService = {
-  async getAll(accessToken: string): Promise<OptimizedClass[]> {
-    const response = await axios.get(`${API_URL}/api/optimized-classes`, {
+  async getAll(accessToken: string, params?: GetOptimizedClassesParams): Promise<PaginatedResponse<OptimizedClass>> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    if (params?.per_page) {
+      queryParams.append('per_page', params.per_page.toString());
+    }
+    if (params?.search) {
+      queryParams.append('search', params.search);
+    }
+
+    const url = `${API_URL}/api/optimized-classes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    console.log('Making paginated request to:', url);
+    console.log('Access token:', accessToken ? 'Present' : 'Missing');
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      },
+    });
+
+    console.log('Paginated response status:', response.status);
+    console.log('Paginated response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Paginated API error response:', errorText);
+      throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Paginated API response data:', data);
+    return data;
+  },
+
+  async getAllSimple(accessToken: string): Promise<OptimizedClass[]> {
+    const url = `${API_URL}/api/optimized-classes`;
+    console.log('Making simple request to:', url);
+    console.log('Access token:', accessToken ? 'Present' : 'Missing');
+    
+    const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    
+    console.log('Simple API response status:', response.status);
+    console.log('Simple API response data:', response.data);
     return response.data.data;
   },
 

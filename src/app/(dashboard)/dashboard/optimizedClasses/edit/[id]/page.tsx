@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/auth.context";
@@ -9,9 +9,17 @@ import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import {
   optimizedClassService,
+  OptimizedClass,
 } from "@/lib/services/optimizedClass.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { ArrowLeft } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Student {
   id: number;
@@ -29,31 +37,67 @@ interface Teacher {
   fullname: string;
 }
 
-export default function AddClassPage() {
+export default function EditClassPage() {
   const router = useRouter();
+  const params = useParams();
+  const classId = parseInt(params.id as string);
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [initialLoading, setInitialLoading] = React.useState(true);
   const [students, setStudents] = React.useState<Student[]>([]);
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
   const [formData, setFormData] = React.useState({
-    tenant_id: 1, // You may need to get this from your auth context
+    tenant_id: 1,
     user_ids: [] as number[],
     droos_ids: [] as number[],
     teacher_ids: [] as number[],
-    status: "active",
+    status: "active" as "active" | "inactive",
   });
 
   React.useEffect(() => {
     const fetchData = async () => {
-      if (!accessToken) return;
+      if (!accessToken || !classId) return;
+      
       try {
-        const classesResponse = await optimizedClassService.getAll(accessToken);
+        setInitialLoading(true);
+        
+        let classesArray: OptimizedClass[] = [];
+        
+        try {
+          // Try paginated API first
+          const classesResponse = await optimizedClassService.getAll(accessToken);
+          
+          // Handle the paginated response structure
+          if (classesResponse && classesResponse.data && Array.isArray(classesResponse.data.data)) {
+            classesArray = classesResponse.data.data;
+          } else {
+            throw new Error('Invalid paginated response structure');
+          }
+        } catch (paginationError) {
+          console.log('Paginated API failed, falling back to simple API:', paginationError);
+          
+          // Fallback to simple API
+          classesArray = await optimizedClassService.getAllSimple(accessToken);
+          
+          if (!Array.isArray(classesArray)) {
+            throw new Error('Simple API response is not an array');
+          }
+        }
+        
+        // Find the current class
+        const currentClassData = classesArray.find((cls: OptimizedClass) => cls.id === classId);
+        if (!currentClassData) {
+          toast.error("کلاس مورد نظر یافت نشد");
+          router.push("/dashboard/optimizedClasses");
+          return;
+        }
         
         // Extract unique students
         const uniqueStudents = new Map<number, Student>();
-        classesResponse.forEach((cls) => {
-          cls.optimized_class_items?.forEach((item) => {
+        classesArray.forEach((cls: OptimizedClass) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          cls.optimized_class_items?.forEach((item: any) => {
             if (item.student) {
               uniqueStudents.set(item.student.id, {
                 id: item.student.id,
@@ -67,7 +111,7 @@ export default function AddClassPage() {
 
         // Extract unique lessons
         const uniqueLessons = new Map<number, Lesson>();
-        classesResponse.forEach((cls) => {
+        classesArray.forEach((cls: OptimizedClass) => {
           if (cls.dars) {
             uniqueLessons.set(cls.dars.id, {id: cls.dars.id, name: cls.dars.title});
           }
@@ -76,8 +120,9 @@ export default function AddClassPage() {
         
         // Extract unique teachers
         const uniqueTeachers = new Map<number, Teacher>();
-        classesResponse.forEach((cls) => {
-          cls.optimized_class_masters?.forEach((master_item) => {
+        classesArray.forEach((cls: OptimizedClass) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          cls.optimized_class_masters?.forEach((master_item: any) => {
             if (master_item.master) {
               uniqueTeachers.set(master_item.master.id, master_item.master);
             }
@@ -85,17 +130,34 @@ export default function AddClassPage() {
         });
         setTeachers(Array.from(uniqueTeachers.values()));
 
+        // Set form data with current class values
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const currentStudentIds = currentClassData.optimized_class_items?.map((item: any) => item.student?.id).filter(Boolean) || [];
+        const currentLessonIds = currentClassData.dars ? [currentClassData.dars.id] : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const currentTeacherIds = currentClassData.optimized_class_masters?.map((master: any) => master.master?.id).filter(Boolean) || [];
+
+        setFormData({
+          tenant_id: currentClassData.tenant_id,
+          user_ids: currentStudentIds,
+          droos_ids: currentLessonIds,
+          teacher_ids: currentTeacherIds,
+          status: currentClassData.status,
+        });
+
       } catch (error) {
-        toast.error("خطا در بارگذاری اطلاعات اولیه");
+        toast.error("خطا در بارگذاری اطلاعات");
         console.error("Error fetching data for form:", error);
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchData();
-  }, [accessToken]);
+  }, [accessToken, classId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accessToken) return;
+    if (!accessToken || !classId) return;
 
     if (formData.user_ids.length === 0) {
       toast.error("لطفاً حداقل یک دانش‌آموز انتخاب کنید.");
@@ -114,7 +176,7 @@ export default function AddClassPage() {
       tenant_id: formData.tenant_id,
       user_id: formData.user_ids[0],
       droos_id: formData.droos_ids[0],
-      status: formData.status as "active" | "inactive",
+      status: formData.status,
       students: formData.user_ids,
       masters: formData.teacher_ids.map(teacherId => ({
         master_id: teacherId,
@@ -124,16 +186,29 @@ export default function AddClassPage() {
 
     try {
       setLoading(true);
-      await optimizedClassService.create(payload, accessToken);
-      toast.success("کلاس با موفقیت ایجاد شد");
+      await optimizedClassService.update(classId, payload, accessToken);
+      toast.success("کلاس با موفقیت ویرایش شد");
       router.push("/dashboard/optimizedClasses");
     } catch (error) {
-      toast.error("خطا در ایجاد کلاس");
+      toast.error("خطا در ویرایش کلاس");
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <PageTransition>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-zinc-600 dark:text-zinc-400">در حال بارگذاری...</p>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>
@@ -142,7 +217,7 @@ export default function AddClassPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
-              افزودن کلاس جدید
+              ویرایش کلاس #{classId}
             </h1>
             <Button
               variant="ghost"
@@ -157,7 +232,7 @@ export default function AddClassPage() {
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader>
-            <CardTitle>اطلاعات کلاس</CardTitle>
+            <CardTitle>ویرایش اطلاعات کلاس</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -204,6 +279,28 @@ export default function AddClassPage() {
                   }
                   placeholder="انتخاب اساتید"
                 />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    وضعیت
+                  </label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value: "active" | "inactive") =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                      <SelectValue placeholder="انتخاب وضعیت" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-zinc-900">
+                      <SelectItem value="active">فعال</SelectItem>
+                      <SelectItem value="inactive">غیرفعال</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">
                 <Button
@@ -217,7 +314,7 @@ export default function AddClassPage() {
                   type="submit"
                   disabled={loading}
                 >
-                  {loading ? "در حال ثبت..." : "ثبت"}
+                  {loading ? "در حال ویرایش..." : "ویرایش"}
                 </Button>
               </div>
             </form>
@@ -226,4 +323,4 @@ export default function AddClassPage() {
       </div>
     </PageTransition>
   );
-}
+} 

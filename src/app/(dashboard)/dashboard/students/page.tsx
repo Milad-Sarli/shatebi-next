@@ -406,20 +406,6 @@ export default function StudentsPage() {
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
                       <div className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                            {student.Fname} {student.Lname}
-                          </h3>
-                          <Badge
-                            variant={
-                              student.status === "active"
-                                ? "default"
-                                : "destructive"
-                            }
-                          >
-                            {student.status === "active" ? "فعال" : "غیرفعال"}
-                          </Badge>
-                        </div>
                         <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
                           <p>نام پدر: {student.FatherName}</p>
                           <p>کد ملی: {student.Mellicode}</p>
