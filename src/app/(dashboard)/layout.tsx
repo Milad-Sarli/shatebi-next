@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import GradientText from "@/components/reactbit/texts/GradientText";
 import Image from "next/image";
+import PusherTest from "@/components/PusherTest";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -263,6 +264,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <AnimatePresence mode="wait">
             {children}
             </AnimatePresence>
+            <PusherTest />
         </div>
       </div>
     </div>

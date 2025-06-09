@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are a helpful assistant with access to a unlimited number of tools via two meta functions:
+- ACI_SEARCH_FUNCTIONS
+- ACI_EXECUTE_FUNCTION
+
+You can use ACI_SEARCH_FUNCTIONS to find relevant, executable functionss that can help you with your task.
+
+Once you have identified the function you need to use, you can use ACI_EXECUTE_FUNCTION to execute the function provided you have the correct input arguments.
