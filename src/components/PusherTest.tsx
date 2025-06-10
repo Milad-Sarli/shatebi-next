@@ -2,8 +2,54 @@
 import Script from 'next/script';
 import { useEffect, useRef } from 'react';
 
+const VAPID_PUBLIC_KEY = 'BCtYNWHIMklDaLd1shk0SN49Z0zrSwk5c-ZxwpxmRb2GM_N4-Gm9oGPBN8FBp75_i38Y6vmFf5jZgwpYV4_P3Dw'; // TODO: Replace with your actual VAPID public key
+
 export default function PusherTest() {
   const pusherRef = useRef<unknown>(null);
+
+  // Register service worker and subscribe to push notifications
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(async (registration) => {
+        console.log('Service Worker registered:', registration);
+        // Subscribe to push notifications
+        if ('PushManager' in window) {
+          const existing = await registration.pushManager.getSubscription();
+          if (!existing) {
+            try {
+              const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+              });
+              // Send subscription to backend
+              await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/save-subscription`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscription),
+              });
+              console.log('Push subscription sent to backend:', subscription);
+            } catch (err) {
+              console.error('Failed to subscribe for push:', err);
+            }
+          } else {
+            console.log('Already subscribed to push:', existing);
+          }
+        }
+      });
+    }
+  }, []);
+
+  // Helper to convert VAPID key
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
 
   // Request notification permission on mount
   useEffect(() => {
