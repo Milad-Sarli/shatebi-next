@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'shatebiapp.ir',
+        hostname: 'galaxe.bikerasol.ir',
         pathname: '/**',
       },
       {
@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'api.shatebiapp.ir',
+        hostname: 'test.bikerasol.ir',
         pathname: '/storage/**',
       },
     ],
