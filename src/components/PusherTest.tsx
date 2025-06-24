@@ -1,21 +1,25 @@
 'use client';
+import { useAuth } from '@/lib/context/auth.context';
 import Script from 'next/script';
 import { useEffect, useRef } from 'react';
 
-const VAPID_PUBLIC_KEY = 'BCtYNWHIMklDaLd1shk0SN49Z0zrSwk5c-ZxwpxmRb2GM_N4-Gm9oGPBN8FBp75_i38Y6vmFf5jZgwpYV4_P3Dw'; // TODO: Replace with your actual VAPID public key
+const VAPID_PUBLIC_KEY = 'BP8iYOpo04l4GtJgvMnqozigtWJaBsqY6PvBzf_mYl6zjPCiStPlnRIjUyjJUd--qHSz5pRCtKjuMVusnFZVV1Y'; // TODO: Replace with your actual VAPID public key
 
 export default function PusherTest() {
   const pusherRef = useRef<unknown>(null);
-
+  const { accessToken } = useAuth();
+ 
   // Register service worker and subscribe to push notifications
   useEffect(() => {
+    if (!accessToken) return; // Wait for accessToken to be available
+ 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(async (registration) => {
         console.log('Service Worker registered:', registration);
         // Subscribe to push notifications
         if ('PushManager' in window) {
           const existing = await registration.pushManager.getSubscription();
-          if (!existing) {
+          if (!existing) { 
             try {
               const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
@@ -24,7 +28,7 @@ export default function PusherTest() {
               // Send subscription to backend
               await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/save-subscription`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` }, 
                 body: JSON.stringify(subscription),
               });
               console.log('Push subscription sent to backend:', subscription);
@@ -37,7 +41,7 @@ export default function PusherTest() {
         }
       });
     }
-  }, []);
+  }, [accessToken]);
 
   // Helper to convert VAPID key
   function urlBase64ToUint8Array(base64String: string) {
