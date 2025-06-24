@@ -117,7 +117,7 @@ export default function PusherTest() {
       <button
         onClick={async () => {
           try {
-            const res = await fetch('https://api.shatebiapp.ir/api/pusher-test', {
+            const res = await fetch('https://test.bikerasol.ir/api/pusher-test', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ message: 'Hello from frontend!' }),
