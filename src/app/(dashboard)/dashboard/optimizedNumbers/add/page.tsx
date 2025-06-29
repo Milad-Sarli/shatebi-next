@@ -146,9 +146,22 @@ interface StudentType {
   aks?: string;
 }
 
+interface StudentActivity {
+  id: number;
+  student_id: number;
+  master_id: number;
+  classha_id: number;
+  class_absent: boolean;
+  provideless: boolean;
+  reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface StudentWithGrades {
   student: StudentType;
   grades: Grade[];
+  activities?: StudentActivity[];
 }
 
 interface FormRefs {
@@ -957,6 +970,7 @@ export default function AddNumberPage() {
   const [loading, setLoading] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<DateObject | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
+  const [studentActivities, setStudentActivities] = React.useState<Record<number, StudentActivity[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isOneGrade, setIsOneGrade] = React.useState(false);
@@ -1089,6 +1103,8 @@ export default function AddNumberPage() {
         const jsDate = selectedDate ? selectedDate.toDate() : null;
         const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
         if (!jsDate) return;
+        
+        // Fetch students and their grades
         const response = await optimizedClassService.getStudents(
           selectedClass.id,
           jsDateStr!,
@@ -1113,6 +1129,31 @@ export default function AddNumberPage() {
 
         setStudents(uniqueStudents);
         setExistingGrades(gradesMap);
+
+        // Fetch student activities for the same class and date
+        try {
+          const activities = await studentActivityService.getByClassAndDate(
+            selectedClass.id,
+            selectedDateStr,
+            accessToken
+          );
+
+          const activitiesMap: Record<number, StudentActivity[]> = {};
+          activities.forEach((activity) => {
+            const activityDate = format(new Date(activity.created_at), "yyyy-MM-dd");
+            if (activityDate === selectedDateStr) {
+              if (!activitiesMap[activity.student_id]) {
+                activitiesMap[activity.student_id] = [];
+              }
+              activitiesMap[activity.student_id].push(activity);
+            }
+          });
+
+          setStudentActivities(activitiesMap);
+        } catch (activitiesError) {
+          console.error("Error fetching student activities:", activitiesError);
+          setStudentActivities({});
+        }
       } catch (error) {
         console.error(error);
         toast.error("Error loading students");
@@ -1406,8 +1447,14 @@ export default function AddNumberPage() {
 
       console.log("activityData:", activityData);
       
-      await studentActivityService.create(activityData, accessToken);
+      const createdActivity = await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
+
+      // Update student activities state
+      setStudentActivities(prev => ({
+        ...prev,
+        [studentId]: [...(prev[studentId] || []), createdActivity]
+      }));
 
       // Create a grade with score 55
       const gradePayload = {
@@ -1541,8 +1588,14 @@ export default function AddNumberPage() {
 
       console.log("activityData:", activityData);
       
-      await studentActivityService.create(activityData, accessToken);
+      const createdActivity = await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
+      
+      // Update student activities state
+      setStudentActivities(prev => ({
+        ...prev,
+        [absentStudent.id]: [...(prev[absentStudent.id] || []), createdActivity]
+      }));
       
       toast.success(`غیبت با دلیل "${reason}" ثبت شد`);
       
@@ -1642,7 +1695,13 @@ export default function AddNumberPage() {
             {selectedClass ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {students.map((studentData, index) => (
+                                  {students.map((studentData, index) => {
+                  // Check if student is absent
+                  const studentActivitiesForToday = studentActivities[studentData.student.id] || [];
+                  const absentActivity = studentActivitiesForToday.find(activity => activity.class_absent);
+                  const provideActivity = studentActivitiesForToday.find(activity => activity.provideless);
+                  
+                  return (
                     <motion.div
                       key={studentData.student.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -1655,7 +1714,13 @@ export default function AddNumberPage() {
                         opacity: { duration: 0.3 },
                         y: { duration: 0.3 }
                       }}
-                      className="flex flex-col p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:shadow-lg hover:border-emerald-500/20 dark:hover:border-emerald-500/30 transition-all duration-300"
+                      className={`flex flex-col p-3 rounded-lg border transition-all duration-300 ${
+                        absentActivity 
+                          ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/20' 
+                          : provideActivity
+                          ? 'border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20'
+                          : 'border-zinc-200 dark:border-zinc-800 hover:shadow-lg hover:border-emerald-500/20 dark:hover:border-emerald-500/30'
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -1691,6 +1756,33 @@ export default function AddNumberPage() {
                             <span className="text-xs text-zinc-500 dark:text-zinc-400">
                               {studentData.student.student_code}
                             </span>
+                            {absentActivity && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center gap-1 mt-1"
+                              >
+                                <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
+                                  غایب
+                                </span>
+                                {absentActivity.reason && (
+                                  <span className="text-xs text-red-500 dark:text-red-400">
+                                    ({absentActivity.reason})
+                                  </span>
+                                )}
+                              </motion.div>
+                            )}
+                            {provideActivity && !absentActivity && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center gap-1 mt-1"
+                              >
+                                <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">
+                                  عدم تحویل
+                                </span>
+                              </motion.div>
+                            )}
                           </motion.div>
                         </div>
                         {(!existingGrades[studentData.student.id] || existingGrades[studentData.student.id].length < 3) && (
@@ -1796,7 +1888,8 @@ export default function AddNumberPage() {
                         </div>
                       )}
                     </motion.div>
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             ) : (
