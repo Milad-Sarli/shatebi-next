@@ -15,6 +15,7 @@ import {
   Dars
 } from "@/lib/services/optimizedClass.service";
 import { MasterService, Master } from "@/lib/services/master.service";
+import { studentActivityService, CreateStudentActivityDto } from "@/lib/services/studentActivity.service";
 import { format, subHours } from "date-fns-jalali";
 import { SingleSelectCombobox } from "@/components/ui/Combobox";
 import { Edit2 } from "lucide-react";
@@ -894,6 +895,58 @@ function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModa
   );
 }
 
+interface AbsentModalProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  student: StudentType;
+  onSubmit: (reason: string) => void;
+}
+
+function AbsentModal({ isOpen, onOpenChange, student, onSubmit }: AbsentModalProps) {
+  const absentReasons = [
+    { value: "مرخصی", label: "مرخصی" },
+    { value: "بدون هماهنگی", label: "بدون هماهنگی" },
+    { value: "مریض", label: "مریض" }
+  ];
+
+  const handleReasonSelect = (reason: string) => {
+    onSubmit(reason);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            ثبت غیبت برای {student.name}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            لطفا دلیل غیبت را انتخاب کنید
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {absentReasons.map((reason) => (
+            <Button
+              key={reason.value}
+              onClick={() => handleReasonSelect(reason.value)}
+              className="w-full text-right justify-between px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              variant="outline"
+            >
+              <span className="text-base">{reason.label}</span>
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-2 h-2 rounded-full bg-red-500"
+              />
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
@@ -911,6 +964,8 @@ export default function AddNumberPage() {
   const [masterData, setMasterData] = React.useState<Master | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<EditingGrade | null>(null);
+  const [isAbsentModalOpen, setIsAbsentModalOpen] = React.useState(false);
+  const [absentStudent, setAbsentStudent] = React.useState<StudentType | null>(null);
 
   React.useEffect(() => {
     const fetchMasterData = async () => {
@@ -1192,6 +1247,186 @@ export default function AddNumberPage() {
     }
   };
 
+  const handleProvideless = async (studentId: number) => {
+    console.log("🔄 Starting handleProvideless for student:", studentId);
+    
+    if (!accessToken) {
+      console.log("❌ No access token");
+      toast.error("توکن دسترسی موجود نیست");
+      return;
+    }
+    
+    if (!selectedClass) {
+      console.log("❌ No selected class");
+      toast.error("لطفا کلاس را انتخاب کنید");
+      return;
+    }
+    
+    if (!masterData) {
+      console.log("❌ No master data:", masterData);
+      toast.error("اطلاعات مربی یافت نشد");
+      return;
+    }
+    
+    const student = students.find(s => s.student.id === studentId);
+    if (!student) {
+      console.log("❌ Student not found");
+      toast.error("دانش آموز یافت نشد");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("✅ All conditions passed, starting API calls...");
+      
+      // Get master_id from class or masterData
+      const masterId = masterData.id || selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+      
+      console.log("📋 masterId:", masterId);
+      
+      // Create student activity for provideless
+      const activityData: CreateStudentActivityDto = {
+        student_id: studentId,
+        master_id: masterId,
+        classha_id: selectedClass.id,
+        class_absent: false,
+        provideless: true,
+        user_id: masterData.user_id || user?.id || 0,
+      };
+
+      console.log("activityData:", activityData);
+      
+      await studentActivityService.create(activityData, accessToken);
+      console.log("Student activity created successfully");
+
+      // Create a grade with score 55
+      const gradePayload = {
+        class_id: selectedClass.id,
+        master_id: masterId,
+        student_id: studentId,
+        droos_id: selectedClass.dars?.id || 0,
+        hefz: 55,
+        details: 0,
+        tajvid: 0,
+        sout: 0,
+        number: 0,
+        practice_count: 0,
+        lesson_area_id: selectedClass.dars?.id || 0,
+        user_id: masterData.user_id || user?.id || 0,
+        tenant_id: 0,
+      };
+
+      console.log("gradePayload:", gradePayload);
+      
+      await optimizedNumberService.create(gradePayload, accessToken);
+      console.log("Grade created successfully");
+      
+      toast.success("عدم تحویل با موفقیت ثبت شد");
+      
+      // Refresh students data
+      if (selectedDate) {
+        const jsDate = selectedDate.toDate();
+        const jsDateStr = format(jsDate, "yyyy/MM/dd");
+        const response = await optimizedClassService.getStudents(
+          selectedClass.id,
+          jsDateStr,
+          accessToken
+        );
+        
+        const selectedDateStr = format(jsDate, "yyyy-MM-dd");
+        const updatedStudent = response.data.find(s => s.student.id === studentId);
+        if (updatedStudent) {
+          const todayGrades = updatedStudent.grades.filter(
+            (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+          );
+          setExistingGrades(prev => ({
+            ...prev,
+            [studentId]: todayGrades
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleProvideless:", error);
+      toast.error("خطا در ثبت عدم تحویل: " + (error as any)?.response?.data?.message || (error as any)?.message || "خطای نامشخص");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAbsent = (studentId: number) => {
+    console.log("handleAbsent called with studentId:", studentId);
+    
+
+    const student = students.find(s => s.student.id === studentId);
+    if (student) {
+      setAbsentStudent(student.student);
+      setIsAbsentModalOpen(true);
+      console.log("Absent modal opened for student:", student.student.name);
+    } else {
+      toast.error("دانش آموز یافت نشد");
+    }
+  };
+
+  const handleAbsentSubmit = async (reason: string) => {
+    console.log("handleAbsentSubmit called with reason:", reason);
+    console.log("accessToken:", !!accessToken);
+    console.log("selectedClass:", selectedClass);
+    console.log("masterData:", masterData);
+    console.log("absentStudent:", absentStudent);
+    
+    if (!accessToken) {
+      toast.error("توکن دسترسی موجود نیست");
+      return;
+    }
+    
+    if (!selectedClass) {
+      toast.error("لطفا کلاس را انتخاب کنید");
+      return;
+    }
+    
+    if (!masterData) {
+      toast.error("اطلاعات مربی یافت نشد");
+      return;
+    }
+    
+    if (!absentStudent) {
+      toast.error("دانش آموز انتخاب نشده است");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Get master_id from class or masterData
+      const masterId = masterData.id || selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+      
+      console.log("masterId:", masterId);
+      
+      const activityData: CreateStudentActivityDto = {
+        student_id: absentStudent.id,
+        master_id: masterId,
+        classha_id: selectedClass.id,
+        class_absent: true,
+        provideless: false,
+        reason: reason,
+        user_id: masterData.user_id || user?.id || 0,
+      };
+
+      console.log("activityData:", activityData);
+      
+      await studentActivityService.create(activityData, accessToken);
+      console.log("Student activity created successfully");
+      
+      toast.success(`غیبت با دلیل "${reason}" ثبت شد`);
+      
+    } catch (error) {
+      console.error("Error in handleAbsentSubmit:", error);
+      toast.error("خطا در ثبت غیبت: " + (error as any)?.response?.data?.message || (error as any)?.message || "خطای نامشخص");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PageTransition>
       <div className="space-y-4 min-h-[80vh]">
@@ -1347,6 +1582,24 @@ export default function AddNumberPage() {
                                 >
                                   افزودن نمره
                                 </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    onClick={() => handleProvideless(studentData.student.id)}
+                                    disabled={loading}
+                                    size="sm"
+                                    className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-zinc-900 dark:hover:bg-orange-400 transition-colors duration-200 text-xs px-2"
+                                  >
+                                    عدم تحویل
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleAbsent(studentData.student.id)}
+                                    disabled={loading}
+                                    size="sm"
+                                    className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:text-zinc-900 dark:hover:bg-red-400 transition-colors duration-200 text-xs px-2"
+                                  >
+                                    غایب
+                                  </Button>
+                                </div>
                               </div>
                             ) : (
                               <span className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -1458,6 +1711,15 @@ export default function AddNumberPage() {
           onOpenChange={setEditModalOpen}
           grade={editingGrade}
           onSubmit={handleEditModalSubmit}
+        />
+      )}
+
+      {absentStudent && (
+        <AbsentModal
+          isOpen={isAbsentModalOpen}
+          onOpenChange={setIsAbsentModalOpen}
+          student={absentStudent}
+          onSubmit={handleAbsentSubmit}
         />
       )}
     </PageTransition>
