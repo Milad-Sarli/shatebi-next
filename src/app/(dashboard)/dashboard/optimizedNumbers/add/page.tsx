@@ -971,19 +971,47 @@ export default function AddNumberPage() {
 
   React.useEffect(() => {
     const fetchMasterData = async () => {
-      if (!accessToken || !user?.username) return;
+      if (!accessToken || !user) return;
       
       try {
         console.log("Fetching master data...");
         console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-        console.log("User username:", user.username);
+        console.log("User data:", user);
         
         const response = await MasterService.getMasters({}, accessToken);
-        const foundMaster = response.data.data.find(
-          (master) => master.mellicode === user.username
-        );
+        console.log("Masters response:", response);
+        
+        // Try multiple ways to find the master
+        let foundMaster = null;
+        
+        // First try by mellicode matching username
+        if (user.username) {
+          foundMaster = response.data.data.find(
+            (master) => master.mellicode === user.username
+          );
+        }
+        
+        // If not found, try by user_id
+        if (!foundMaster && user.id) {
+          foundMaster = response.data.data.find(
+            (master) => master.user_id === user.id
+          );
+        }
+        
+        // If not found, try by name matching
+        if (!foundMaster && user.name) {
+          foundMaster = response.data.data.find(
+            (master) => master.fullname === user.name
+          );
+        }
+        
         setMasterData(foundMaster || null);
         console.log("Master data fetched successfully:", foundMaster);
+        
+        if (!foundMaster) {
+          console.log("No master found for user:", user);
+          console.log("Available masters:", response.data.data);
+        }
       } catch (error) {
         console.error("Error fetching master data:", error);
         
@@ -1003,7 +1031,7 @@ export default function AddNumberPage() {
     };
 
     fetchMasterData();
-  }, [accessToken, user?.username]);
+  }, [accessToken, user]);
 
   React.useEffect(() => {
     const fetchClasses = async () => {
@@ -1016,6 +1044,7 @@ export default function AddNumberPage() {
         const response = await optimizedClassService.getAllSimple(accessToken);
         console.log("Classes response:", response);
         
+        // The service now handles different response formats and always returns an array
         if (Array.isArray(response)) {
           setClasses(response);
         } else {
@@ -1142,9 +1171,28 @@ export default function AddNumberPage() {
         end_joze?: number;
       };
 
+      // Get master_id from multiple sources
+      let masterId = 0;
+      let userId = 0;
+      
+      if (masterData) {
+        masterId = masterData.id;
+        userId = masterData.user_id || user?.id || 0;
+      } else {
+        // Fallback to class master or current user
+        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
+                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        userId = user?.id || 0;
+        
+        // If user has master role and no masterId found, use user.id as masterId
+        if (masterId === 0 && user?.app_roles?.some(role => role.name === 'master')) {
+          masterId = user.id || 0;
+        }
+      }
+
       const payload: PayloadType = {
         class_id: selectedClass.id,
-        master_id: selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0,
+        master_id: masterId,
         student_id: selectedStudent.id,
         droos_id: selectedCourse.id,
         hefz: parseFloat(data.hefz as string),
@@ -1154,7 +1202,7 @@ export default function AddNumberPage() {
         number: 0,
         practice_count: 0,
         lesson_area_id: selectedClass.dars?.id || 0,
-        user_id: 0,
+        user_id: userId,
         tenant_id: 0,
       };
 
@@ -1308,12 +1356,6 @@ export default function AddNumberPage() {
       return;
     }
     
-    if (!masterData) {
-      console.log("❌ No master data:", masterData);
-      toast.error("اطلاعات مربی یافت نشد");
-      return;
-    }
-    
     const student = students.find(s => s.student.id === studentId);
     if (!student) {
       console.log("❌ Student not found");
@@ -1323,12 +1365,34 @@ export default function AddNumberPage() {
 
     try {
       setLoading(true);
-      console.log("✅ All conditions passed, starting API calls...");
+      console.log("✅ Starting API calls...");
       
-      // Get master_id from class or masterData
-      const masterId = masterData.id || selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+      // Get master_id from multiple sources
+      let masterId = 0;
+      let userId = 0;
       
-      console.log("📋 masterId:", masterId);
+      if (masterData) {
+        masterId = masterData.id;
+        userId = masterData.user_id || user?.id || 0;
+        console.log("📋 Using masterData - masterId:", masterId, "userId:", userId);
+      } else {
+        // Fallback to class master or current user
+        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
+                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        userId = user?.id || 0;
+        
+        // If user has master role and no masterId found, use user.id as masterId
+        if (masterId === 0 && user?.app_roles?.some(role => role.name === 'master')) {
+          masterId = user.id || 0;
+        }
+        
+        console.log("📋 Using fallback - masterId:", masterId, "userId:", userId);
+        
+        if (masterId === 0) {
+          toast.error("اطلاعات مربی یافت نشد. لطفا با مدیر سیستم تماس بگیرید.");
+          return;
+        }
+      }
       
       // Create student activity for provideless
       const activityData: CreateStudentActivityDto = {
@@ -1337,7 +1401,7 @@ export default function AddNumberPage() {
         classha_id: selectedClass.id,
         class_absent: false,
         provideless: true,
-        user_id: masterData.user_id || user?.id || 0,
+        user_id: userId,
       };
 
       console.log("activityData:", activityData);
@@ -1358,7 +1422,7 @@ export default function AddNumberPage() {
         number: 0,
         practice_count: 0,
         lesson_area_id: selectedClass.dars?.id || 0,
-        user_id: masterData.user_id || user?.id || 0,
+        user_id: userId,
         tenant_id: 0,
       };
 
@@ -1430,11 +1494,6 @@ export default function AddNumberPage() {
       return;
     }
     
-    if (!masterData) {
-      toast.error("اطلاعات مربی یافت نشد");
-      return;
-    }
-    
     if (!absentStudent) {
       toast.error("دانش آموز انتخاب نشده است");
       return;
@@ -1443,10 +1502,32 @@ export default function AddNumberPage() {
     try {
       setLoading(true);
       
-      // Get master_id from class or masterData
-      const masterId = masterData.id || selectedClass.optimized_class_masters?.[0]?.master?.id || selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+      // Get master_id from multiple sources
+      let masterId = 0;
+      let userId = 0;
       
-      console.log("masterId:", masterId);
+      if (masterData) {
+        masterId = masterData.id;
+        userId = masterData.user_id || user?.id || 0;
+        console.log("📋 Using masterData - masterId:", masterId, "userId:", userId);
+      } else {
+        // Fallback to class master or current user
+        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
+                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        userId = user?.id || 0;
+        
+        // If user has master role and no masterId found, use user.id as masterId
+        if (masterId === 0 && user?.app_roles?.some(role => role.name === 'master')) {
+          masterId = user.id || 0;
+        }
+        
+        console.log("📋 Using fallback - masterId:", masterId, "userId:", userId);
+        
+        if (masterId === 0) {
+          toast.error("اطلاعات مربی یافت نشد. لطفا با مدیر سیستم تماس بگیرید.");
+          return;
+        }
+      }
       
       const activityData: CreateStudentActivityDto = {
         student_id: absentStudent.id,
@@ -1455,7 +1536,7 @@ export default function AddNumberPage() {
         class_absent: true,
         provideless: false,
         reason: reason,
-        user_id: masterData.user_id || user?.id || 0,
+        user_id: userId,
       };
 
       console.log("activityData:", activityData);

@@ -165,7 +165,18 @@ export const optimizedClassService = {
 
     console.log('Simple API response status:', response.status);
     console.log('Simple API response data:', response.data);
-    return response.data.data;
+    
+    // Handle different response formats
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+      return response.data.data.data;
+    } else {
+      console.error('Unexpected API response format:', response.data);
+      return [];
+    }
   },
 
   async getById(id: number, accessToken: string): Promise<OptimizedClass> {
