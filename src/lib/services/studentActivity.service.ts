@@ -98,29 +98,4 @@ export const studentActivityService = {
         });
         return response.data.data;
     },
-
-    async getByClassAndDate(classId: number, date: string, accessToken: string): Promise<StudentActivity[]> {
-        try {
-            const response = await axios.get(`${API_URL}/api/student-activities/class/${classId}?date=${date}`, {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-            return response.data.data;
-        } catch (error) {
-            console.error("Error in getByClassAndDate:", error);
-            // Fallback to getting all activities and filtering client-side
-            try {
-                const allActivities = await this.getAll(accessToken);
-                const targetDate = new Date(date).toISOString().split('T')[0];
-                return allActivities.filter(activity =>
-                    activity.classha_id === classId &&
-                    new Date(activity.created_at).toISOString().split('T')[0] === targetDate
-                );
-            } catch (fallbackError) {
-                console.error("Error in fallback getAll:", fallbackError);
-                return [];
-            }
-        }
-    },
 }; 

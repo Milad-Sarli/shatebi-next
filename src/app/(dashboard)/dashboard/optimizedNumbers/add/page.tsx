@@ -12,13 +12,15 @@ import {
   optimizedClassService,
   OptimizedClass,
   Grade,
-  Dars
+  Dars,
+  Student,
+  StudentActivity
 } from "@/lib/services/optimizedClass.service";
 import { MasterService, Master } from "@/lib/services/master.service";
 import { studentActivityService, CreateStudentActivityDto } from "@/lib/services/studentActivity.service";
 import { format, subHours } from "date-fns-jalali";
 import { SingleSelectCombobox } from "@/components/ui/Combobox";
-import { Edit2 } from "lucide-react";
+import { Edit2, X, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import RotatingText from "@/components/reactbit/texts/RotatingText";
 import { TextEffect } from "@/components/motion-primitives/text-effect";
@@ -143,25 +145,7 @@ interface StudentType {
   student_code: string;
   phone: string;
   parent_phone: string;
-  aks?: string;
-}
-
-interface StudentActivity {
-  id: number;
-  student_id: number;
-  master_id: number;
-  classha_id: number;
-  class_absent: boolean;
-  provideless: boolean;
-  reason?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface StudentWithGrades {
-  student: StudentType;
-  grades: Grade[];
-  activities?: StudentActivity[];
+  aks?: string | null;
 }
 
 interface FormRefs {
@@ -915,9 +899,10 @@ interface AbsentModalProps {
   onOpenChange: (open: boolean) => void;
   student: StudentType;
   onSubmit: (reason: string) => void;
+  isLoading?: boolean;
 }
 
-function AbsentModal({ isOpen, onOpenChange, student, onSubmit }: AbsentModalProps) {
+function AbsentModal({ isOpen, onOpenChange, student, onSubmit, isLoading = false }: AbsentModalProps) {
   const absentReasons = [
     { value: "مرخصی", label: "مرخصی" },
     { value: "بدون هماهنگی", label: "بدون هماهنگی" },
@@ -926,11 +911,10 @@ function AbsentModal({ isOpen, onOpenChange, student, onSubmit }: AbsentModalPro
 
   const handleReasonSelect = (reason: string) => {
     onSubmit(reason);
-    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={!isLoading ? onOpenChange : () => {}}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">
@@ -945,17 +929,116 @@ function AbsentModal({ isOpen, onOpenChange, student, onSubmit }: AbsentModalPro
             <Button
               key={reason.value}
               onClick={() => handleReasonSelect(reason.value)}
+              disabled={isLoading}
               className="w-full text-right justify-between px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
               variant="outline"
             >
-              <span className="text-base">{reason.label}</span>
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="w-2 h-2 rounded-full bg-red-500"
-              />
+              {isLoading ? (
+                <div className="flex items-center gap-2 w-full justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>در حال ثبت...</span>
+                </div>
+              ) : (
+                <>
+                  <span className="text-base">{reason.label}</span>
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="w-2 h-2 rounded-full bg-red-500"
+                  />
+                </>
+              )}
             </Button>
           ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  confirmText: string;
+  cancelText: string;
+  onConfirm: () => void;
+  isLoading?: boolean;
+  variant?: "default" | "destructive" | "warning";
+}
+
+function ConfirmationModal({ 
+  isOpen, 
+  onOpenChange, 
+  title, 
+  description, 
+  confirmText, 
+  cancelText, 
+  onConfirm, 
+  isLoading = false,
+  variant = "default"
+}: ConfirmationModalProps) {
+  const handleConfirm = () => {
+    onConfirm();
+  };
+
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "destructive":
+        return {
+          button: "bg-red-600 hover:bg-red-700 text-white",
+          icon: "text-red-500"
+        };
+      case "warning":
+        return {
+          button: "bg-orange-600 hover:bg-orange-700 text-white",
+          icon: "text-orange-500"
+        };
+      default:
+        return {
+          button: "bg-blue-600 hover:bg-blue-700 text-white",
+          icon: "text-blue-500"
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-4 py-4">
+          <Button
+            onClick={() => onOpenChange(false)}
+            variant="outline"
+            className="flex-1"
+            disabled={isLoading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className={`flex-1 ${styles.button}`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                در حال انجام...
+              </div>
+            ) : (
+              confirmText
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -968,11 +1051,10 @@ export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
   const [selectedClass, setSelectedClass] = React.useState<OptimizedClass | null>(null);
-  const [students, setStudents] = React.useState<StudentWithGrades[]>([]);
+  const [students, setStudents] = React.useState<Student[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<DateObject | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
-  const [studentActivities, setStudentActivities] = React.useState<Record<number, StudentActivity[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isOneGrade, setIsOneGrade] = React.useState(false);
@@ -984,6 +1066,10 @@ export default function AddNumberPage() {
   const [editingGrade, setEditingGrade] = useState<EditingGrade | null>(null);
   const [isAbsentModalOpen, setIsAbsentModalOpen] = React.useState(false);
   const [absentStudent, setAbsentStudent] = React.useState<StudentType | null>(null);
+  const [isProvideConfirmOpen, setIsProvideConfirmOpen] = React.useState(false);
+  const [isAbsentConfirmOpen, setIsAbsentConfirmOpen] = React.useState(false);
+  const [selectedStudentForAction, setSelectedStudentForAction] = React.useState<StudentType | null>(null);
+  const [actionLoading, setActionLoading] = React.useState(false);
 
   React.useEffect(() => {
     const fetchMasterData = async () => {
@@ -1132,30 +1218,7 @@ export default function AddNumberPage() {
         setStudents(uniqueStudents);
         setExistingGrades(gradesMap);
 
-        // Fetch student activities for the same class and date
-        try {
-          const activities = await studentActivityService.getByClassAndDate(
-            selectedClass.id,
-            selectedDateStr,
-            accessToken
-          );
 
-          const activitiesMap: Record<number, StudentActivity[]> = {};
-          activities.forEach((activity) => {
-            const activityDate = format(new Date(activity.created_at), "yyyy-MM-dd");
-            if (activityDate === selectedDateStr) {
-              if (!activitiesMap[activity.student_id]) {
-                activitiesMap[activity.student_id] = [];
-              }
-              activitiesMap[activity.student_id].push(activity);
-            }
-          });
-
-          setStudentActivities(activitiesMap);
-        } catch (activitiesError) {
-          console.error("Error fetching student activities:", activitiesError);
-          setStudentActivities({});
-        }
       } catch (error) {
         console.error(error);
         toast.error("Error loading students");
@@ -1384,30 +1447,27 @@ export default function AddNumberPage() {
     }
   };
 
-  const handleProvideless = async (studentId: number) => {
-    console.log("🔄 Starting handleProvideless for student:", studentId);
-    
-    if (!accessToken) {
-      console.log("❌ No access token");
-      toast.error("توکن دسترسی موجود نیست");
-      return;
-    }
-    
-    if (!selectedClass) {
-      console.log("❌ No selected class");
-      toast.error("لطفا کلاس را انتخاب کنید");
-      return;
-    }
-    
+  const handleProvideless = (studentId: number) => {
     const student = students.find(s => s.student.id === studentId);
-    if (!student) {
-      console.log("❌ Student not found");
+    if (student) {
+      setSelectedStudentForAction(student.student);
+      setIsProvideConfirmOpen(true);
+    } else {
       toast.error("دانش آموز یافت نشد");
+    }
+  };
+
+  const handleConfirmProvideless = async () => {
+    if (!selectedStudentForAction || !accessToken || !selectedClass) {
+      toast.error("اطلاعات لازم موجود نیست");
       return;
     }
 
+    const studentId = selectedStudentForAction.id;
+    console.log("🔄 Starting handleConfirmProvideless for student:", studentId);
+
     try {
-      setLoading(true);
+      setActionLoading(true);
       console.log("✅ Starting API calls...");
       
       // Get master_id from multiple sources
@@ -1452,12 +1512,6 @@ export default function AddNumberPage() {
       const createdActivity = await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
 
-      // Update student activities state
-      setStudentActivities(prev => ({
-        ...prev,
-        [studentId]: [...(prev[studentId] || []), createdActivity]
-      }));
-
       // Create a grade with score 55
       const gradePayload = {
         class_id: selectedClass.id,
@@ -1480,49 +1534,53 @@ export default function AddNumberPage() {
       await optimizedNumberService.create(gradePayload, accessToken);
       console.log("Grade created successfully");
       
-      toast.success("عدم تحویل با موفقیت ثبت شد");
-      
       // Refresh students data
       if (selectedDate) {
         const jsDate = selectedDate.toDate();
         const jsDateStr = format(jsDate, "yyyy/MM/dd");
-        const response = await optimizedClassService.getStudents(
-          selectedClass.id,
-          jsDateStr,
-          accessToken
-        );
-        
-        const selectedDateStr = format(jsDate, "yyyy-MM-dd");
-        const updatedStudent = response.data.find(s => s.student.id === studentId);
-        if (updatedStudent) {
-          const todayGrades = updatedStudent.grades.filter(
-            (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+        try {
+          const response = await optimizedClassService.getStudents(
+            selectedClass.id,
+            jsDateStr,
+            accessToken
           );
-          setExistingGrades(prev => ({
-            ...prev,
-            [studentId]: todayGrades
-          }));
+          
+          const uniqueStudents = Array.from(
+            new Map(response.data.map(item => [item.student.id, item])).values()
+          );
+          setStudents(uniqueStudents);
+        } catch (refreshError) {
+          console.error("Error refreshing students:", refreshError);
         }
       }
+      
+      toast.success("عدم تحویل با موفقیت ثبت شد");
+      setIsProvideConfirmOpen(false);
+      setSelectedStudentForAction(null);
+      
     } catch (error) {
-      console.error("Error in handleProvideless:", error);
+      console.error("Error in handleConfirmProvideless:", error);
       toast.error("خطا در ثبت عدم تحویل: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleAbsent = (studentId: number) => {
-    console.log("handleAbsent called with studentId:", studentId);
-    
-
     const student = students.find(s => s.student.id === studentId);
     if (student) {
-      setAbsentStudent(student.student);
-      setIsAbsentModalOpen(true);
-      console.log("Absent modal opened for student:", student.student.name);
+      setSelectedStudentForAction(student.student);
+      setIsAbsentConfirmOpen(true);
     } else {
       toast.error("دانش آموز یافت نشد");
+    }
+  };
+
+  const handleConfirmAbsent = () => {
+    if (selectedStudentForAction) {
+      setAbsentStudent(selectedStudentForAction);
+      setIsAbsentModalOpen(true);
+      setIsAbsentConfirmOpen(false);
     }
   };
 
@@ -1549,7 +1607,7 @@ export default function AddNumberPage() {
     }
 
     try {
-      setLoading(true);
+      setActionLoading(true);
       
       // Get master_id from multiple sources
       let masterId = 0;
@@ -1593,19 +1651,162 @@ export default function AddNumberPage() {
       const createdActivity = await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
       
-      // Update student activities state
-      setStudentActivities(prev => ({
-        ...prev,
-        [absentStudent.id]: [...(prev[absentStudent.id] || []), createdActivity]
-      }));
+      // Refresh students data to get updated activities
+      if (selectedDate) {
+        const jsDate = selectedDate.toDate();
+        const jsDateStr = format(jsDate, "yyyy/MM/dd");
+        try {
+          const response = await optimizedClassService.getStudents(
+            selectedClass.id,
+            jsDateStr,
+            accessToken
+          );
+          
+          const uniqueStudents = Array.from(
+            new Map(response.data.map(item => [item.student.id, item])).values()
+          );
+          setStudents(uniqueStudents);
+        } catch (refreshError) {
+          console.error("Error refreshing students:", refreshError);
+        }
+      }
       
       toast.success(`غیبت با دلیل "${reason}" ثبت شد`);
+      setIsAbsentModalOpen(false);
+      setAbsentStudent(null);
+      setSelectedStudentForAction(null);
       
     } catch (error) {
       console.error("Error in handleAbsentSubmit:", error);
       toast.error("خطا در ثبت غیبت: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveAbsent = async (studentId: number, activityId: number) => {
+    if (!accessToken || !selectedClass) {
+      toast.error("دسترسی لازم موجود نیست");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      console.log("Removing absent activity:", activityId, "for student:", studentId);
+      
+      await studentActivityService.delete(activityId, accessToken);
+      console.log("Activity deleted successfully");
+      
+      // Refresh students data
+      if (selectedDate) {
+        const jsDate = selectedDate.toDate();
+        const jsDateStr = format(jsDate, "yyyy/MM/dd");
+        try {
+          const response = await optimizedClassService.getStudents(
+            selectedClass.id,
+            jsDateStr,
+            accessToken
+          );
+          
+          const uniqueStudents = Array.from(
+            new Map(response.data.map(item => [item.student.id, item])).values()
+          );
+          setStudents(uniqueStudents);
+        } catch (refreshError) {
+          console.error("Error refreshing students:", refreshError);
+        }
+      }
+      
+      toast.success("غیبت با موفقیت حذف شد");
+      
+    } catch (error) {
+      console.error("Error removing absent:", error);
+      toast.error("خطا در حذف غیبت: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveProvideless = async (studentId: number, activityId: number) => {
+    if (!accessToken || !selectedClass) {
+      toast.error("دسترسی لازم موجود نیست");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      console.log("Removing provideless activity:", activityId, "for student:", studentId);
+      
+      // Find and delete the associated grade (55 score)
+      const studentGrades = existingGrades[studentId];
+      if (studentGrades) {
+        // Find the provideless grade (55 hefz with 0 for others)
+        const provideGrade = studentGrades.find(grade => 
+          Number(grade.hefz) === 55 && 
+          Number(grade.tajvid) === 0 && 
+          Number(grade.sout) === 0 && 
+          Number(grade.details) === 0
+        );
+        
+        if (provideGrade) {
+          console.log("Found provideless grade to delete:", provideGrade.id);
+          try {
+            await optimizedNumberService.delete(provideGrade.id, accessToken);
+            console.log("Provideless grade deleted successfully");
+          } catch (gradeError) {
+            console.error("Error deleting provideless grade:", gradeError);
+            // Continue with activity deletion even if grade deletion fails
+          }
+        }
+      }
+      
+      // Delete the activity
+      await studentActivityService.delete(activityId, accessToken);
+      console.log("Activity deleted successfully");
+      
+      // Refresh students data
+      if (selectedDate) {
+        const jsDate = selectedDate.toDate();
+        const jsDateStr = format(jsDate, "yyyy/MM/dd");
+        try {
+          const response = await optimizedClassService.getStudents(
+            selectedClass.id,
+            jsDateStr,
+            accessToken
+          );
+          
+          const uniqueStudents = Array.from(
+            new Map(response.data.map(item => [item.student.id, item])).values()
+          );
+          setStudents(uniqueStudents);
+          
+          // Update existing grades
+          const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+          const gradesMap: Record<number, Grade[]> = {};
+          
+          response.data.forEach((student) => {
+            const todayGrades = student.grades.filter(
+              (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+            );
+            if (todayGrades.length > 0) {
+              gradesMap[student.student.id] = todayGrades;
+            }
+          });
+          
+          setExistingGrades(gradesMap);
+          
+        } catch (refreshError) {
+          console.error("Error refreshing students:", refreshError);
+        }
+      }
+      
+      toast.success("عدم تحویل و نمره مربوطه با موفقیت حذف شد");
+      
+    } catch (error) {
+      console.error("Error removing provideless:", error);
+      toast.error("خطا در حذف عدم تحویل: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -1694,14 +1895,21 @@ export default function AddNumberPage() {
               </div>
             </div>
 
-            {selectedClass ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {students.map((studentData, index) => {
-                  // Check if student is absent
-                  const studentActivitiesForToday = studentActivities[studentData.student.id] || [];
-                  const absentActivity = studentActivitiesForToday.find(activity => activity.class_absent);
-                  const provideActivity = studentActivitiesForToday.find(activity => activity.provideless);
+                            {selectedClass ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {students.map((studentData, index) => {
+                // Check if student is absent - activities are now included in student data
+                const jsDate = selectedDate ? selectedDate.toDate() : null;
+                const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+                
+                const todayActivities = studentData.activities.filter(activity => {
+                  const activityDate = format(new Date(activity.created_at), "yyyy-MM-dd");
+                  return activityDate === selectedDateStr;
+                });
+                
+                const absentActivity = todayActivities.find(activity => activity.reason && activity.provideless === "0");
+                const provideActivity = todayActivities.find(activity => activity.provideless === "1");
                   
                   return (
                     <motion.div
@@ -1764,9 +1972,27 @@ export default function AddNumberPage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="flex items-center gap-1 mt-1"
                               >
-                                <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
-                                  غایب
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
+                                    غایب
+                                  </span>
+                                  {isWithin24Hours(absentActivity.created_at) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRemoveAbsent(studentData.student.id, absentActivity.id)}
+                                      disabled={loading || actionLoading}
+                                      className="w-4 h-4 p-0 hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors"
+                                      title="حذف غیبت"
+                                    >
+                                      {actionLoading ? (
+                                        <Loader2 className="w-3 h-3 animate-spin text-red-600 dark:text-red-400" />
+                                      ) : (
+                                        <X className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
                                 {absentActivity.reason && (
                                   <span className="text-xs text-red-500 dark:text-red-400">
                                     ({absentActivity.reason})
@@ -1780,9 +2006,27 @@ export default function AddNumberPage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="flex items-center gap-1 mt-1"
                               >
-                                <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">
-                                  عدم تحویل
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">
+                                    عدم تحویل
+                                  </span>
+                                  {isWithin24Hours(provideActivity.created_at) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRemoveProvideless(studentData.student.id, provideActivity.id)}
+                                      disabled={loading || actionLoading}
+                                      className="w-4 h-4 p-0 hover:bg-orange-500/20 dark:hover:bg-orange-500/30 transition-colors"
+                                      title="حذف عدم تحویل"
+                                    >
+                                      {actionLoading ? (
+                                        <Loader2 className="w-3 h-3 animate-spin text-orange-600 dark:text-orange-400" />
+                                      ) : (
+                                        <X className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
                               </motion.div>
                             )}
                           </motion.div>
@@ -1797,7 +2041,7 @@ export default function AddNumberPage() {
                               <div className="flex flex-col items-end gap-1">
                                 <Button
                                   onClick={() => handleAddNumber(studentData.student.id)}
-                                  disabled={loading}
+                                  disabled={loading || actionLoading}
                                   size="sm"
                                   className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
                                 >
@@ -1806,15 +2050,22 @@ export default function AddNumberPage() {
                                 <div className="flex gap-1">
                                   <Button
                                     onClick={() => handleProvideless(studentData.student.id)}
-                                    disabled={loading}
+                                    disabled={loading || actionLoading}
                                     size="sm"
                                     className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-zinc-900 dark:hover:bg-orange-400 transition-colors duration-200 text-xs px-2"
                                   >
-                                    عدم تحویل
+                                    {actionLoading && selectedStudentForAction?.id === studentData.student.id && isProvideConfirmOpen ? (
+                                      <div className="flex items-center gap-1">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>درحال...</span>
+                                      </div>
+                                    ) : (
+                                      "عدم تحویل"
+                                    )}
                                   </Button>
                                   <Button
                                     onClick={() => handleAbsent(studentData.student.id)}
-                                    disabled={loading}
+                                    disabled={loading || actionLoading}
                                     size="sm"
                                     className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:text-zinc-900 dark:hover:bg-red-400 transition-colors duration-200 text-xs px-2"
                                   >
@@ -1837,6 +2088,12 @@ export default function AddNumberPage() {
                             const totalScore = Number(grade.hefz) + Number(grade.tajvid) + Number(grade.sout) + Number(grade.details);
                             const isNegative = totalScore < 80;
                             
+                            // Check if this is a provideless grade (55 hefz score with 0 for others)
+                            const isProvidelessGrade = Number(grade.hefz) === 55 && 
+                                                     Number(grade.tajvid) === 0 && 
+                                                     Number(grade.sout) === 0 && 
+                                                     Number(grade.details) === 0;
+                            
                             return (
                               <motion.div 
                                 key={gradeIndex} 
@@ -1849,41 +2106,74 @@ export default function AddNumberPage() {
                                 }}
                                 className={`group relative bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50 p-2 rounded-md hover:shadow-md transition-all duration-300 ${
                                   isNegative ? 'hover:border-2 hover:border-red-500/50 dark:hover:border-red-500/30' : ''
-                                }`}
+                                } ${isProvidelessGrade ? 'border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20' : ''}`}
                               >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                    {grade.dars?.title || "بدون نام"}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1">
-                                      <span className={`text-sm font-bold ${
-                                        isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
-                                      }`}>
-                                        {totalScore}
-                                      </span>
-                                      {isNegative && (
-                                        <motion.span 
-                                          initial={{ opacity: 0, scale: 0.8 }}
-                                          animate={{ opacity: 1, scale: 1 }}
-                                          className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full"
+                                {isProvidelessGrade ? (
+                                  // Special display for provideless grade (55)
+                                  <div className="flex items-center justify-between">
+                                    <motion.span 
+                                      initial={{ opacity: 0, scale: 0.8 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full"
+                                    >
+                                      حفظ
+                                    </motion.span>
+                                    <div className="flex items-center gap-2">
+                                      <motion.span 
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-lg font-bold text-red-600 dark:text-red-400"
+                                      >
+                                        55
+                                      </motion.span>
+                                      {isWithin24Hours(grade.created_at) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                          className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
                                         >
-                                          منفی
-                                        </motion.span>
+                                          <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                        </Button>
                                       )}
                                     </div>
-                                    {isWithin24Hours(grade.created_at) && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleEditGrade(studentData.student.id, grade)}
-                                        className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
-                                      >
-                                        <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                                      </Button>
-                                    )}
                                   </div>
-                                </div>
+                                ) : (
+                                  // Normal grade display
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                      {grade.dars?.title || "بدون نام"}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <span className={`text-sm font-bold ${
+                                          isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                                        }`}>
+                                          {totalScore}
+                                        </span>
+                                        {isNegative && (
+                                          <motion.span 
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full"
+                                          >
+                                            منفی
+                                          </motion.span>
+                                        )}
+                                      </div>
+                                      {isWithin24Hours(grade.created_at) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                          className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                        >
+                                          <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </motion.div>
                             );
                           })}
@@ -1942,8 +2232,33 @@ export default function AddNumberPage() {
           onOpenChange={setIsAbsentModalOpen}
           student={absentStudent}
           onSubmit={handleAbsentSubmit}
+          isLoading={actionLoading}
         />
       )}
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={isProvideConfirmOpen}
+        onOpenChange={setIsProvideConfirmOpen}
+        title="تأیید ثبت عدم تحویل"
+        description={`آیا مطمئن هستید که می‌خواهید عدم تحویل برای "${selectedStudentForAction?.name}" ثبت کنید؟`}
+        confirmText="تأیید"
+        cancelText="لغو"
+        onConfirm={handleConfirmProvideless}
+        isLoading={actionLoading}
+        variant="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={isAbsentConfirmOpen}
+        onOpenChange={setIsAbsentConfirmOpen}
+        title="تأیید ثبت غیبت"
+        description={`آیا مطمئن هستید که می‌خواهید غیبت برای "${selectedStudentForAction?.name}" ثبت کنید؟`}
+        confirmText="تأیید"
+        cancelText="لغو"
+        onConfirm={handleConfirmAbsent}
+        variant="destructive"
+      />
     </PageTransition>
   );
 }

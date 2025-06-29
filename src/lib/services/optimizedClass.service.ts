@@ -95,6 +95,19 @@ export interface Grade {
   created_at: string;
 }
 
+export interface StudentActivity {
+  id: number;
+  class_absent: string | null;
+  provideless: string;
+  reason: string | null;
+  master: {
+    id: number;
+    name: string | null;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Student {
   student: {
     id: number;
@@ -103,8 +116,10 @@ export interface Student {
     student_code: string;
     phone: string;
     parent_phone: string;
+    aks?: string | null;
   };
   grades: Grade[];
+  activities: StudentActivity[];
 }
 
 export interface StudentsResponse {
@@ -165,7 +180,7 @@ export const optimizedClassService = {
 
     console.log('Simple API response status:', response.status);
     console.log('Simple API response data:', response.data);
-    
+
     // Handle different response formats
     if (Array.isArray(response.data)) {
       return response.data;
