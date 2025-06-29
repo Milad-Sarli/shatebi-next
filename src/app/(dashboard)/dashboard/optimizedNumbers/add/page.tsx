@@ -829,8 +829,10 @@ interface ValidationError {
   response?: {
     data?: {
       errors?: Record<string, string[]>;
+      message?: string;
     };
   };
+  message?: string;
 }
 
 interface FormField {
@@ -1504,7 +1506,7 @@ export default function AddNumberPage() {
       }
     } catch (error) {
       console.error("Error in handleProvideless:", error);
-      toast.error("خطا در ثبت عدم تحویل: " + (error as any)?.response?.data?.message || (error as any)?.message || "خطای نامشخص");
+      toast.error("خطا در ثبت عدم تحویل: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
     } finally {
       setLoading(false);
     }
@@ -1601,7 +1603,7 @@ export default function AddNumberPage() {
       
     } catch (error) {
       console.error("Error in handleAbsentSubmit:", error);
-      toast.error("خطا در ثبت غیبت: " + (error as any)?.response?.data?.message || (error as any)?.message || "خطای نامشخص");
+      toast.error("خطا در ثبت غیبت: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
     } finally {
       setLoading(false);
     }
