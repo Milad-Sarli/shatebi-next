@@ -947,6 +947,8 @@ function AbsentModal({ isOpen, onOpenChange, student, onSubmit }: AbsentModalPro
   );
 }
 
+
+
 export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
   const [classes, setClasses] = React.useState<OptimizedClass[]>([]);
@@ -972,14 +974,31 @@ export default function AddNumberPage() {
       if (!accessToken || !user?.username) return;
       
       try {
+        console.log("Fetching master data...");
+        console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+        console.log("User username:", user.username);
+        
         const response = await MasterService.getMasters({}, accessToken);
         const foundMaster = response.data.data.find(
           (master) => master.mellicode === user.username
         );
         setMasterData(foundMaster || null);
+        console.log("Master data fetched successfully:", foundMaster);
       } catch (error) {
         console.error("Error fetching master data:", error);
-        toast.error("خطا در دریافت اطلاعات مربی");
+        
+        // More specific error handling
+        if (error instanceof Error) {
+          if (error.message.includes('Network Error')) {
+            toast.error("خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.");
+          } else if (error.message.includes('timeout')) {
+            toast.error("زمان انتظار تمام شد. لطفاً دوباره تلاش کنید.");
+          } else {
+            toast.error(`خطا در دریافت اطلاعات مربی: ${error.message}`);
+          }
+        } else {
+          toast.error("خطا در دریافت اطلاعات مربی");
+        }
       }
     };
 
@@ -990,16 +1009,43 @@ export default function AddNumberPage() {
     const fetchClasses = async () => {
       if (!accessToken) return;
       try {
-        const response = await optimizedClassService.getAll(accessToken);
-        if (response?.data?.data) {
-          setClasses(response.data.data);
+        setLoading(true);
+        console.log("Fetching classes with token:", accessToken ? "Present" : "Missing");
+        
+        // Use the simple method instead of paginated one
+        const response = await optimizedClassService.getAllSimple(accessToken);
+        console.log("Classes response:", response);
+        
+        if (Array.isArray(response)) {
+          setClasses(response);
         } else {
+          console.error("Expected array but got:", typeof response, response);
           setClasses([]);
         }
       } catch (error) {
-        console.error(error);
-        toast.error("Error loading classes");
+        console.error("Error fetching classes:", error);
+        
+        // More specific error handling
+        if (error instanceof Error) {
+          if (error.message.includes('Network Error') || error.message.includes('ERR_CONNECTION_RESET')) {
+            toast.error("خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.");
+          } else if (error.message.includes('timeout')) {
+            toast.error("زمان انتظار تمام شد. لطفاً دوباره تلاش کنید.");
+          } else if (error.message.includes('401')) {
+            toast.error("احراز هویت ناموفق. لطفاً دوباره وارد شوید.");
+          } else if (error.message.includes('403')) {
+            toast.error("شما دسترسی لازم برای این عملیات را ندارید.");
+          } else if (error.message.includes('500')) {
+            toast.error("خطای سرور. لطفاً بعداً تلاش کنید.");
+          } else {
+            toast.error(`خطا در بارگذاری کلاس‌ها: ${error.message}`);
+          }
+        } else {
+          toast.error("خطا در بارگذاری کلاس‌ها");
+        }
         setClasses([]);
+      } finally {
+        setLoading(false);
       }
     };
 
