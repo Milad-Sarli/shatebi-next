@@ -114,14 +114,14 @@ export default function PusherTest() {
         strategy="afterInteractive"
         onLoad={handlePusherLoad}
       />
-      <h1>Pusher Test</h1>
+      {/* <h1>Pusher Test</h1>
       <p>
         Try publishing an event to channel <code>my-channel</code> with event name <code>my-event</code>.
       </p>
       <button
         onClick={async () => {
           try {
-            const res = await fetch('https://api.shatebiapp.ir/api/pusher-test', {
+            const res = await fetch('https://test.bikerasol.ir/api/pusher-test', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ message: 'Hello from frontend!' }),
@@ -138,7 +138,7 @@ export default function PusherTest() {
         style={{ marginTop: '1rem', padding: '0.5rem 1rem', fontSize: '1rem' }}
       >
         Test Event
-      </button>
+      </button> */}
     </>
   );
 } 

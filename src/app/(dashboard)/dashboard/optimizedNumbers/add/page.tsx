@@ -13,8 +13,7 @@ import {
   OptimizedClass,
   Grade,
   Dars,
-  Student,
-  StudentActivity
+  Student
 } from "@/lib/services/optimizedClass.service";
 import { MasterService, Master } from "@/lib/services/master.service";
 import { studentActivityService, CreateStudentActivityDto } from "@/lib/services/studentActivity.service";
@@ -1509,7 +1508,7 @@ export default function AddNumberPage() {
 
       console.log("activityData:", activityData);
       
-      const createdActivity = await studentActivityService.create(activityData, accessToken);
+      await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
 
       // Create a grade with score 55
@@ -1648,7 +1647,7 @@ export default function AddNumberPage() {
 
       console.log("activityData:", activityData);
       
-      const createdActivity = await studentActivityService.create(activityData, accessToken);
+      await studentActivityService.create(activityData, accessToken);
       console.log("Student activity created successfully");
       
       // Refresh students data to get updated activities
