@@ -69,12 +69,12 @@ const items: NavItem[] = [
     icon: BookOpen,
     requiredRole: "admin",
   },
-  {
-    title: "نمرات",
-    href: "/dashboard/optimizedNumbers",
-    icon: GraduationCap,
-    requiredRole: ["admin", "master"],
-  },
+  // {
+  //   title: "نمرات",
+  //   href: "/dashboard/optimizedNumbers",
+  //   icon: GraduationCap,
+  //   requiredRole: ["admin", "master"],
+  // },
   {
     title: "ثبت نمرات",
     href: "/dashboard/optimizedNumbers/add",

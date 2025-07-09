@@ -3,8 +3,8 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, GraduationCap, Building2, Download, TrendingUp } from "lucide-react";
-import { AttendanceChart } from "@/components/charts/attendance-chart";
+import { GraduationCap, TrendingUp } from "lucide-react";
+
 import { PageTransition } from "@/components/ui/page-transition";
 
 const stats = [

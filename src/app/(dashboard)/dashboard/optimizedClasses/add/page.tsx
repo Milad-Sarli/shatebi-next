@@ -10,7 +10,9 @@ import { PageTransition } from "@/components/ui/page-transition";
 import {
   optimizedClassService,
 } from "@/lib/services/optimizedClass.service";
+import { MasterService } from "@/lib/services/master.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
+import { MultiSelectComboBoxWithInfiniteScroll } from "@/components/ui/MultiSelectComboBoxWithInfiniteScroll";
 import { ArrowLeft } from "lucide-react";
 
 interface Student {
@@ -61,6 +63,8 @@ export default function AddClassPage() {
   const [students, setStudents] = React.useState<Student[]>([]);
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
+  const [teachersLoading, setTeachersLoading] = React.useState(false);
+  const [teachersHasMore, setTeachersHasMore] = React.useState(true);
   const [formData, setFormData] = React.useState({
     tenant_id: 1, // You may need to get this from your auth context
     user_ids: [] as number[],
@@ -72,6 +76,17 @@ export default function AddClassPage() {
     const fetchData = async () => {
       if (!accessToken) return;
       try {
+        // Load first page of masters/teachers
+        setTeachersLoading(true);
+        const mastersResponse = await MasterService.getMasters({ page: 1, per_page: 15 }, accessToken);
+        setTeachers(mastersResponse.data.data.map(master => ({
+          id: master.id,
+          fullname: master.fullname,
+        })));
+        setTeachersHasMore(mastersResponse.data.current_page < mastersResponse.data.last_page);
+        setTeachersLoading(false);
+
+        // Load existing classes to extract students and lessons
         const classesResponse = await optimizedClassService.getAll(accessToken);
         
         // Get the data array from the paginated response
@@ -100,25 +115,37 @@ export default function AddClassPage() {
           }
         });
         setLessons(Array.from(uniqueLessons.values()));
-        
-        // Extract unique teachers
-        const uniqueTeachers = new Map<number, Teacher>();
-        classesArray.forEach((cls: OptimizedClassData) => {
-          cls.optimized_class_masters?.forEach((master_item: OptimizedClassMaster) => {
-            if (master_item.master) {
-              uniqueTeachers.set(master_item.master.id, master_item.master);
-            }
-          });
-        });
-        setTeachers(Array.from(uniqueTeachers.values()));
 
       } catch (error) {
         toast.error("خطا در بارگذاری اطلاعات اولیه");
         console.error("Error fetching data for form:", error);
+        setTeachersLoading(false);
       }
     };
     fetchData();
   }, [accessToken]);
+
+  const handleLoadMoreTeachers = async (page: number) => {
+    if (!accessToken || teachersLoading) return;
+    
+    try {
+      setTeachersLoading(true);
+      const mastersResponse = await MasterService.getMasters({ page, per_page: 15 }, accessToken);
+      
+      const newTeachers = mastersResponse.data.data.map(master => ({
+        id: master.id,
+        fullname: master.fullname,
+      }));
+      
+      setTeachers(prev => [...prev, ...newTeachers]);
+      setTeachersHasMore(mastersResponse.data.current_page < mastersResponse.data.last_page);
+      setTeachersLoading(false);
+    } catch (error) {
+      toast.error("خطا در بارگذاری اساتید بیشتر");
+      console.error("Error loading more teachers:", error);
+      setTeachersLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +247,7 @@ export default function AddClassPage() {
                   }
                   placeholder="انتخاب درس‌ها"
                 />
-                <MultiSelectComboBox
+                <MultiSelectComboBoxWithInfiniteScroll
                   label="اساتید"
                   options={teachers.map((t) => ({
                     label: t.fullname,
@@ -234,6 +261,9 @@ export default function AddClassPage() {
                     }))
                   }
                   placeholder="انتخاب اساتید"
+                  onLoadMore={handleLoadMoreTeachers}
+                  hasMore={teachersHasMore}
+                  loading={teachersLoading}
                 />
               </div>
               <div className="flex justify-end gap-2 mt-6">

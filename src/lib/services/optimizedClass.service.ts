@@ -168,29 +168,71 @@ export const optimizedClassService = {
   },
 
   async getAllSimple(accessToken: string): Promise<OptimizedClass[]> {
-    const url = `${API_URL}/api/optimized-classes`;
-    console.log('Making simple request to:', url);
-    console.log('Access token:', accessToken ? 'Present' : 'Missing');
+    try {
+      // First, try to get all classes with a large per_page parameter
+      console.log('Fetching all classes...');
+      const response = await this.getAll(accessToken, { per_page: 1000 });
 
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+      if (response.data && response.data.data) {
+        console.log(`Fetched ${response.data.data.length} classes out of ${response.data.total} total`);
 
-    console.log('Simple API response status:', response.status);
-    console.log('Simple API response data:', response.data);
+        // If we have more classes than what was returned, fetch all pages
+        if (response.data.total > response.data.data.length) {
+          const allClasses: OptimizedClass[] = [...response.data.data];
+          const totalPages = response.data.last_page;
 
-    // Handle different response formats
-    if (Array.isArray(response.data)) {
-      return response.data;
-    } else if (response.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
-      return response.data.data.data;
-    } else {
-      console.error('Unexpected API response format:', response.data);
+          console.log(`Need to fetch ${totalPages} pages total`);
+
+          // Fetch remaining pages
+          for (let page = 2; page <= totalPages; page++) {
+            console.log(`Fetching page ${page}...`);
+            const pageResponse = await this.getAll(accessToken, { page, per_page: 1000 });
+            if (pageResponse.data && pageResponse.data.data) {
+              allClasses.push(...pageResponse.data.data);
+            }
+          }
+
+          console.log(`Total classes fetched: ${allClasses.length}`);
+          return allClasses;
+        }
+
+        return response.data.data;
+      }
+
+      console.error('Unexpected API response format:', response);
       return [];
+    } catch (error) {
+      console.error('Error fetching all classes:', error);
+
+      // Fallback to original simple request
+      try {
+        const url = `${API_URL}/api/optimized-classes`;
+        console.log('Falling back to simple request to:', url);
+
+        const response = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        console.log('Fallback API response status:', response.status);
+        console.log('Fallback API response data:', response.data);
+
+        // Handle different response formats
+        if (Array.isArray(response.data)) {
+          return response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          return response.data.data;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+          return response.data.data.data;
+        } else {
+          console.error('Unexpected API response format:', response.data);
+          return [];
+        }
+      } catch (fallbackError) {
+        console.error('Fallback request also failed:', fallbackError);
+        throw fallbackError;
+      }
     }
   },
 

@@ -21,9 +21,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { StudentForm } from "./student-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -55,6 +54,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function StudentsPage() {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [students, setStudents] = React.useState<Student[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState({
@@ -72,9 +72,6 @@ export default function StudentsPage() {
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
   const [studentToDelete, setStudentToDelete] = React.useState<number | null>(
-    null
-  );
-  const [studentToEdit, setStudentToEdit] = React.useState<Student | null>(
     null
   );
   const [statusFilter, setStatusFilter] = React.useState<
@@ -196,7 +193,7 @@ export default function StudentsPage() {
   };
 
   const handleEditStudent = (student: Student) => {
-    setStudentToEdit(student);
+    router.push(`/dashboard/students/edit/${student.id}`);
   };
 
   const handleSearch = () => {
@@ -406,6 +403,22 @@ export default function StudentsPage() {
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
                       <div className="p-4">
+                        <div className="mb-2">
+                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                            {student.Fname} {student.Lname}
+                          </h3>
+                          <Badge
+                            className={
+                              student.status === "در حال تحصیل"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                : student.status === "فارغ التحصیل"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                            }
+                          >
+                            {student.status}
+                          </Badge>
+                        </div>
                         <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
                           <p>نام پدر: {student.FatherName}</p>
                           <p>کد ملی: {student.Mellicode}</p>
@@ -572,25 +585,7 @@ export default function StudentsPage() {
           </CardContent>
         </Card>
 
-        <Dialog
-          open={studentToEdit !== null}
-          onOpenChange={(open: boolean) => !open && setStudentToEdit(null)}
-        >
-          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-zinc-900 dark:text-zinc-100">
-                ویرایش قرآن آموز
-              </DialogTitle>
-            </DialogHeader>
-            <StudentForm
-              student={studentToEdit || undefined}
-              onSuccess={() => {
-                setStudentToEdit(null);
-                fetchStudents();
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+
 
         <Dialog
           open={studentToDelete !== null}

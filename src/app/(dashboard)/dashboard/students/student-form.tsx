@@ -271,49 +271,71 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="Fname">نام</Label>
-          <Input id="Fname" {...form.register("Fname")} placeholder="نام" />
-          {form.formState.errors.Fname && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.Fname.message}
-            </p>
-          )}
+      {/* Essential Fields Only - Optimized for Mobile */}
+      <div className="space-y-4">
+        {/* Full Name Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="Fname">نام</Label>
+            <Input id="Fname" {...form.register("Fname")} placeholder="نام" />
+            {form.formState.errors.Fname && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.Fname.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="Lname">نام خانوادگی</Label>
+            <Input
+              id="Lname"
+              {...form.register("Lname")}
+              placeholder="نام خانوادگی"
+            />
+            {form.formState.errors.Lname && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.Lname.message}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="Lname">نام خانوادگی</Label>
-          <Input
-            id="Lname"
-            {...form.register("Lname")}
-            placeholder="نام خانوادگی"
-          />
-          {form.formState.errors.Lname && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.Lname.message}
-            </p>
-          )}
+        {/* Father Info Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="FatherName">نام پدر</Label>
+            <Input
+              id="FatherName"
+              {...form.register("FatherName")}
+              placeholder="نام پدر"
+            />
+            {form.formState.errors.FatherName && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.FatherName.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="FatherJob">شغل پدر</Label>
+            <Input
+              id="FatherJob"
+              {...form.register("FatherJob")}
+              placeholder="شغل پدر"
+            />
+            {form.formState.errors.FatherJob && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.FatherJob.message}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="FatherName">نام پدر</Label>
-          <Input
-            id="FatherName"
-            {...form.register("FatherName")}
-            placeholder="نام پدر"
-          />
-          {form.formState.errors.FatherName && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.FatherName.message}
-            </p>
-          )}
-        </div>
-
+        {/* National Code */}
         <div className="space-y-2">
           <Label htmlFor="Mellicode">کد ملی</Label>
           <Input
-          maxLength={10}
+            maxLength={10}
             id="Mellicode"
             {...form.register("Mellicode")}
             placeholder="کد ملی"
@@ -325,20 +347,134 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="FatherJob">شغل پدر</Label>
-          <Input
-            id="FatherJob"
-            {...form.register("FatherJob")}
-            placeholder="شغل پدر"
-          />
-          {form.formState.errors.FatherJob && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.FatherJob.message}
-            </p>
-          )}
+        {/* Location Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="Ostan">استان</Label>
+            <SingleSelectCombobox
+              options={provinces.map(province => ({
+                value: province.name,
+                label: province.name
+              }))}
+              value={form.watch("Ostan")}
+              onChange={handleProvinceChange}
+              placeholder="استان را انتخاب کنید"
+              emptyMessage="استانی یافت نشد"
+              searchable={true}
+            />
+            {form.formState.errors.Ostan && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.Ostan.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="City">شهر</Label>
+            <SingleSelectCombobox
+              options={cities.map(city => ({
+                value: city.name,
+                label: city.name
+              }))}
+              value={form.watch("City")}
+              onChange={handleCityChange}
+              placeholder="شهر را انتخاب کنید"
+              emptyMessage="شهری یافت نشد (ابتدا استان را انتخاب کنید)"
+              searchable={true}
+            />
+            {form.formState.errors.City && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.City.message}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Status and Education */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="status">وضعیت</Label>
+            <Select
+              value={form.watch("status")}
+              onValueChange={(value) =>
+                form.setValue(
+                  "status",
+                  value as
+                    | "در حال تحصیل"
+                    | "ترک تحصیل"
+                    | "فارغ التحصیل"
+                    | "انتقالی"
+                    | "اخراجی"
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="انتخاب وضعیت" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="در حال تحصیل">در حال تحصیل</SelectItem>
+                <SelectItem value="ترک تحصیل">ترک تحصیل</SelectItem>
+                <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
+                <SelectItem value="انتقالی">انتقالی</SelectItem>
+                <SelectItem value="اخراجی">اخراجی</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="Educating">پایه تحصیلی</Label>
+            <Select value={form.watch("Educating") || ""}
+              onValueChange={(value) => {
+                form.setValue("Educating", value);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="انتخاب پایه تحصیلی" />
+              </SelectTrigger>
+              <SelectContent>
+                {educationLevels.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.Educating && (
+              <p className="text-sm text-red-500">
+                {form.formState.errors.Educating.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Phone Numbers */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="Phone">شماره تماس</Label>
+            <Input
+              id="Phone"
+              {...form.register("Phone")}
+              placeholder="شماره تماس"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ParentPhone">شماره تماس والدین</Label>
+            <Input
+              id="ParentPhone"
+              {...form.register("ParentPhone")}
+              placeholder="شماره تماس والدین"
+            />
+          </div>
+        </div>
+
+        {/* Address */}
+        <div className="space-y-2">
+          <Label htmlFor="Adress">آدرس</Label>
+          <Input id="Adress" {...form.register("Adress")} placeholder="آدرس" />
+        </div>
+
+        {/* Entry Date */}
         <div className="space-y-2">
           <Label htmlFor="Entryday">تاریخ ورود</Label>
           <DatePicker 
@@ -361,131 +497,9 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
             </div>
           )}
         </div>
-
       </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="Ostan">استان</Label>
-          <SingleSelectCombobox
-            options={provinces.map(province => ({
-              value: province.name,
-              label: province.name
-            }))}
-            value={form.watch("Ostan")}
-            onChange={handleProvinceChange}
-            placeholder="استان را انتخاب کنید"
-            emptyMessage="استانی یافت نشد"
-            searchable={true}
-          />
-          {form.formState.errors.Ostan && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.Ostan.message}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="City">شهر</Label>
-          <SingleSelectCombobox
-            options={cities.map(city => ({
-              value: city.name,
-              label: city.name
-            }))}
-            value={form.watch("City")}
-            onChange={handleCityChange}
-            placeholder="شهر را انتخاب کنید"
-            emptyMessage="شهری یافت نشد (ابتدا استان را انتخاب کنید)"
-            searchable={true}
-          />
-          {form.formState.errors.City && (
-            <p className="text-sm text-red-500">
-              {form.formState.errors.City.message}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="status">وضعیت</Label>
-          <Select
-            value={form.watch("status")}
-            onValueChange={(value) =>
-              form.setValue(
-                "status",
-                value as
-                  | "در حال تحصیل"
-                  | "ترک تحصیل"
-                  | "فارغ التحصیل"
-                  | "انتقالی"
-                  | "اخراجی"
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="انتخاب وضعیت" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="در حال تحصیل">در حال تحصیل</SelectItem>
-              <SelectItem value="ترک تحصیل">ترک تحصیل</SelectItem>
-              <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
-              <SelectItem value="انتقالی">انتقالی</SelectItem>
-              <SelectItem value="اخراجی">اخراجی</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-<div className="space-y-2">
-<Label htmlFor="Educating">پایه تحصیلی</Label>
-<Select value={form.watch("Educating") || ""}
-  onValueChange={(value) => {
-    form.setValue("Educating", value);
-  }}
->
-  <SelectTrigger>
-    <SelectValue placeholder="انتخاب پایه تحصیلی" />
-  </SelectTrigger>
-  <SelectContent>
-    {educationLevels.map((level) => (
-      <SelectItem key={level.value} value={level.value}>
-        {level.label}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-{form.formState.errors.Educating && (
-  <p className="text-sm text-red-500">
-    {form.formState.errors.Educating.message}
-  </p>
-)}
-</div>
-        <div className="space-y-2">
-          <Label htmlFor="Phone">شماره تماس</Label>
-          <Input
-            id="Phone"
-            {...form.register("Phone")}
-            placeholder="شماره تماس"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="ParentPhone">شماره تماس والدین</Label>
-          <Input
-            id="ParentPhone"
-            {...form.register("ParentPhone")}
-            placeholder="شماره تماس والدین"
-          />
-        </div>
-
-     
-
-        <div className="space-y-2">
-          <Label htmlFor="Adress">آدرس</Label>
-          <Input id="Adress" {...form.register("Adress")} placeholder="آدرس" />
-        </div>
-      </div>
-
-  
-
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-4">
         <Button
           type="button"
           variant="outline"

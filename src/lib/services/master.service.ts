@@ -92,6 +92,33 @@ export class MasterService {
     return data;
   }
 
+  static async getAllMasters(accessToken: string): Promise<Master[]> {
+    let allMasters: Master[] = [];
+    let currentPage = 1;
+    let hasMorePages = true;
+
+    while (hasMorePages) {
+      try {
+        const response = await this.getMasters({ page: currentPage, per_page: 100 }, accessToken);
+
+        if (response.data && response.data.data) {
+          allMasters = [...allMasters, ...response.data.data];
+
+          // Check if there are more pages
+          hasMorePages = response.data.current_page < response.data.last_page;
+          currentPage++;
+        } else {
+          hasMorePages = false;
+        }
+      } catch (error) {
+        console.error(`Error fetching masters page ${currentPage}:`, error);
+        hasMorePages = false;
+      }
+    }
+
+    return allMasters;
+  }
+
   static async getMastersByTenant(tenantId: number, accessToken: string): Promise<MasterResponse> {
     const { data } = await axios.get(`${API_URL}/api/masters/tenant/${tenantId}`, {
       headers: {

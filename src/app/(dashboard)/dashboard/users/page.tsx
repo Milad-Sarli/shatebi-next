@@ -2,6 +2,7 @@
 
 /* eslint-disable */
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Search,  ChevronLeft, ChevronRight, Sun, Moon, Edit, Trash2, Mail, Phone, Building, Shield, User as UserIcon, Star, Crown, Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,6 @@ import { useTheme } from "@/lib/context/theme.context";
 import { UserService, User, UserFilters } from "@/lib/services/user.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { UserForm } from "./user-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppRoleService } from "@/lib/services/approle.service";
@@ -56,6 +56,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function UsersPage() {
   const { accessToken } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<UserFilters>({
@@ -74,7 +75,6 @@ export default function UsersPage() {
   const [selectedTenant, setSelectedTenant] = React.useState<string>("all");
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<number | null>(null);
-  const [userToEdit, setUserToEdit] = React.useState<User | null>(null);
   const searchInProgress = React.useRef(false);
   const [attachRoleUser, setAttachRoleUser] = React.useState<User | null>(null);
   const [isAttachRoleOpen, setIsAttachRoleOpen] = React.useState(false);
@@ -173,7 +173,7 @@ export default function UsersPage() {
   };
 
   const handleEditUser = (user: User) => {
-    setUserToEdit(user);
+    router.push(`/dashboard/users/edit/${user.id}`);
   };
 
   const getUserFullName = (user: User) => {
@@ -611,20 +611,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={userToEdit !== null} onOpenChange={(open: boolean) => !open && setUserToEdit(null)}>
-          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش کاربر</DialogTitle>
-            </DialogHeader>
-            <UserForm
-              initialData={userToEdit || undefined}
-              onSuccess={() => {
-                setUserToEdit(null);
-                fetchUsers();
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+
 
         <Dialog open={userToDelete !== null} onOpenChange={(open: boolean) => !open && setUserToDelete(null)}>
           <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">

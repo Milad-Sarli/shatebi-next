@@ -65,7 +65,7 @@ export interface UserFilters {
 export class UserService {
   static async getUsers(filters: UserFilters = {}, accessToken: string): Promise<PaginatedResponse<User>> {
     const queryParams = new URLSearchParams();
-    
+
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.with) queryParams.append('with', filters.with);
     if (filters.page) queryParams.append('page', filters.page.toString());
@@ -122,6 +122,22 @@ export class UserService {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'خطا در بروزرسانی کاربر');
+    }
+
+    return response.json();
+  }
+
+  static async getUserById(id: number, accessToken: string): Promise<{ data: User }> {
+    const response = await fetch(`${API_URL}/api/users/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'خطا در دریافت اطلاعات کاربر');
     }
 
     return response.json();

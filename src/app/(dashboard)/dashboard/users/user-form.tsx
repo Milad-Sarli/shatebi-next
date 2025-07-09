@@ -18,8 +18,10 @@ const userSchema = z.object({
   name: z.string().min(2, "نام باید حداقل 2 کاراکتر باشد"),
   lname: z.string().optional(),
   phone: z.string().regex(/^09\d{9}$/, "شماره موبایل باید با 09 شروع شود و 11 رقم باشد"),
-  email: z.string().email("ایمیل نامعتبر است").optional().or(z.literal("")),
-  password: z.string().min(6, "رمز عبور باید حداقل 6 کاراکتر باشد"),
+  email: z.string().optional().refine((val) => !val || val === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+    message: "ایمیل نامعتبر است",
+  }),
+  password: z.string().optional(),
   tenant_id: z.number().min(1, "مرکز را انتخاب کنید"),
   send_sms: z.boolean(),
   is_superuser: z.boolean(),
@@ -30,28 +32,34 @@ type UserFormValues = z.infer<typeof userSchema>;
 
 interface UserFormProps {
   onSuccess: () => void;
+  onCancel?: () => void;
   initialData?: User;
 }
 
-export function UserForm({ onSuccess, initialData }: UserFormProps) {
+export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
+
+  // Helper function to get user full name
+  const getUserFullName = (user: User) => {
+    return `${user.fname || ''} ${user.lname || ''}`.trim() || user.name || '';
+  };
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: initialData
       ? {
-          username: initialData.username,
+          username: initialData.username || "",
           fname: initialData.fname || "",
-          name: initialData.name,
+          name: initialData.name || getUserFullName(initialData),
           lname: initialData.lname || "",
-          phone: initialData.phone,
+          phone: initialData.phone || "",
           email: initialData.email || "",
           password: "",
-          tenant_id: initialData.tenant_id,
-          send_sms: initialData.send_sms,
-          is_superuser: initialData.is_superuser,
-          is_admin: initialData.is_admin,
+          tenant_id: initialData.tenant_id || 1,
+          send_sms: initialData.send_sms || false,
+          is_superuser: initialData.is_superuser || false,
+          is_admin: initialData.is_admin || false,
         }
       : {
           username: "",
@@ -71,13 +79,26 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
   const onSubmit = async (data: UserFormValues) => {
     if (!accessToken) return;
 
+    // Custom validation for password
+    if (!initialData && (!data.password || data.password.length < 6)) {
+      toast.error("رمز عبور باید حداقل 6 کاراکتر باشد");
+      return;
+    }
+
     try {
       setLoading(true);
+      
+      // For edit mode, only include password if it's provided
+      const submitData: Partial<UserFormValues> = { ...data };
+      if (initialData && (!data.password || data.password === "")) {
+        delete submitData.password;
+      }
+
       if (initialData) {
-        await UserService.updateUser(initialData.id, data, accessToken);
+        await UserService.updateUser(initialData.id, submitData, accessToken);
         toast.success("کاربر با موفقیت بروزرسانی شد");
       } else {
-        await UserService.createUser(data, accessToken);
+        await UserService.createUser(submitData, accessToken);
         toast.success("کاربر با موفقیت ایجاد شد");
       }
       onSuccess();
@@ -90,7 +111,7 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <form className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="username" className="text-zinc-900 dark:text-zinc-100">نام کاربری</Label>
@@ -174,12 +195,14 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-zinc-900 dark:text-zinc-100">رمز عبور</Label>
+          <Label htmlFor="password" className="text-zinc-900 dark:text-zinc-100">
+            رمز عبور{initialData ? " (اختیاری)" : ""}
+          </Label>
           <Input
             id="password"
             type="password"
             {...form.register("password")}
-            placeholder="رمز عبور"
+            placeholder={initialData ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}
             className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
           />
           {form.formState.errors.password && (
@@ -225,13 +248,30 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
         </div>
       </div>
 
-      <Button 
-        type="submit" 
-        className="w-full bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200" 
-        disabled={loading}
-      >
-        {loading ? "در حال ذخیره..." : initialData ? "بروزرسانی" : "ایجاد"}
-      </Button>
+      <div className="flex gap-3">
+        {onCancel && (
+          <Button 
+            type="button"
+            variant="outline"
+            className="flex-1 border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            انصراف
+          </Button>
+        )}
+        <Button 
+          type="button"
+          className="flex-1 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          disabled={loading}
+          onClick={async () => {
+            const values = form.getValues();
+            await onSubmit(values);
+          }}
+        >
+          {loading ? "در حال ذخیره..." : initialData ? "بروزرسانی" : "ایجاد"}
+        </Button>
+      </div>
     </form>
   );
 } 

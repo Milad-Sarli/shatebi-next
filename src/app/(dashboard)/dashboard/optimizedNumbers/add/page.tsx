@@ -41,7 +41,7 @@ import { UseFormReturn } from "react-hook-form";
 import DatePicker, { DateObject } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Course {
   id: number;
@@ -69,9 +69,33 @@ const pageBasedSchema = z.object({
       message: "نمره صوت باید بین 0 تا 10 باشد"
     }),
   details: z.string()
-    .min(1, "نمره تفاصیل الزامی است")
+    .min(1, "نمره مشخصات الزامی است")
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
-      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+      message: "نمره مشخصات باید بین 0 تا 10 باشد"
+    }),
+});
+
+// New schema for is_one_grade droos with surah/verse fields
+const oneGradeSurahSchema = z.object({
+  start_surah: z.string().min(1, "سوره شروع الزامی است"),
+  start_verse: z.string().min(1, "آیه شروع الزامی است"),
+  end_surah: z.string().min(1, "سوره پایان الزامی است"),
+  end_verse: z.string().min(1, "آیه پایان الزامی است"),
+  number: z.string()
+    .min(1, "نمره الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
+      message: "نمره باید بین 0 تا 100 باشد"
+    }),
+});
+
+// Schema for is_one_grade droos with page fields
+const oneGradePageSchema = z.object({
+  start_page: z.string().min(1, "صفحه شروع الزامی است"),
+  end_page: z.string().min(1, "صفحه پایان الزامی است"),
+  number: z.string()
+    .min(1, "نمره الزامی است")
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
+      message: "نمره باید بین 0 تا 100 باشد"
     }),
 });
 
@@ -106,9 +130,9 @@ const surahBasedSchema = z.object({
       message: "نمره صوت باید بین 0 تا 10 باشد"
     }),
   details: z.string()
-    .min(1, "نمره تفاصیل الزامی است")
+    .min(1, "نمره مشخصات الزامی است")
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
-      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+      message: "نمره مشخصات باید بین 0 تا 10 باشد"
     }),
 });
 
@@ -131,9 +155,9 @@ const partBasedSchema = z.object({
       message: "نمره صوت باید بین 0 تا 10 باشد"
     }),
   details: z.string()
-    .min(1, "نمره تفاصیل الزامی است")
+    .min(1, "نمره مشخصات الزامی است")
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 10, {
-      message: "نمره تفاصیل باید بین 0 تا 10 باشد"
+      message: "نمره مشخصات باید بین 0 تا 10 باشد"
     }),
 });
 
@@ -164,6 +188,14 @@ interface AddGradeModalProps {
   onFormRefsChange?: (refs: FormRefs) => void;
 }
 
+// Helper function to identify reading classes
+const isReadingClass = (courseTitle: string): boolean => {
+  const readingKeywords = ['روخوانی', 'قرائت', 'خواندن', 'reading'];
+  return readingKeywords.some(keyword => 
+    courseTitle.toLowerCase().includes(keyword.toLowerCase())
+  );
+};
+
 function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse, onFormRefsChange }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
   const [surahs, setSurahs] = React.useState<Surah[]>([]);
@@ -171,12 +203,41 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
   const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
   const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
   const { accessToken } = useAuth();
+  
+  // Determine if this is a reading class
+  const isReadingClassType = selectedCourse ? isReadingClass(selectedCourse.title) : false;
+  const shouldUseOneGrade = isOneGrade || isReadingClassType;
+  
+  // Check if this is a hefz class (new type for is_one_grade)
+  const isHefzClass = selectedCourse?.title?.toLowerCase().includes('حفظ') || false;
+
   const oneGradeForm = useForm({
     resolver: zodResolver(oneGradeSchema),
     defaultValues: {
       start_page: "",
       end_page: "",
       hefz: "",
+    },
+  });
+
+  // New forms for is_one_grade droos
+  const oneGradeSurahForm = useForm({
+    resolver: zodResolver(oneGradeSurahSchema),
+    defaultValues: {
+      start_surah: "",
+      start_verse: "",
+      end_surah: "",
+      end_verse: "",
+      number: "",
+    },
+  });
+
+  const oneGradePageForm = useForm({
+    resolver: zodResolver(oneGradePageSchema),
+    defaultValues: {
+      start_page: "",
+      end_page: "",
+      number: "",
     },
   });
 
@@ -217,6 +278,22 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       details: "",
     },
   });
+
+  // Clear all forms when modal opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      // Reset all forms when modal closes
+      oneGradeForm.reset();
+      oneGradeSurahForm.reset();
+      oneGradePageForm.reset();
+      multiGradeForm.reset();
+      surahForm.reset();
+      partForm.reset();
+      setActiveTab("page");
+      setStartSurahVerses([]);
+      setEndSurahVerses([]);
+    }
+  }, [isOpen, oneGradeForm, oneGradeSurahForm, oneGradePageForm, multiGradeForm, surahForm, partForm]);
 
   React.useEffect(() => {
     const fetchSurahs = async () => {
@@ -262,6 +339,19 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
 
   const handleSubmit = (data: Record<string, unknown>) => {
     onSubmit({ ...data, type: activeTab });
+    
+    // Clear forms after successful submission
+    setTimeout(() => {
+      oneGradeForm.reset();
+      oneGradeSurahForm.reset();
+      oneGradePageForm.reset();
+      multiGradeForm.reset();
+      surahForm.reset();
+      partForm.reset();
+      setActiveTab("page");
+      setStartSurahVerses([]);
+      setEndSurahVerses([]);
+    }, 100);
   };
 
   React.useEffect(() => {
@@ -274,6 +364,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
       });
     }
   }, [multiGradeForm, surahForm, partForm, activeTab, onFormRefsChange]);
+
+  // Removed unused readingGradeSchema and readingGradeForm
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -315,62 +407,312 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                 transition={{ delay: 0.2 }}
               >
                 {selectedCourse?.title}
+                {isReadingClassType && (
+                  <span className="text-blue-500 dark:text-blue-400 text-sm block mt-1">
+                    (کلاس روخوانی - تک نمره)
+                  </span>
+                )}
+           
               </motion.p>
             </DialogTitle>
             <DialogDescription className="text-center">
-              لطفا نوع درس و نمرات را وارد کنید
+              {isReadingClassType 
+                ? "لطفا نمره روخوانی را وارد کنید" 
+                : isHefzClass
+                ? "لطفا نمره حفظ را وارد کنید "
+                : "لطفا نوع درس و نمرات را وارد کنید"
+              }
             </DialogDescription>
           </motion.div>
         </DialogHeader>
-        {isOneGrade ? (
-          <Form {...oneGradeForm}>
-            <form onSubmit={oneGradeForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={oneGradeForm.control}
-                  name="start_page"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>صفحه شروع</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} dir="rtl" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={oneGradeForm.control}
-                  name="end_page"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>صفحه پایان</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} dir="rtl" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={oneGradeForm.control}
-                  name="hefz"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>نمره</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} dir="rtl" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <Button type="submit" className="w-full">ثبت نمره</Button>
-            </form>
-          </Form>
+        {shouldUseOneGrade ? (
+          // Handle different types of is_one_grade droos
+          isHefzClass ? (
+            // Hefz class with surah/verse fields
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="surah">سوره و آیه</TabsTrigger>
+                <TabsTrigger value="page">صفحه ای</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="surah">
+                <Form {...oneGradeSurahForm}>
+                  <form onSubmit={oneGradeSurahForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={oneGradeSurahForm.control}
+                        name="start_surah"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>سوره شروع</FormLabel>
+                            <FormControl>
+                              {isLoadingSurahs ? (
+                                <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                              ) : (
+                                <SingleSelectCombobox
+                                  options={surahs?.map(surah => ({
+                                    value: surah.id.toString(),
+                                    label: `${surah.titleAr}`
+                                  })) || []}
+                                  value={field.value}
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    handleStartSurahChange(value);
+                                  }}
+                                  placeholder="انتخاب سوره"
+                                  className="w-full"
+                                />
+                              )}
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={oneGradeSurahForm.control}
+                        name="start_verse"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>آیه شروع</FormLabel>
+                            <FormControl>
+                              <SingleSelectCombobox
+                                options={startSurahVerses?.map(verse => ({
+                                  value: verse.toString(),
+                                  label: verse.toString()
+                                })) || []}
+                                value={field.value}
+                                onChange={(value) => field.onChange(value)}
+                                placeholder="انتخاب آیه"
+                                className="w-full"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={oneGradeSurahForm.control}
+                        name="end_surah"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>سوره پایان</FormLabel>
+                            <FormControl>
+                              {isLoadingSurahs ? (
+                                <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                              ) : (
+                                <SingleSelectCombobox
+                                  options={surahs?.map(surah => ({
+                                    value: surah.id.toString(),
+                                    label: `${surah.titleAr}`
+                                  })) || []}
+                                  value={field.value}
+                                  onChange={handleEndSurahChange}
+                                  placeholder="انتخاب سوره"
+                                  className="w-full"
+                                />
+                              )}
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={oneGradeSurahForm.control}
+                        name="end_verse"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>آیه پایان</FormLabel>
+                            <FormControl>
+                              <SingleSelectCombobox
+                                options={endSurahVerses?.map(verse => ({
+                                  value: verse.toString(),
+                                  label: verse.toString()
+                                })) || []}
+                                value={field.value}
+                                onChange={(value) => field.onChange(value)}
+                                placeholder="انتخاب آیه"
+                                className="w-full"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField
+                        control={oneGradeSurahForm.control}
+                        name="number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>نمره حفظ (0 تا 100)</FormLabel>
+                            <FormControl>
+                              <Input type="number" min="0" max="100" {...field} dir="rtl" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">ثبت نمره</Button>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="page">
+                <Form {...oneGradePageForm}>
+                  <form onSubmit={oneGradePageForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={oneGradePageForm.control}
+                        name="start_page"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>صفحه شروع</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} dir="rtl" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={oneGradePageForm.control}
+                        name="end_page"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>صفحه پایان</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} dir="rtl" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField
+                        control={oneGradePageForm.control}
+                        name="number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>نمره حفظ (0 تا 100)</FormLabel>
+                            <FormControl>
+                              <Input type="number" min="0" max="100" {...field} dir="rtl" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full">ثبت نمره</Button>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          ) : isReadingClassType ? (
+            // Reading class (existing logic)
+            <Form {...oneGradeForm}>
+              <form onSubmit={oneGradeForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="start_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه شروع</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="end_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه پایان</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="hefz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره روخوانی</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full">ثبت نمره</Button>
+              </form>
+            </Form>
+          ) : (
+            // Other is_one_grade droos (existing logic)
+            <Form {...oneGradeForm}>
+              <form onSubmit={oneGradeForm.handleSubmit(handleSubmit)} className="space-y-4" dir="rtl">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="start_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه شروع</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="end_page"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>صفحه پایان</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={oneGradeForm.control}
+                    name="hefz"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نمره</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} dir="rtl" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full">ثبت نمره</Button>
+              </form>
+            </Form>
+          )
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
             <TabsList className="grid w-full grid-cols-3">
@@ -457,7 +799,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       name="details"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormLabel>نمره مشخصات</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} dir="rtl" />
                           </FormControl>
@@ -624,7 +966,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       name="details"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormLabel>نمره مشخصات</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} dir="rtl" />
                           </FormControl>
@@ -716,7 +1058,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       name="details"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>نمره تفاصیل</FormLabel>
+                          <FormLabel>نمره مشخصات</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} />
                           </FormControl>
@@ -784,29 +1126,47 @@ function SelectCourseModal({ isOpen, onOpenChange, onCourseSelect, dars }: Selec
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {allCourses.map((course) => (
-            <Button
-              key={course.id}
-              onClick={() => {
-                onCourseSelect(course);
-                onOpenChange(false);
-              }}
-              className="w-full text-right justify-between px-4 py-3 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
-              variant="outline"
-            >
-              <span className="text-base">{course.title}</span>
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="w-2 h-2 rounded-full bg-emerald-500"
-              />
-            </Button>
-          ))}
+          {allCourses.map((course) => {
+            const isReadingClassType = isReadingClass(course.title);
+            const isHefzClass = course.title?.toLowerCase().includes('حفظ') || false;
+            return (
+              <Button
+                key={course.id}
+                onClick={() => {
+                  onCourseSelect(course);
+                  onOpenChange(false);
+                }}
+                className="w-full text-right justify-between px-4 py-3 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+                variant="outline"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{course.title}</span>
+                  {isReadingClassType && (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">
+                      روخوانی
+                    </span>
+                  )}
+                  {isHefzClass && !isReadingClassType && (
+                    <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-1 rounded-full">
+                      حفظ
+                    </span>
+                  )}
+                </div>
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-2 h-2 rounded-full bg-emerald-500"
+                />
+              </Button>
+            );
+          })}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+
 
 interface ValidationError {
   response?: {
@@ -846,22 +1206,103 @@ interface EditGradeModalProps {
 
 function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModalProps) {
   const [form, setForm] = React.useState({
-    hefz: grade.hefz,
-    tajvid: grade.tajvid,
-    sout: grade.sout,
-    details: grade.details,
+    hefz: grade.hefz ?? 0,
+    tajvid: grade.tajvid ?? 0,
+    sout: grade.sout ?? 0,
+    details: grade.details ?? 0,
     start_page: grade.lesson_area?.start_page || '',
     end_page: grade.lesson_area?.end_page || '',
-    start_surah: grade.lesson_area?.start_surah?.id?.toString() || '',
+    start_surah: grade.lesson_area?.start_surah?.id ? grade.lesson_area.start_surah.id.toString() : '',
     start_verse: grade.lesson_area?.start_verse || '',
-    end_surah: grade.lesson_area?.end_surah?.id?.toString() || '',
+    end_surah: grade.lesson_area?.end_surah?.id ? grade.lesson_area.end_surah.id.toString() : '',
     end_verse: grade.lesson_area?.end_verse || '',
     start_joze: grade.lesson_area?.start_joze || '',
     end_joze: grade.lesson_area?.end_joze || '',
+    number: grade.number ?? 0,
   });
 
+  // سوره‌ها و آیه‌ها
+  const [surahs, setSurahs] = React.useState<Surah[]>([]);
+  const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
+  const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
+  const [isLoadingSurahs, setIsLoadingSurahs] = React.useState(true);
+  const { accessToken } = useAuth();
+
+  useEffect(() => {
+    const fetchSurahs = async () => {
+      if (!accessToken) return;
+      try {
+        setIsLoadingSurahs(true);
+        const response = await SurahService.getAllSurahs(accessToken);
+        if (response && Array.isArray(response)) {
+          const sortedSurahs = response.sort((a: Surah, b: Surah) => a.index - b.index);
+          setSurahs(sortedSurahs);
+        }
+      } finally {
+        setIsLoadingSurahs(false);
+      }
+    };
+    fetchSurahs();
+  }, [accessToken]);
+
+  useEffect(() => {
+    // مقداردهی اولیه آیه‌ها بر اساس سوره انتخابی
+    if (form.start_surah) {
+      const selectedSurah = surahs.find(s => s.id.toString() === form.start_surah);
+      if (selectedSurah) {
+        setStartSurahVerses(Array.from({ length: selectedSurah.count }, (_, i) => i + 1));
+      }
+    }
+    if (form.end_surah) {
+      const selectedSurah = surahs.find(s => s.id.toString() === form.end_surah);
+      if (selectedSurah) {
+        setEndSurahVerses(Array.from({ length: selectedSurah.count }, (_, i) => i + 1));
+      }
+    }
+  }, [form.start_surah, form.end_surah, surahs]);
+
+  // مقداردهی مجدد فرم هنگام تغییر grade
+  useEffect(() => {
+    setForm({
+      hefz: grade.hefz ?? 0,
+      tajvid: grade.tajvid ?? 0,
+      sout: grade.sout ?? 0,
+      details: grade.details ?? 0,
+      start_page: grade.lesson_area?.start_page || '',
+      end_page: grade.lesson_area?.end_page || '',
+      start_surah: grade.lesson_area?.start_surah?.id ? grade.lesson_area.start_surah.id.toString() : '',
+      start_verse: grade.lesson_area?.start_verse || '',
+      end_surah: grade.lesson_area?.end_surah?.id ? grade.lesson_area.end_surah.id.toString() : '',
+      end_verse: grade.lesson_area?.end_verse || '',
+      start_joze: grade.lesson_area?.start_joze || '',
+      end_joze: grade.lesson_area?.end_joze || '',
+      number: grade.number ?? 0,
+    });
+  }, [grade]);
+
+  // Check if this is a reading grade
+  const isReadingGrade = Number(grade.number) > 0 && 
+                       Number(grade.hefz) === 0 && 
+                       Number(grade.tajvid) === 0 && 
+                       Number(grade.sout) === 0 && 
+                       Number(grade.details) === 0;
+  
+  // Check if this is a hefz grade
+  const isHefzGrade = Number(grade.number) > 0 && 
+                    Number(grade.hefz) === 0 && 
+                    Number(grade.tajvid) === 0 && 
+                    Number(grade.sout) === 0 && 
+                    Number(grade.details) === 0;
+
+  // Check if this is a provideless grade (55 hefz score)
+  const isProvidelessGrade = Number(grade.hefz) === 55 && 
+                           Number(grade.tajvid) === 0 && 
+                           Number(grade.sout) === 0 && 
+                           Number(grade.details) === 0;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value === '' ? 0 : value }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -871,21 +1312,216 @@ function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => {
+        // Prevent closing when clicking on form elements
+        let targetElement = e.target as HTMLElement;
+        while (targetElement && targetElement !== document.body) {
+          if (targetElement.tagName === 'INPUT' || targetElement.tagName === 'BUTTON') {
+            e.preventDefault();
+            return;
+          }
+          targetElement = targetElement.parentElement as HTMLElement;
+        }
+      }}>
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center">ویرایش نمره</DialogTitle>
-          <DialogDescription className="text-center">مقادیر را ویرایش و ذخیره کنید</DialogDescription>
+          <DialogTitle className="text-xl font-bold text-center">
+            {isReadingGrade ? "ویرایش نمره روخوانی" : 
+             isHefzGrade ? "ویرایش نمره حفظ" : 
+             isProvidelessGrade ? "ویرایش نمره عدم تحویل" : 
+             "ویرایش نمره"}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {isReadingGrade ? "نمره روخوانی را ویرایش کنید" : 
+             isHefzGrade ? "نمره حفظ را ویرایش کنید" : 
+             isProvidelessGrade ? "نمره عدم تحویل را ویرایش کنید" : 
+             "مقادیر را ویرایش و ذخیره کنید"}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
-          <div className="grid grid-cols-2 gap-4">
-            <Input name="hefz" type="number" value={form.hefz} onChange={handleChange} placeholder="نمره حفظ" />
-            <Input name="tajvid" type="number" value={form.tajvid} onChange={handleChange} placeholder="نمره تجوید" />
+          <div className="grid grid-cols-1 gap-4">
+            {/* نمره */}
+            {isReadingGrade || isHefzGrade ? (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  {isReadingGrade ? "نمره روخوانی" : "نمره حفظ"}
+                </label>
+                <Input 
+                  name="number" 
+                  type="number" 
+                  min="0"
+                  max="100"
+                  value={form.number || ''} 
+                  onChange={handleChange} 
+                  placeholder={isReadingGrade ? "نمره روخوانی (0 تا 100)" : "نمره حفظ (0 تا 100)"}
+                  className="text-center text-lg"
+                />
+              </div>
+            ) : isProvidelessGrade ? (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  نمره عدم تحویل
+                </label>
+                <Input 
+                  name="hefz" 
+                  type="number" 
+                  min="0"
+                  max="100"
+                  value={form.hefz || ''} 
+                  onChange={handleChange} 
+                  placeholder="نمره عدم تحویل (0 تا 100)"
+                  className="text-center text-lg"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      نمره حفظ
+                    </label>
+                    <Input 
+                      name="hefz" 
+                      type="number" 
+                      min="0"
+                      max="70"
+                      value={form.hefz || ''} 
+                      onChange={handleChange} 
+                      placeholder="نمره حفظ (0 تا 70)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      نمره تجوید
+                    </label>
+                    <Input 
+                      name="tajvid" 
+                      type="number" 
+                      min="0"
+                      max="10"
+                      value={form.tajvid || ''} 
+                      onChange={handleChange} 
+                      placeholder="نمره تجوید (0 تا 10)"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      نمره صوت
+                    </label>
+                    <Input 
+                      name="sout" 
+                      type="number" 
+                      min="0"
+                      max="10"
+                      value={form.sout || ''} 
+                      onChange={handleChange} 
+                      placeholder="نمره صوت (0 تا 10)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      نمره مشخصات
+                    </label>
+                    <Input 
+                      name="details" 
+                      type="number" 
+                      min="0"
+                      max="10"
+                      value={form.details || ''} 
+                      onChange={handleChange} 
+                      placeholder="نمره مشخصات (0 تا 10)"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            {/* محدوده درسی */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">صفحه شروع</label>
+                <Input name="start_page" type="number" value={form.start_page || ''} onChange={handleChange} placeholder="صفحه شروع" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">صفحه پایان</label>
+                <Input name="end_page" type="number" value={form.end_page || ''} onChange={handleChange} placeholder="صفحه پایان" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">سوره شروع</label>
+                {isLoadingSurahs ? (
+                  <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                ) : (
+                  <SingleSelectCombobox
+                    options={surahs?.map(surah => ({
+                      value: surah.id.toString(),
+                      label: `${surah.titleAr}`
+                    })) || []}
+                    value={form.start_surah}
+                    onChange={value => setForm(prev => ({ ...prev, start_surah: value }))}
+                    placeholder="انتخاب سوره"
+                    className="w-full"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">آیه شروع</label>
+                <SingleSelectCombobox
+                  options={startSurahVerses?.map(verse => ({
+                    value: verse.toString(),
+                    label: verse.toString()
+                  })) || []}
+                  value={form.start_verse?.toString()}
+                  onChange={value => setForm(prev => ({ ...prev, start_verse: value }))}
+                  placeholder="انتخاب آیه"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">سوره پایان</label>
+                {isLoadingSurahs ? (
+                  <div className="h-10 w-full animate-pulse bg-zinc-100 dark:bg-zinc-800 rounded-md" />
+                ) : (
+                  <SingleSelectCombobox
+                    options={surahs?.map(surah => ({
+                      value: surah.id.toString(),
+                      label: `${surah.titleAr}`
+                    })) || []}
+                    value={form.end_surah}
+                    onChange={value => setForm(prev => ({ ...prev, end_surah: value }))}
+                    placeholder="انتخاب سوره"
+                    className="w-full"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">آیه پایان</label>
+                <SingleSelectCombobox
+                  options={endSurahVerses?.map(verse => ({
+                    value: verse.toString(),
+                    label: verse.toString()
+                  })) || []}
+                  value={form.end_verse?.toString()}
+                  onChange={value => setForm(prev => ({ ...prev, end_verse: value }))}
+                  placeholder="انتخاب آیه"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">جز شروع</label>
+                <Input name="start_joze" type="number" value={form.start_joze || ''} onChange={handleChange} placeholder="جز شروع" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">جز پایان</label>
+                <Input name="end_joze" type="number" value={form.end_joze || ''} onChange={handleChange} placeholder="جز پایان" />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input name="sout" type="number" value={form.sout} onChange={handleChange} placeholder="نمره صوت" />
-            <Input name="details" type="number" value={form.details} onChange={handleChange} placeholder="نمره تفاصیل" />
-          </div>
-          {/* Optionally add fields for page/surah/joze if needed */}
           <Button type="submit" className="w-full">ذخیره تغییرات</Button>
         </form>
       </DialogContent>
@@ -1044,7 +1680,48 @@ function ConfirmationModal({
   );
 }
 
-
+// Helper function to format lesson range
+const formatLessonRange = (grade: Grade): string => {
+  const lessonArea = grade.lesson_area;
+  
+  if (!lessonArea) return "";
+  
+  // Page-based range
+  if (lessonArea.start_page && lessonArea.end_page) {
+    return `صفحات ${lessonArea.start_page} تا ${lessonArea.end_page}`;
+  }
+  
+  // Surah and verse range
+  if (lessonArea.start_surah && lessonArea.end_surah) {
+    const startSurahName = lessonArea.start_surah.titleAr || lessonArea.start_surah.title;
+    const endSurahName = lessonArea.end_surah.titleAr || lessonArea.end_surah.title;
+    
+    if (lessonArea.start_verse && lessonArea.end_verse) {
+      if (lessonArea.start_surah.id === lessonArea.end_surah.id) {
+        return `${startSurahName} آیات ${lessonArea.start_verse} تا ${lessonArea.end_verse}`;
+      } else {
+        return `${startSurahName} آیه ${lessonArea.start_verse} تا ${endSurahName} آیه ${lessonArea.end_verse}`;
+      }
+    } else {
+      if (lessonArea.start_surah.id === lessonArea.end_surah.id) {
+        return `${startSurahName}`;
+      } else {
+        return `${startSurahName} تا ${endSurahName}`;
+      }
+    }
+  }
+  
+  // Joze (part) range
+  if (lessonArea.start_joze && lessonArea.end_joze) {
+    if (lessonArea.start_joze === lessonArea.end_joze) {
+      return `جز ${lessonArea.start_joze}`;
+    } else {
+      return `جز ${lessonArea.start_joze} تا ${lessonArea.end_joze}`;
+    }
+  }
+  
+  return "";
+};
 
 export default function AddNumberPage() {
   const { accessToken, user } = useAuth();
@@ -1079,31 +1756,68 @@ export default function AddNumberPage() {
         console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
         console.log("User data:", user);
         
-        const response = await MasterService.getMasters({}, accessToken);
-        console.log("Masters response:", response);
+        const allMasters = await MasterService.getAllMasters(accessToken);
+        console.log("All masters fetched:", allMasters.length);
+        console.log("Masters:", allMasters);
         
         // Try multiple ways to find the master
         let foundMaster = null;
         
-        // First try by mellicode matching username
-        if (user.username) {
-          foundMaster = response.data.data.find(
-            (master) => master.mellicode === user.username
-          );
-        }
-        
-        // If not found, try by user_id
-        if (!foundMaster && user.id) {
-          foundMaster = response.data.data.find(
+        // First try by user_id (most reliable)
+        if (user.id) {
+          foundMaster = allMasters.find(
             (master) => master.user_id === user.id
           );
+          console.log("Trying user_id match:", user.id, "Found:", foundMaster);
+        }
+        
+        // If not found, try by mellicode matching username (very common case)
+        if (!foundMaster && user.username) {
+          foundMaster = allMasters.find(
+            (master) => master.mellicode === user.username
+          );
+          console.log("Trying mellicode match:", user.username, "Found:", foundMaster);
         }
         
         // If not found, try by name matching
         if (!foundMaster && user.name) {
-          foundMaster = response.data.data.find(
+          foundMaster = allMasters.find(
             (master) => master.fullname === user.name
           );
+          console.log("Trying name match:", user.name, "Found:", foundMaster);
+        }
+        
+        // If still not found, try by username matching mellicode (string comparison)
+        if (!foundMaster && user.username) {
+          foundMaster = allMasters.find(
+            (master) => master.mellicode?.toString() === user.username?.toString()
+          );
+          console.log("Trying username-mellicode string match:", user.username, "Found:", foundMaster);
+        }
+        
+        // If still not found, try by ID matching user_id as string
+        if (!foundMaster && user.id) {
+          foundMaster = allMasters.find(
+            (master) => master.user_id?.toString() === user.id?.toString()
+          );
+          console.log("Trying user_id string match:", user.id, "Found:", foundMaster);
+        }
+        
+        // If still not found, try by phone number if available
+        if (!foundMaster && user.phone) {
+          foundMaster = allMasters.find(
+            (master) => master.phone === user.phone
+          );
+          console.log("Trying phone match:", user.phone, "Found:", foundMaster);
+        }
+        
+        // If still not found, try by fullname containing parts of user name
+        if (!foundMaster && user.fname && user.lname) {
+          const fullUserName = `${user.fname} ${user.lname}`;
+          foundMaster = allMasters.find(
+            (master) => master.fullname.includes(String(user.fname)) && master.fullname.includes(String(user.lname))
+          );
+          console.log("Trying fullname parts match:", fullUserName, "Found:", foundMaster);
         }
         
         setMasterData(foundMaster || null);
@@ -1111,7 +1825,8 @@ export default function AddNumberPage() {
         
         if (!foundMaster) {
           console.log("No master found for user:", user);
-          console.log("Available masters:", response.data.data);
+          console.log("Available masters:", allMasters);
+          console.log("Available masters user_ids:", allMasters.map(m => ({ id: m.id, user_id: m.user_id, mellicode: m.mellicode, fullname: m.fullname })));
         }
       } catch (error) {
         console.error("Error fetching master data:", error);
@@ -1283,27 +1998,35 @@ export default function AddNumberPage() {
       if (masterData) {
         masterId = masterData.id;
         userId = masterData.user_id || user?.id || 0;
+        console.log("📋 Grade submission - Using masterData - masterId:", masterId, "userId:", userId);
       } else {
         // Fallback to class master or current user
-        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
-                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        const classMaster = selectedClass.optimized_class_masters?.[0];
+        masterId = classMaster?.master?.id || classMaster?.user_id || 0;
         userId = user?.id || 0;
         
         // If user has master role and no masterId found, use user.id as masterId
         if (masterId === 0 && user?.app_roles?.some(role => role.name === 'master')) {
           masterId = user.id || 0;
         }
+        
+        console.log("📋 Grade submission - Using fallback - masterId:", masterId, "userId:", userId);
+        console.log("📋 Grade submission - Class master data:", classMaster);
       }
+
+      // Check if this is a reading class or hefz class
+      const isReadingClassType = isReadingClass(selectedCourse.title);
+      const isHefzClass = selectedCourse.title?.toLowerCase().includes('حفظ') || false;
 
       const payload: PayloadType = {
         class_id: selectedClass.id,
         master_id: masterId,
         student_id: selectedStudent.id,
         droos_id: selectedCourse.id,
-        hefz: parseFloat(data.hefz as string),
-        details: parseFloat(data.details as string),
-        tajvid: parseFloat(data.tajvid as string),
-        sout: parseFloat(data.sout as string),
+        hefz: 0,
+        details: 0,
+        tajvid: 0,
+        sout: 0,
         number: 0,
         practice_count: 0,
         lesson_area_id: selectedClass.dars?.id || 0,
@@ -1311,17 +2034,51 @@ export default function AddNumberPage() {
         tenant_id: 0,
       };
 
-      if (data.type === 'page') {
-        payload.start_page = parseInt(data.start_page as string);
-        payload.end_page = parseInt(data.end_page as string);
-      } else if (data.type === 'surah') {
-        payload.start_surah = data.start_surah as string;
-        payload.start_verse = parseInt(data.start_verse as string);
-        payload.end_surah = data.end_surah as string;
-        payload.end_verse = parseInt(data.end_verse as string);
-      } else if (data.type === 'part') {
-        payload.start_joze = parseInt(data.start_joze as string);
-        payload.end_joze = parseInt(data.end_joze as string);
+      // Handle different types of droos
+      if (isOneGrade) {
+        if (isHefzClass) {
+          // Hefz class - store grade in number field (0-100)
+          payload.number = parseFloat(data.number as string);
+          
+          if (data.type === 'surah') {
+            payload.start_surah = data.start_surah as string;
+            payload.start_verse = parseInt(data.start_verse as string);
+            payload.end_surah = data.end_surah as string;
+            payload.end_verse = parseInt(data.end_verse as string);
+          } else if (data.type === 'page') {
+            payload.start_page = parseInt(data.start_page as string);
+            payload.end_page = parseInt(data.end_page as string);
+          }
+        } else if (isReadingClassType) {
+          // Reading class - store grade in number field
+          payload.number = parseFloat(data.number as string);
+          payload.start_page = parseInt(data.start_page as string);
+          payload.end_page = parseInt(data.end_page as string);
+        } else {
+          // Other is_one_grade droos - store grade in hefz field
+          payload.hefz = parseFloat(data.hefz as string);
+          payload.start_page = parseInt(data.start_page as string);
+          payload.end_page = parseInt(data.end_page as string);
+        }
+      } else {
+        // Multi-grade droos
+        payload.hefz = parseFloat(data.hefz as string);
+        payload.details = parseFloat(data.details as string);
+        payload.tajvid = parseFloat(data.tajvid as string);
+        payload.sout = parseFloat(data.sout as string);
+
+        if (data.type === 'page') {
+          payload.start_page = parseInt(data.start_page as string);
+          payload.end_page = parseInt(data.end_page as string);
+        } else if (data.type === 'surah') {
+          payload.start_surah = data.start_surah as string;
+          payload.start_verse = parseInt(data.start_verse as string);
+          payload.end_surah = data.end_surah as string;
+          payload.end_verse = parseInt(data.end_verse as string);
+        } else if (data.type === 'part') {
+          payload.start_joze = parseInt(data.start_joze as string);
+          payload.end_joze = parseInt(data.end_joze as string);
+        }
       }
 
       const jsDate = selectedDate ? selectedDate.toDate() : null;
@@ -1361,9 +2118,9 @@ export default function AddNumberPage() {
             .replace("The tajvid field must not be greater than 10.", "نمره تجوید نباید بیشتر از 10 باشد")
             .replace("The hefz field must not be greater than 70.", "نمره حفظ نباید بیشتر از 70 باشد")
             .replace("The sout field must not be greater than 10.", "نمره صوت نباید بیشتر از 10 باشد")
-            .replace("The details field must not be greater than 10.", "نمره تفاصیل نباید بیشتر از 10 باشد");
+            .replace("The details field must not be greater than 10.", "نمره مشخصات نباید بیشتر از 10 باشد");
           
-          if (isOneGrade) {
+          if (isOneGrade || isReadingClass(selectedCourse?.title || '')) {
             toast.error(persianMessage);
           } else if (!formRefs) {
             toast.error(persianMessage);
@@ -1412,25 +2169,145 @@ export default function AddNumberPage() {
     if (!editingGrade) return;
     try {
       setLoading(true);
-      const updated = await optimizedNumberService.update(editingGrade.id, {
-        hefz: parseFloat(form.hefz as string),
-        tajvid: parseFloat(form.tajvid as string),
-        sout: parseFloat(form.sout as string),
-        details: parseFloat(form.details as string),
-        // Add other fields as needed
-      }, accessToken!);
+      // Check if this is a reading grade
+      const isReadingGrade = Number(editingGrade.number) > 0 && 
+                           Number(editingGrade.hefz) === 0 && 
+                           Number(editingGrade.tajvid) === 0 && 
+                           Number(editingGrade.sout) === 0 && 
+                           Number(editingGrade.details) === 0;
+      // Check if this is a hefz grade
+      const isHefzGrade = Number(editingGrade.number) > 0 && 
+                        Number(editingGrade.hefz) === 0 && 
+                        Number(editingGrade.tajvid) === 0 && 
+                        Number(editingGrade.sout) === 0 && 
+                        Number(editingGrade.details) === 0;
+      // Check if this is a provideless grade (55 hefz score)
+      const isProvidelessGrade = Number(editingGrade.hefz) === 55 && 
+                               Number(editingGrade.tajvid) === 0 && 
+                               Number(editingGrade.sout) === 0 && 
+                               Number(editingGrade.details) === 0;
+      // استخراج فیلدهای اصلی از grade و state
+      const class_id = selectedClass?.id;
+      const master_id = masterData?.id;
+      const student_id = editingGrade.studentId;
+      const droos_id = editingGrade.droos_id?.id || editingGrade.dars?.id;
+      const lesson_area_id = editingGrade.lesson_area?.id;
+      const user_id = user?.id || masterData?.user_id;
+      const tenant_id = selectedClass?.tenant_id || user?.tenant_id || 0;
+      const practice_count = editingGrade.practice_count || 0;
+      
+      type UpdateData = {
+        class_id: number;
+        master_id: number;
+        student_id: number;
+        droos_id?: number;
+        lesson_area_id?: number;
+        user_id: number;
+        tenant_id: number;
+        practice_count: number;
+        number?: number;
+        hefz?: number;
+        tajvid?: number;
+        sout?: number;
+        details?: number;
+        start_page?: number;
+        end_page?: number;
+        start_surah?: number;
+        start_verse?: number;
+        end_surah?: number;
+        end_verse?: number;
+        start_joze?: number;
+        end_joze?: number;
+      };
+      
+      let updateData: UpdateData = {
+        class_id: class_id ?? 0,
+        master_id: master_id ?? 0,
+        student_id: student_id,
+        droos_id: droos_id ?? 0,
+        lesson_area_id: lesson_area_id ?? 0,
+        user_id: user_id ?? 0,
+        tenant_id: tenant_id ?? 0,
+        practice_count,
+      };
+      if (isReadingGrade || isHefzGrade) {
+        // Update number field for reading/hefz grades
+        updateData = {
+          ...updateData,
+          number: parseFloat(form.number as string),
+          hefz: 0,
+          tajvid: 0,
+          sout: 0,
+          details: 0,
+          start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
+          end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
+          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
+          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
+          start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
+          end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
+        };
+      } else if (isProvidelessGrade) {
+        // Update hefz field for provideless grades
+        updateData = {
+          ...updateData,
+          hefz: parseFloat(form.hefz as string),
+          tajvid: 0,
+          sout: 0,
+          details: 0,
+          number: 0,
+          start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
+          end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
+          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
+          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
+          start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
+          end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
+        };
+      } else {
+        // Update individual fields for multi-grade
+        updateData = {
+          ...updateData,
+          hefz: parseFloat(form.hefz as string),
+          tajvid: parseFloat(form.tajvid as string),
+          sout: parseFloat(form.sout as string),
+          details: parseFloat(form.details as string),
+          number: 0,
+          start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
+          end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
+          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
+          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
+          start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
+          end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
+        };
+      }
+      console.log("Updating grade with data:", updateData);
+      const updated = await optimizedNumberService.update(editingGrade.id, updateData, accessToken!);
       toast.success("نمره با موفقیت ویرایش شد");
       // Update local state
       setExistingGrades(prev => {
         const grades = prev[editingGrade.studentId]?.map((g: Grade) => {
           if (g.id === updated.id) {
-            // Only update the fields that are safe to update
             return {
               ...g,
-              hefz: updated.hefz,
-              tajvid: updated.tajvid,
-              sout: updated.sout,
-              details: updated.details,
+              hefz: updateData.hefz ?? g.hefz,
+              tajvid: updateData.tajvid ?? g.tajvid,
+              sout: updateData.sout ?? g.sout,
+              details: updateData.details ?? g.details,
+              number: updateData.number ?? g.number,
+              practice_count: updateData.practice_count,
+              start_page: updateData.start_page,
+              end_page: updateData.end_page,
+              start_surah: updateData.start_surah,
+              start_verse: updateData.start_verse,
+              end_surah: updateData.end_surah,
+              end_verse: updateData.end_verse,
+              start_joze: updateData.start_joze,
+              end_joze: updateData.end_joze,
             };
           }
           return g;
@@ -1439,8 +2316,9 @@ export default function AddNumberPage() {
       });
       setEditModalOpen(false);
       setEditingGrade(null);
-    } catch {
-      toast.error("خطا در ویرایش نمره");
+    } catch (error) {
+      console.error("Error updating grade:", error);
+      toast.error("خطا در ویرایش نمره: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
     } finally {
       setLoading(false);
     }
@@ -1479,8 +2357,8 @@ export default function AddNumberPage() {
         console.log("📋 Using masterData - masterId:", masterId, "userId:", userId);
       } else {
         // Fallback to class master or current user
-        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
-                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        const classMaster = selectedClass.optimized_class_masters?.[0];
+        masterId = classMaster?.master?.id || classMaster?.user_id || 0;
         userId = user?.id || 0;
         
         // If user has master role and no masterId found, use user.id as masterId
@@ -1489,6 +2367,7 @@ export default function AddNumberPage() {
         }
         
         console.log("📋 Using fallback - masterId:", masterId, "userId:", userId);
+        console.log("📋 Class master data:", classMaster);
         
         if (masterId === 0) {
           toast.error("اطلاعات مربی یافت نشد. لطفا با مدیر سیستم تماس بگیرید.");
@@ -1618,8 +2497,8 @@ export default function AddNumberPage() {
         console.log("📋 Using masterData - masterId:", masterId, "userId:", userId);
       } else {
         // Fallback to class master or current user
-        masterId = selectedClass.optimized_class_masters?.[0]?.master?.id || 
-                  selectedClass.optimized_class_masters?.[0]?.user_id || 0;
+        const classMaster = selectedClass.optimized_class_masters?.[0];
+        masterId = classMaster?.master?.id || classMaster?.user_id || 0;
         userId = user?.id || 0;
         
         // If user has master role and no masterId found, use user.id as masterId
@@ -1628,6 +2507,7 @@ export default function AddNumberPage() {
         }
         
         console.log("📋 Using fallback - masterId:", masterId, "userId:", userId);
+        console.log("📋 Class master data:", classMaster);
         
         if (masterId === 0) {
           toast.error("اطلاعات مربی یافت نشد. لطفا با مدیر سیستم تماس بگیرید.");
@@ -1862,26 +2742,80 @@ export default function AddNumberPage() {
                 ) : !masterData ? (
                   <div className="text-center text-red-500">برای شما هیچ کلاسی ثبت نشده است</div>
                 ) : (
-                  <SingleSelectCombobox
-                    options={classes
-                      .filter(classItem =>
-                        classItem.optimized_class_masters?.some(master =>
-                          master.master?.id === masterData.id
-                        )
-                      )
-                      .map((classItem) => ({
-                        value: classItem.id.toString(),
-                        label: `${classItem.dars?.title || "بدون نام"} - ${
-                          classItem.optimized_class_masters?.[0]?.master?.fullname ||
-                          classItem.optimized_class_masters?.[0]?.users?.fullname ||
-                          "بدون استاد"
-                        }`,
-                      }))}
-                    value={selectedClass?.id.toString()}
-                    onChange={(value: string) => handleClassChange(value)}
-                    placeholder="انتخاب کلاس"
-                    className="w-full"
-                  />
+                  (() => {
+                    // Debug log for master data and classes
+                    console.log("Master data for filtering:", masterData);
+                    console.log("All classes:", classes);
+                    
+                    const filteredClasses = classes.filter(classItem => {
+                      console.log("Checking class:", classItem.id, classItem.dars?.title);
+                      console.log("Class masters:", classItem.optimized_class_masters);
+                      
+                      // Check multiple conditions for master matching
+                      const hasMatchingMaster = classItem.optimized_class_masters?.some(master => {
+                        console.log("Checking master:", master);
+                        
+                        // Check if master.master.id matches masterData.id
+                        if (master.master?.id === masterData.id) {
+                          console.log("Match found via master.master.id:", master.master.id);
+                          return true;
+                        }
+                        
+                        // Check if master.user_id matches masterData.id
+                        if (master.user_id === masterData.id) {
+                          console.log("Match found via master.user_id:", master.user_id);
+                          return true;
+                        }
+                        
+                        // Check if master.user_id matches masterData.user_id
+                        if (master.user_id === masterData.user_id) {
+                          console.log("Match found via master.user_id === masterData.user_id:", master.user_id);
+                          return true;
+                        }
+                        
+                        // Check if master.master.user_id matches user.id
+                        if (master.master?.user_id === user?.id) {
+                          console.log("Match found via master.master.user_id === user.id:", master.master.user_id);
+                          return true;
+                        }
+                        
+                        return false;
+                      });
+                      
+                      console.log("Has matching master:", hasMatchingMaster);
+                      return hasMatchingMaster;
+                    });
+                    
+                    console.log("Filtered classes:", filteredClasses);
+                    
+                    if (filteredClasses.length === 0) {
+                      return (
+                        <div className="text-center text-red-500">
+                          <p>هیچ کلاسی برای شما یافت نشد</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Master ID: {masterData.id}, User ID: {user?.id}
+                          </p>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <SingleSelectCombobox
+                        options={filteredClasses.map((classItem) => ({
+                          value: classItem.id.toString(),
+                          label: `${classItem.dars?.title || "بدون نام"} - ${
+                            classItem.optimized_class_masters?.[0]?.master?.fullname ||
+                            classItem.optimized_class_masters?.[0]?.users?.fullname ||
+                            "بدون استاد"
+                          }`,
+                        }))}
+                        value={selectedClass?.id.toString()}
+                        onChange={(value: string) => handleClassChange(value)}
+                        placeholder="انتخاب کلاس"
+                        className="w-full"
+                      />
+                    );
+                  })()
                 )}
               </div>
               <div className="flex-1 w-full mx-auto">
@@ -2030,68 +2964,104 @@ export default function AddNumberPage() {
                             )}
                           </motion.div>
                         </div>
-                        {(!existingGrades[studentData.student.id] || existingGrades[studentData.student.id].length < 3) && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.1 + 0.4 }}
-                          >
-                            {isWithin24Hours(new Date().toString()) ? (
-                              <div className="flex flex-col items-end gap-1">
-                                <Button
-                                  onClick={() => handleAddNumber(studentData.student.id)}
-                                  disabled={loading || actionLoading}
-                                  size="sm"
-                                  className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
-                                >
-                                  افزودن نمره
-                                </Button>
-                                <div className="flex gap-1">
+                        {(() => {
+                          const isReading = selectedClass && isReadingClass(selectedClass.dars?.title || '');
+                          const canAddGrade = isReading || !existingGrades[studentData.student.id] || existingGrades[studentData.student.id].length < 10;
+                          return canAddGrade && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: index * 0.1 + 0.4 }}
+                            >
+                              {isWithin24Hours(new Date().toString()) ? (
+                                <div className="flex flex-col items-end gap-1">
                                   <Button
-                                    onClick={() => handleProvideless(studentData.student.id)}
+                                    onClick={() => handleAddNumber(studentData.student.id)}
                                     disabled={loading || actionLoading}
                                     size="sm"
-                                    className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-zinc-900 dark:hover:bg-orange-400 transition-colors duration-200 text-xs px-2"
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-zinc-900 dark:hover:bg-emerald-400 transition-colors duration-200"
                                   >
-                                    {actionLoading && selectedStudentForAction?.id === studentData.student.id && isProvideConfirmOpen ? (
-                                      <div className="flex items-center gap-1">
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                        <span>درحال...</span>
-                                      </div>
-                                    ) : (
-                                      "عدم تحویل"
-                                    )}
+                                    افزودن نمره
                                   </Button>
-                                  <Button
-                                    onClick={() => handleAbsent(studentData.student.id)}
-                                    disabled={loading || actionLoading}
-                                    size="sm"
-                                    className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:text-zinc-900 dark:hover:bg-red-400 transition-colors duration-200 text-xs px-2"
-                                  >
-                                    غایب
-                                  </Button>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      onClick={() => handleProvideless(studentData.student.id)}
+                                      disabled={loading || actionLoading}
+                                      size="sm"
+                                      className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-zinc-900 dark:hover:bg-orange-400 transition-colors duration-200 text-xs px-2"
+                                    >
+                                      {actionLoading && selectedStudentForAction?.id === studentData.student.id && isProvideConfirmOpen ? (
+                                        <div className="flex items-center gap-1">
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                          <span>درحال...</span>
+                                        </div>
+                                      ) : (
+                                        "عدم تحویل"
+                                      )}
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleAbsent(studentData.student.id)}
+                                      disabled={loading || actionLoading}
+                                      size="sm"
+                                      className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:text-zinc-900 dark:hover:bg-red-400 transition-colors duration-200 text-xs px-2"
+                                    >
+                                      غایب
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                زمان افزودن نمره به پایان رسیده است
-                              </span>
-                            )}
-                          </motion.div>
-                        )}
+                              ) : (
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                  زمان افزودن نمره به پایان رسیده است
+                                </span>
+                              )}
+                            </motion.div>
+                          );
+                        })()}
                       </div>
                       
                       {existingGrades[studentData.student.id] && (
                         <div className="grid grid-cols-1 gap-2">
                           {existingGrades[studentData.student.id].map((grade, gradeIndex) => {
-                            const totalScore = Number(grade.hefz) + Number(grade.tajvid) + Number(grade.sout) + Number(grade.details);
-                            const isNegative = totalScore < 80;
+                            // Check if this is a hefz grade (is_one_grade with number field)
+                            const isHefzGradeForScore = Number(grade.number) > 0 && 
+                                                      Number(grade.hefz) === 0 && 
+                                                      Number(grade.tajvid) === 0 && 
+                                                      Number(grade.sout) === 0 && 
+                                                      Number(grade.details) === 0 &&
+                                                      selectedClass?.dars?.title?.toLowerCase().includes('حفظ');
+                            
+                            // Calculate total score based on grade type
+                            let totalScore: number;
+                            let isNegative: boolean;
+                            
+                            if (isHefzGradeForScore) {
+                              totalScore = Number(grade.number);
+                              isNegative = totalScore < 80;
+                            } else {
+                              totalScore = Number(grade.hefz) + Number(grade.tajvid) + Number(grade.sout) + Number(grade.details);
+                              isNegative = totalScore < 80;
+                            }
+                            
+                            // Check if this is a hefz grade for display purposes
+                            const isHefzGrade = Number(grade.number) > 0 && 
+                                              Number(grade.hefz) === 0 && 
+                                              Number(grade.tajvid) === 0 && 
+                                              Number(grade.sout) === 0 && 
+                                              Number(grade.details) === 0 &&
+                                              selectedClass?.dars?.title?.toLowerCase().includes('حفظ');
                             
                             // Check if this is a provideless grade (55 hefz score with 0 for others)
                             const isProvidelessGrade = Number(grade.hefz) === 55 && 
                                                      Number(grade.tajvid) === 0 && 
                                                      Number(grade.sout) === 0 && 
                                                      Number(grade.details) === 0;
+                            
+                            // Check if this is a reading grade (only number has value, others are 0)
+                            const isReadingGrade = Number(grade.number) > 0 && 
+                                                 Number(grade.hefz) === 0 && 
+                                                 Number(grade.tajvid) === 0 && 
+                                                 Number(grade.sout) === 0 && 
+                                                 Number(grade.details) === 0;
                             
                             return (
                               <motion.div 
@@ -2105,51 +3075,70 @@ export default function AddNumberPage() {
                                 }}
                                 className={`group relative bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50 p-2 rounded-md hover:shadow-md transition-all duration-300 ${
                                   isNegative ? 'hover:border-2 hover:border-red-500/50 dark:hover:border-red-500/30' : ''
-                                } ${isProvidelessGrade ? 'border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20' : ''}`}
+                                } ${isProvidelessGrade ? 'border border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20' : ''} ${
+                                  isReadingGrade ? 'border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20' : ''
+                                } ${isHefzGrade ? 'border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20' : ''}`}
                               >
                                 {isProvidelessGrade ? (
                                   // Special display for provideless grade (55)
-                                  <div className="flex items-center justify-between">
-                                    <motion.span 
-                                      initial={{ opacity: 0, scale: 0.8 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full"
-                                    >
-                                      حفظ
-                                    </motion.span>
-                                    <div className="flex items-center gap-2">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
                                       <motion.span 
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="text-lg font-bold text-red-600 dark:text-red-400"
+                                        className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full"
                                       >
-                                        55
+                                        حفظ
                                       </motion.span>
-                                      {isWithin24Hours(grade.created_at) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleEditGrade(studentData.student.id, grade)}
-                                          className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                      <div className="flex items-center gap-2">
+                                        <motion.span 
+                                          initial={{ opacity: 0, scale: 0.8 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          className="text-lg font-bold text-red-600 dark:text-red-400"
                                         >
-                                          <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                                        </Button>
-                                      )}
+                                          55
+                                        </motion.span>
+                                        {isWithin24Hours(grade.created_at) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                            className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                          >
+                                            <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                          </Button>
+                                        )}
+                                      </div>
                                     </div>
+                                    {formatLessonRange(grade) && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 text-center"
+                                      >
+                                        {formatLessonRange(grade)}
+                                      </motion.div>
+                                    )}
                                   </div>
-                                ) : (
-                                  // Normal grade display
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                                      {grade.dars?.title || "بدون نام"}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1">
-                                        <span className={`text-sm font-bold ${
-                                          isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
-                                        }`}>
-                                          {totalScore}
-                                        </span>
+                                ) : isReadingGrade ? (
+                                  // Special display for reading grade
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <motion.span 
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full"
+                                      >
+                                        روخوانی
+                                      </motion.span>
+                                      <div className="flex items-center gap-2">
+                                        <motion.span 
+                                          initial={{ opacity: 0, scale: 0.8 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}
+                                        >
+                                          {grade.number}
+                                        </motion.span>
                                         {isNegative && (
                                           <motion.span 
                                             initial={{ opacity: 0, scale: 0.8 }}
@@ -2159,18 +3148,123 @@ export default function AddNumberPage() {
                                             منفی
                                           </motion.span>
                                         )}
+                                        {isWithin24Hours(grade.created_at) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                            className="h-6 px-1 hover:bg-blue-500/10 dark:hover:bg-blue-500/20"
+                                          >
+                                            <Edit2 className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                          </Button>
+                                        )}
                                       </div>
-                                      {isWithin24Hours(grade.created_at) && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleEditGrade(studentData.student.id, grade)}
-                                          className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
-                                        >
-                                          <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                                        </Button>
-                                      )}
                                     </div>
+                                    {formatLessonRange(grade) && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 text-center"
+                                      >
+                                        {formatLessonRange(grade)}
+                                      </motion.div>
+                                    )}
+                                  </div>
+                                ) : isHefzGrade ? (
+                                  // Special display for hefz grade
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <motion.span 
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded-full"
+                                      >
+                                        حفظ
+                                      </motion.span>
+                                      <div className="flex items-center gap-2">
+                                        <motion.span 
+                                          initial={{ opacity: 0, scale: 0.8 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          className={`text-lg font-bold ${Number(grade.number) < 80 ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`}
+                                        >
+                                          {grade.number}
+                                        </motion.span>
+                                        {Number(grade.number) < 80 && (
+                                          <motion.span 
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full"
+                                          >
+                                            منفی
+                                          </motion.span>
+                                        )}
+                                        {isWithin24Hours(grade.created_at) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                            className="h-6 px-1 hover:bg-purple-500/10 dark:hover:bg-purple-500/20"
+                                          >
+                                            <Edit2 className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {formatLessonRange(grade) && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 text-center"
+                                      >
+                                        {formatLessonRange(grade)}
+                                      </motion.div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  // Normal grade display
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                        {grade.dars?.title || "بدون نام"}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
+                                          <span className={`text-sm font-bold ${
+                                            isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                                          }`}>
+                                            {totalScore}
+                                          </span>
+                                          {isNegative && (
+                                            <motion.span 
+                                              initial={{ opacity: 0, scale: 0.8 }}
+                                              animate={{ opacity: 1, scale: 1 }}
+                                              className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full"
+                                            >
+                                              منفی
+                                            </motion.span>
+                                          )}
+                                        </div>
+                                        {isWithin24Hours(grade.created_at) && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditGrade(studentData.student.id, grade)}
+                                            className="h-6 px-1 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20"
+                                          >
+                                            <Edit2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {formatLessonRange(grade) && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: -5 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 text-center"
+                                      >
+                                        {formatLessonRange(grade)}
+                                      </motion.div>
+                                    )}
                                   </div>
                                 )}
                               </motion.div>
