@@ -88,6 +88,7 @@ const ModernStatCard = ({
 
 export default function DashboardPage() {
   const { user } = useAuth();
+
   const [countyData, setCountyData] = React.useState<
     Array<{
       title: string;
@@ -155,21 +156,26 @@ export default function DashboardPage() {
           </div>
           {/* Optionally, add a date picker or user avatar here for more modern look */}
         </div>
-        {/* Stat Cards */}
-        <div className="grid gap-3 sm:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {loading
-            ? Array.from({ length: skeletonCount }).map((_, idx) => (
-                <StatCardSkeleton key={idx} index={idx} />
-              ))
-            : stats.map((stat, index) => (
-                <ModernStatCard key={stat.title} stat={stat} index={index} />
-              ))}
-        </div>
-        
-        {/* Average Scores Chart */}
-        <div className="mt-2 sm:mt-0">
-          <AverageScoresChart />
-        </div>
+        {/* Stat Cards and Chart: Only for Admins */}
+        {user?.app_roles?.some((role: unknown) => (role as { name: string }).name === 'admin') && (
+          <>
+            {/* Stat Cards */}
+            <div className="grid gap-3 sm:gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {loading
+                ? Array.from({ length: skeletonCount }).map((_, idx) => (
+                    <StatCardSkeleton key={idx} index={idx} />
+                  ))
+                : stats.map((stat, index) => (
+                    <ModernStatCard key={stat.title} stat={stat} index={index} />
+                  ))}
+            </div>
+            
+            {/* Average Scores Chart */}
+            <div className="mt-2 sm:mt-0">
+              <AverageScoresChart />
+            </div>
+          </>
+        )}
       </div>
     </PageTransition>
   );
