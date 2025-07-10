@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import GradientText from "@/components/reactbit/texts/GradientText";
 import Image from "next/image";
 import PusherTest from "@/components/PusherTest";
 
@@ -161,16 +160,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Link prefetch href="/dashboard" className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <Image src="/fav-icon.png" alt="Logo" width={32} height={32} className="h-8 w-8" />
-              <GradientText
-                colors={["#40ffaa", "#4079ff", "#40ffaa", "#4079ff", "#40ffaa"]}
-                animationSpeed={3}
-                showBorder={false}
-                className="text-xl font-bold"
-              >
-                سامانه جامع آموزشی
-                <br />
-                <span className="text-base">دارالقرآن امام شاطبی (رح)</span>
-              </GradientText>
+              <div className="overflow-hidden w-48 sm:w-64 md:w-80" style={{ direction: "rtl" }}>
+                <span
+                  className="inline-block whitespace-nowrap text-base font-semibold text-blue-600 dark:text-blue-400 animate-marquee"
+                  style={{
+                    animation: "marquee 5s linear infinite",
+                  }}
+                >
+                  سامانه جامع آموزشی دارالقرآن امام شاطبی (رح)
+                </span>
+                <style jsx>{`
+                  @keyframes marquee {
+                    0% {
+                      transform: translateX(-100%);
+                    }
+                    100% {
+                      transform: translateX(100%);
+                    }
+                  }
+                `}</style>
+            </div>
             </div>
             </Link>
           
@@ -254,9 +263,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Add Logo and Title here for mobile view */}
           <div className="flex items-center gap-2 mx-auto">
             <Image src="/fav-icon.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
-            <span className="text-base font-semibold text-blue-600 dark:text-blue-400">
-              سامانه جامع آموزشی دارالقرآن امام شاطبی (رح)
-            </span>
+            <div className="overflow-hidden w-48 sm:w-64 md:w-80" style={{ direction: "rtl" }}>
+              <span
+                className="inline-block whitespace-nowrap text-base font-semibold text-blue-600 dark:text-blue-400 animate-marquee"
+                style={{
+                  animation: "marquee 10s linear infinite",
+                }}
+              >
+                سامانه جامع آموزشی دارالقرآن امام شاطبی (رح)
+              </span>
+              <style jsx>{`
+                @keyframes marquee {
+                  0% {
+                    transform: translateX(100%);
+                  }
+                  100% {
+                    transform: translateX(-100%);
+                  }
+                }
+              `}</style>
+            </div>
           </div>
         </div>
 
