@@ -15,6 +15,7 @@
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
     "@mui/styled-engine-sc": "^7.1.0",
+    "@mui/x-charts": "^8.7.0",
     "@mui/x-date-pickers": "^8.3.1",
     "@radix-ui/react-accordion": "^1.2.8",
     "@radix-ui/react-alert-dialog": "^1.1.11",

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
@@ -33,6 +34,12 @@ interface NavItem {
 }
 
 const items: NavItem[] = [
+  {
+    title: "داشبورد",
+    href: "/dashboard",
+    icon: Home,
+    requiredRole: "",
+  },
   {
     title: "مدیریت کاربران",
     href: "/dashboard/users",

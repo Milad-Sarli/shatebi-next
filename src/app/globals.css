@@ -234,6 +234,20 @@
   }
 }
 
+@keyframes scroll-text {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(0); }
+  75% { transform: translateX(-100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Only apply scrolling animation on mobile screens */
+@media (max-width: 640px) {
+  .animate-scroll-text {
+    animation: scroll-text 4s linear infinite;
+  }
+}
+
 /* === Pinar Font Faces === */
 @font-face {
   font-family: 'Pinar';
