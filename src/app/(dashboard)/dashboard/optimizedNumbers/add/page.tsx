@@ -1981,6 +1981,7 @@ export default function AddNumberPage() {
         lesson_area_id: number;
         user_id: number;
         tenant_id: number;
+        created_at?: string;
         start_page?: number;
         end_page?: number;
         start_surah?: string;
@@ -2084,6 +2085,9 @@ export default function AddNumberPage() {
       const jsDate = selectedDate ? selectedDate.toDate() : null;
       const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
       if (!jsDate) return;
+
+      // Add the selected date to the payload
+      payload.created_at = format(jsDate, "yyyy-MM-dd HH:mm:ss");
 
       await optimizedNumberService.create(payload, accessToken);
       toast.success("نمره با موفقیت ثبت شد");
@@ -2391,7 +2395,7 @@ export default function AddNumberPage() {
       console.log("Student activity created successfully");
 
       // Create a grade with score 55
-      const gradePayload = {
+      const gradePayload: any = {
         class_id: selectedClass.id,
         master_id: masterId,
         student_id: studentId,
@@ -2406,6 +2410,12 @@ export default function AddNumberPage() {
         user_id: userId,
         tenant_id: 0,
       };
+
+      // Add the selected date to the grade payload
+      if (selectedDate) {
+        const gradeDate = selectedDate.toDate();
+        gradePayload.created_at = format(gradeDate, "yyyy-MM-dd HH:mm:ss");
+      }
 
       console.log("gradePayload:", gradePayload);
       
