@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import CustomJalaliDatePicker from "@/components/ui/CustomJalaliDatePicker";
 
 const formSchema = z.object({
   student_id: z.string().min(1, "لطفا دانش‌آموز را انتخاب کنید"),
@@ -38,6 +39,7 @@ const formSchema = z.object({
   number: z.string().min(1, "لطفا نمره کل را وارد کنید"),
   practice_count: z.string().min(1, "لطفا تعداد تمرین را وارد کنید"),
   lesson_area_id: z.string().min(1, "لطفا حوزه درس را انتخاب کنید"),
+  date: z.string().min(1, "لطفا تاریخ را انتخاب کنید"),
 });
 
 interface NumberFormProps {
@@ -69,6 +71,7 @@ export function NumberForm({
       number: initialData?.number?.toString() || "",
       practice_count: initialData?.practice_count?.toString() || "",
       lesson_area_id: initialData?.lesson_area_id?.toString() || "",
+      date: initialData?.date || "",
     },
   });
 
@@ -130,6 +133,7 @@ export function NumberForm({
         lesson_area_id: parseInt(values.lesson_area_id),
         class_id: 0,
         droos_id: 0,
+        date: values.date,
       };
 
       if (numberId) {
@@ -306,6 +310,23 @@ export function NumberForm({
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>تاریخ</FormLabel>
+              <FormControl>
+                <CustomJalaliDatePicker
+                  value={field.value ? new Date(field.value) : undefined}
+                  onChange={(date) => field.onChange(date)}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
