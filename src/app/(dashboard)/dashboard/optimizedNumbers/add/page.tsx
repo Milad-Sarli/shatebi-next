@@ -1914,11 +1914,32 @@ export default function AddNumberPage() {
         );
 
         const gradesMap: Record<number, Grade[]> = {};
-        const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+        // تاریخ انتخاب شده را به میلادی تبدیل کن
+        // Always use Gregorian yyyy-MM-dd for comparison
+        const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+        
+        // Debug logging for date conversion
+        console.log("📅 Date debugging:");
+        console.log("Selected date object:", selectedDate);
+        console.log("JS date (Gregorian):", jsDate);
+        console.log("Selected date string (Gregorian):", selectedDateGregorianStr);
+        console.log("JS date string (Jalali):", jsDateStr);
 
         response.data.forEach((student) => {
           const todayGrades = student.grades.filter(
-            (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+            (grade) => {
+              // اولویت با ستون date، اگر نبود از created_at استفاده کن
+              const dateToUse = grade.date || grade.created_at;
+              if (!dateToUse) return false;
+              try {
+                // Always format grade date as Gregorian yyyy-MM-dd
+                const gradeDateGregorian = format(new Date(dateToUse), "yyyy-MM-dd");
+                const isMatch = gradeDateGregorian === selectedDateGregorianStr;
+                return isMatch;
+              } catch (error) {
+                return false;
+              }
+            }
           );
           if (todayGrades.length > 0) {
             gradesMap[student.student.id] = todayGrades;
@@ -2038,7 +2059,7 @@ export default function AddNumberPage() {
         lesson_area_id: selectedClass.dars?.id || 0,
         user_id: userId,
         tenant_id: 0,
-        date: format(jsDate, "yyyy-MM-dd HH:mm:ss"), // تاریخ انتخاب شده (MySQL format)
+        date: jsDate.toISOString(), // تاریخ انتخاب شده (timestamp with time)
       };
 
       // Handle different types of droos
@@ -2110,9 +2131,17 @@ export default function AddNumberPage() {
       if (student) {
         const todayGrades = student.grades.filter(
           (grade) => {
-            // اگر ستون date وجود دارد، از آن استفاده کن، در غیر این صورت از created_at
-            const gradeDate = grade.date ? format(new Date(grade.date), "yyyy-MM-dd") : format(new Date(grade.created_at), "yyyy-MM-dd");
-            return gradeDate === selectedDateStr;
+            // اولویت با ستون date، اگر نبود از created_at استفاده کن
+            const dateToUse = grade.date || grade.created_at;
+            if (!dateToUse) return false;
+            
+            try {
+              const gradeDate = format(new Date(dateToUse), "yyyy-MM-dd");
+              return gradeDate === selectedDateStr;
+            } catch (error) {
+              console.error("Error parsing date:", dateToUse, error);
+              return false;
+            }
           }
         );
         setExistingGrades(prev => ({
@@ -2174,10 +2203,18 @@ export default function AddNumberPage() {
   };
 
   const isGradeWithin24Hours = (grade: Grade) => {
-    // اگر ستون date وجود دارد، از آن استفاده کن، در غیر این صورت از created_at
-    const gradeDate = grade.date ? new Date(grade.date) : new Date(grade.created_at);
-    const twentyFourHoursAgo = subHours(new Date(), 24);
-    return gradeDate > twentyFourHoursAgo;
+    // اولویت با ستون date، اگر نبود از created_at استفاده کن
+    const dateToUse = grade.date || grade.created_at;
+    if (!dateToUse) return false;
+    
+    try {
+      const gradeDate = new Date(dateToUse);
+      const twentyFourHoursAgo = subHours(new Date(), 24);
+      return gradeDate > twentyFourHoursAgo;
+    } catch (error) {
+      console.error("Error parsing date in isGradeWithin24Hours:", dateToUse, error);
+      return false;
+    }
   };
 
   const handleEditGrade = (studentId: number, grade: Grade) => {
@@ -2431,12 +2468,12 @@ export default function AddNumberPage() {
       // Add the selected date to the grade payload
       if (selectedDate) {
         const gradeDate = selectedDate.toDate();
-        gradePayload.date = format(gradeDate, "yyyy-MM-dd HH:mm:ss"); // تاریخ انتخاب شده (MySQL format)
+        gradePayload.date = gradeDate.toISOString(); // تاریخ انتخاب شده (timestamp with time)
         gradePayload.created_at = format(gradeDate, "yyyy-MM-dd HH:mm:ss");
       } else {
         // اگر selectedDate وجود ندارد، از تاریخ امروز استفاده کن
         const today = new Date();
-        gradePayload.date = format(today, "yyyy-MM-dd HH:mm:ss");
+        gradePayload.date = today.toISOString();
         gradePayload.created_at = format(today, "yyyy-MM-dd HH:mm:ss");
       }
 
@@ -2710,7 +2747,19 @@ export default function AddNumberPage() {
           
           response.data.forEach((student) => {
             const todayGrades = student.grades.filter(
-              (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+              (grade) => {
+                // اولویت با ستون date، اگر نبود از created_at استفاده کن
+                const dateToUse = grade.date || grade.created_at;
+                if (!dateToUse) return false;
+                
+                try {
+                  const gradeDate = format(new Date(dateToUse), "yyyy-MM-dd");
+                  return gradeDate === selectedDateStr;
+                } catch (error) {
+                  console.error("Error parsing date:", dateToUse, error);
+                  return false;
+                }
+              }
             );
             if (todayGrades.length > 0) {
               gradesMap[student.student.id] = todayGrades;
