@@ -1936,7 +1936,7 @@ export default function AddNumberPage() {
                 const gradeDateGregorian = format(new Date(dateToUse), "yyyy-MM-dd");
                 const isMatch = gradeDateGregorian === selectedDateGregorianStr;
                 return isMatch;
-              } catch (error) {
+              } catch {
                 return false;
               }
             }
@@ -2449,7 +2449,27 @@ export default function AddNumberPage() {
       console.log("Student activity created successfully");
 
       // Create a grade with score 55
-      const gradePayload: any = {
+      const gradeDate = selectedDate ? selectedDate.toDate() : new Date();
+      
+      type GradePayload = {
+        class_id: number;
+        master_id: number;
+        student_id: number;
+        droos_id: number;
+        hefz: number;
+        details: number;
+        tajvid: number;
+        sout: number;
+        number: number;
+        practice_count: number;
+        lesson_area_id: number;
+        user_id: number;
+        tenant_id: number;
+        date: string;
+        created_at: string;
+      };
+
+      const gradePayload: GradePayload = {
         class_id: selectedClass.id,
         master_id: masterId,
         student_id: studentId,
@@ -2463,24 +2483,15 @@ export default function AddNumberPage() {
         lesson_area_id: selectedClass.dars?.id || 0,
         user_id: userId,
         tenant_id: 0,
+        date: gradeDate.toISOString(),
+        created_at: format(gradeDate, "yyyy-MM-dd HH:mm:ss"),
       };
-
-      // Add the selected date to the grade payload
-      if (selectedDate) {
-        const gradeDate = selectedDate.toDate();
-        gradePayload.date = gradeDate.toISOString(); // تاریخ انتخاب شده (timestamp with time)
-        gradePayload.created_at = format(gradeDate, "yyyy-MM-dd HH:mm:ss");
-      } else {
-        // اگر selectedDate وجود ندارد، از تاریخ امروز استفاده کن
-        const today = new Date();
-        gradePayload.date = today.toISOString();
-        gradePayload.created_at = format(today, "yyyy-MM-dd HH:mm:ss");
-      }
 
       console.log("gradePayload:", gradePayload);
       console.log("📋 Grade payload date field:", gradePayload.date);
       
-      await optimizedNumberService.create(gradePayload, accessToken);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await optimizedNumberService.create(gradePayload as any, accessToken);
       console.log("Grade created successfully");
       
       // Refresh students data
