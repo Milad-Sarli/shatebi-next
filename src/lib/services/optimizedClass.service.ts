@@ -92,6 +92,7 @@ export interface Grade {
   droos_id: Dars;
   dars: Dars;
   lesson_area: LessonArea;
+  date?: string; // تاریخ انتخاب شده برای نمره (ISO timestamp) - اختیاری برای سازگاری با نمرات قدیمی
   created_at: string;
 }
 
