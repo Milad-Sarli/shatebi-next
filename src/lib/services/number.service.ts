@@ -17,6 +17,7 @@ export interface OptimizedNumber {
   practice_count: number;
   description?: string;
   lesson_area_id: number;
+  date?: string; // تاریخ انتخاب شده برای نمره (MySQL datetime format)
   created_at: string;
   updated_at: string;
   optimizedClass?: OptimizedClass;
@@ -40,6 +41,18 @@ export interface CreateOptimizedNumberDto {
   practice_count: number;
   description?: string;
   lesson_area_id: number;
+  date: string; // تاریخ انتخاب شده برای نمره (MySQL datetime format) - required
+  user_id?: number;
+  tenant_id?: number;
+  // فیلدهای اضافی برای محدوده درسی
+  start_page?: number;
+  end_page?: number;
+  start_surah?: string;
+  start_verse?: number;
+  end_surah?: string;
+  end_verse?: number;
+  start_joze?: number;
+  end_joze?: number;
 }
 
 export interface UpdateOptimizedNumberDto extends Partial<CreateOptimizedNumberDto> { }

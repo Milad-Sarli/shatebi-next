@@ -1981,6 +1981,7 @@ export default function AddNumberPage() {
         lesson_area_id: number;
         user_id: number;
         tenant_id: number;
+        date: string; // تاریخ انتخاب شده (MySQL datetime format - required)
         created_at?: string;
         start_page?: number;
         end_page?: number;
@@ -2019,6 +2020,10 @@ export default function AddNumberPage() {
       const isReadingClassType = isReadingClass(selectedCourse.title);
       const isHefzClass = selectedCourse.title?.toLowerCase().includes('حفظ') || false;
 
+      const jsDate = selectedDate ? selectedDate.toDate() : null;
+      const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
+      if (!jsDate) return;
+
       const payload: PayloadType = {
         class_id: selectedClass.id,
         master_id: masterId,
@@ -2033,6 +2038,7 @@ export default function AddNumberPage() {
         lesson_area_id: selectedClass.dars?.id || 0,
         user_id: userId,
         tenant_id: 0,
+        date: format(jsDate, "yyyy-MM-dd HH:mm:ss"), // تاریخ انتخاب شده (MySQL format)
       };
 
       // Handle different types of droos
@@ -2082,12 +2088,11 @@ export default function AddNumberPage() {
         }
       }
 
-      const jsDate = selectedDate ? selectedDate.toDate() : null;
-      const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
-      if (!jsDate) return;
-
       // Add the selected date to the payload
       payload.created_at = format(jsDate, "yyyy-MM-dd HH:mm:ss");
+
+      console.log("📋 Final payload:", payload);
+      console.log("📋 Date field:", payload.date);
 
       await optimizedNumberService.create(payload, accessToken);
       toast.success("نمره با موفقیت ثبت شد");
@@ -2104,7 +2109,11 @@ export default function AddNumberPage() {
       const student = response.data.find(s => s.student.id === selectedStudent.id);
       if (student) {
         const todayGrades = student.grades.filter(
-          (grade) => format(new Date(grade.created_at), "yyyy-MM-dd") === selectedDateStr
+          (grade) => {
+            // اگر ستون date وجود دارد، از آن استفاده کن، در غیر این صورت از created_at
+            const gradeDate = grade.date ? format(new Date(grade.date), "yyyy-MM-dd") : format(new Date(grade.created_at), "yyyy-MM-dd");
+            return gradeDate === selectedDateStr;
+          }
         );
         setExistingGrades(prev => ({
           ...prev,
@@ -2122,7 +2131,8 @@ export default function AddNumberPage() {
             .replace("The tajvid field must not be greater than 10.", "نمره تجوید نباید بیشتر از 10 باشد")
             .replace("The hefz field must not be greater than 70.", "نمره حفظ نباید بیشتر از 70 باشد")
             .replace("The sout field must not be greater than 10.", "نمره صوت نباید بیشتر از 10 باشد")
-            .replace("The details field must not be greater than 10.", "نمره مشخصات نباید بیشتر از 10 باشد");
+            .replace("The details field must not be greater than 10.", "نمره مشخصات نباید بیشتر از 10 باشد")
+            .replace("The date field is required.", "تاریخ الزامی است");
           
           if (isOneGrade || isReadingClass(selectedCourse?.title || '')) {
             toast.error(persianMessage);
@@ -2159,6 +2169,13 @@ export default function AddNumberPage() {
 
   const isWithin24Hours = (date: string) => {
     const gradeDate = new Date(date);
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+    return gradeDate > twentyFourHoursAgo;
+  };
+
+  const isGradeWithin24Hours = (grade: Grade) => {
+    // اگر ستون date وجود دارد، از آن استفاده کن، در غیر این صورت از created_at
+    const gradeDate = grade.date ? new Date(grade.date) : new Date(grade.created_at);
     const twentyFourHoursAgo = subHours(new Date(), 24);
     return gradeDate > twentyFourHoursAgo;
   };
@@ -2216,9 +2233,9 @@ export default function AddNumberPage() {
         details?: number;
         start_page?: number;
         end_page?: number;
-        start_surah?: number;
+        start_surah?: string;
         start_verse?: number;
-        end_surah?: number;
+        end_surah?: string;
         end_verse?: number;
         start_joze?: number;
         end_joze?: number;
@@ -2245,9 +2262,9 @@ export default function AddNumberPage() {
           details: 0,
           start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
           end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
-          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_surah: form.start_surah ? form.start_surah.toString() : undefined,
           start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
-          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_surah: form.end_surah ? form.end_surah.toString() : undefined,
           end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
           start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
           end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
@@ -2263,9 +2280,9 @@ export default function AddNumberPage() {
           number: 0,
           start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
           end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
-          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_surah: form.start_surah ? form.start_surah.toString() : undefined,
           start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
-          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_surah: form.end_surah ? form.end_surah.toString() : undefined,
           end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
           start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
           end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
@@ -2281,9 +2298,9 @@ export default function AddNumberPage() {
           number: 0,
           start_page: form.start_page ? parseInt(form.start_page as string) : undefined,
           end_page: form.end_page ? parseInt(form.end_page as string) : undefined,
-          start_surah: form.start_surah ? parseInt(form.start_surah as string) : undefined,
+          start_surah: form.start_surah ? form.start_surah.toString() : undefined,
           start_verse: form.start_verse ? parseInt(form.start_verse as string) : undefined,
-          end_surah: form.end_surah ? parseInt(form.end_surah as string) : undefined,
+          end_surah: form.end_surah ? form.end_surah.toString() : undefined,
           end_verse: form.end_verse ? parseInt(form.end_verse as string) : undefined,
           start_joze: form.start_joze ? parseInt(form.start_joze as string) : undefined,
           end_joze: form.end_joze ? parseInt(form.end_joze as string) : undefined,
@@ -2414,10 +2431,17 @@ export default function AddNumberPage() {
       // Add the selected date to the grade payload
       if (selectedDate) {
         const gradeDate = selectedDate.toDate();
+        gradePayload.date = format(gradeDate, "yyyy-MM-dd HH:mm:ss"); // تاریخ انتخاب شده (MySQL format)
         gradePayload.created_at = format(gradeDate, "yyyy-MM-dd HH:mm:ss");
+      } else {
+        // اگر selectedDate وجود ندارد، از تاریخ امروز استفاده کن
+        const today = new Date();
+        gradePayload.date = format(today, "yyyy-MM-dd HH:mm:ss");
+        gradePayload.created_at = format(today, "yyyy-MM-dd HH:mm:ss");
       }
 
       console.log("gradePayload:", gradePayload);
+      console.log("📋 Grade payload date field:", gradePayload.date);
       
       await optimizedNumberService.create(gradePayload, accessToken);
       console.log("Grade created successfully");
@@ -2448,7 +2472,18 @@ export default function AddNumberPage() {
       
     } catch (error) {
       console.error("Error in handleConfirmProvideless:", error);
-      toast.error("خطا در ثبت عدم تحویل: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
+      const validationError = error as ValidationError;
+      if (validationError.response?.data?.errors) {
+        const errors = validationError.response.data.errors;
+        Object.keys(errors).forEach((field) => {
+          const errorMessage = errors[field][0];
+          const persianMessage = errorMessage
+            .replace("The date field is required.", "تاریخ الزامی است");
+          toast.error(persianMessage);
+        });
+      } else {
+        toast.error("خطا در ثبت عدم تحویل: " + validationError?.response?.data?.message || validationError?.message || "خطای نامشخص");
+      }
     } finally {
       setActionLoading(false);
     }
@@ -3108,7 +3143,7 @@ export default function AddNumberPage() {
                                         >
                                           55
                                         </motion.span>
-                                        {isWithin24Hours(grade.created_at) && (
+                                        {isGradeWithin24Hours(grade) && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -3158,7 +3193,7 @@ export default function AddNumberPage() {
                                             منفی
                                           </motion.span>
                                         )}
-                                        {isWithin24Hours(grade.created_at) && (
+                                        {isGradeWithin24Hours(grade) && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -3208,7 +3243,7 @@ export default function AddNumberPage() {
                                             منفی
                                           </motion.span>
                                         )}
-                                        {isWithin24Hours(grade.created_at) && (
+                                        {isGradeWithin24Hours(grade) && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -3254,7 +3289,7 @@ export default function AddNumberPage() {
                                             </motion.span>
                                           )}
                                         </div>
-                                        {isWithin24Hours(grade.created_at) && (
+                                        {isGradeWithin24Hours(grade) && (
                                           <Button
                                             variant="ghost"
                                             size="sm"

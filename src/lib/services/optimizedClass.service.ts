@@ -92,6 +92,7 @@ export interface Grade {
   droos_id: Dars;
   dars: Dars;
   lesson_area: LessonArea;
+  date?: string; // تاریخ انتخاب شده برای نمره (MySQL datetime format)
   created_at: string;
 }
 
