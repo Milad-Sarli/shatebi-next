@@ -186,6 +186,7 @@ interface AddGradeModalProps {
   isOneGrade?: boolean;
   selectedCourse?: Course | null;
   onFormRefsChange?: (refs: FormRefs) => void;
+  isLoading?: boolean;
 }
 
 // Helper function to identify reading classes
@@ -196,7 +197,7 @@ const isReadingClass = (courseTitle: string): boolean => {
   );
 };
 
-function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse, onFormRefsChange }: AddGradeModalProps) {
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = false, selectedCourse, onFormRefsChange, isLoading = false }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
   const [surahs, setSurahs] = React.useState<Surah[]>([]);
   const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
@@ -556,7 +557,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                         )}
                       />
                     </div>
-                    <Button type="submit" className="w-full">ثبت نمره</Button>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>در حال ثبت...</span>
+                        </div>
+                      ) : (
+                        "ثبت نمره"
+                      )}
+                    </Button>
                   </form>
                 </Form>
               </TabsContent>
@@ -607,7 +617,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                         )}
                       />
                     </div>
-                    <Button type="submit" className="w-full">ثبت نمره</Button>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>در حال ثبت...</span>
+                        </div>
+                      ) : (
+                        "ثبت نمره"
+                      )}
+                    </Button>
                   </form>
                 </Form>
               </TabsContent>
@@ -659,7 +678,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                     )}
                   />
                 </div>
-                <Button type="submit" className="w-full">ثبت نمره</Button>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>در حال ثبت...</span>
+                    </div>
+                  ) : (
+                    "ثبت نمره"
+                  )}
+                </Button>
               </form>
             </Form>
           ) : (
@@ -709,7 +737,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                     )}
                   />
                 </div>
-                <Button type="submit" className="w-full">ثبت نمره</Button>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>در حال ثبت...</span>
+                    </div>
+                  ) : (
+                    "ثبت نمره"
+                  )}
+                </Button>
               </form>
             </Form>
           )
@@ -808,7 +845,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       )}
                     />
                   </div>
-                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>در حال ثبت...</span>
+                      </div>
+                    ) : (
+                      "ثبت نمره"
+                    )}
+                  </Button>
                 </form>
               </Form>
             </TabsContent>
@@ -975,7 +1021,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       )}
                     />
                   </div>
-                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>در حال ثبت...</span>
+                      </div>
+                    ) : (
+                      "ثبت نمره"
+                    )}
+                  </Button>
                 </form>
               </Form>
             </TabsContent>
@@ -1067,7 +1122,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, isOneGrade = f
                       )}
                     />
                   </div>
-                  <Button type="submit" className="w-full">ثبت نمره</Button>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>در حال ثبت...</span>
+                      </div>
+                    ) : (
+                      "ثبت نمره"
+                    )}
+                  </Button>
                 </form>
               </Form>
             </TabsContent>
@@ -1202,9 +1266,10 @@ interface EditGradeModalProps {
   onOpenChange: (open: boolean) => void;
   grade: Grade;
   onSubmit: (form: Record<string, string | number>) => void;
+  isLoading?: boolean;
 }
 
-function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModalProps) {
+function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit, isLoading = false }: EditGradeModalProps) {
   const [form, setForm] = React.useState({
     hefz: grade.hefz ?? 0,
     tajvid: grade.tajvid ?? 0,
@@ -1522,7 +1587,16 @@ function EditGradeModal({ isOpen, onOpenChange, grade, onSubmit }: EditGradeModa
               </div>
             </div>
           </div>
-          <Button type="submit" className="w-full">ذخیره تغییرات</Button>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>در حال ذخیره...</span>
+              </div>
+            ) : (
+              "ذخیره تغییرات"
+            )}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
@@ -2263,6 +2337,8 @@ export default function AddNumberPage() {
         user_id: number;
         tenant_id: number;
         practice_count: number;
+        date: string; // تاریخ انتخاب شده (MySQL datetime format - required)
+        created_at?: string;
         number?: number;
         hefz?: number;
         tajvid?: number;
@@ -2278,6 +2354,9 @@ export default function AddNumberPage() {
         end_joze?: number;
       };
       
+      // Get the date to use for the update
+      const updateDate = selectedDate ? selectedDate.toDate() : new Date();
+      
       let updateData: UpdateData = {
         class_id: class_id ?? 0,
         master_id: master_id ?? 0,
@@ -2287,6 +2366,8 @@ export default function AddNumberPage() {
         user_id: user_id ?? 0,
         tenant_id: tenant_id ?? 0,
         practice_count,
+        date: updateDate.toISOString(), // تاریخ انتخاب شده (timestamp with time)
+        created_at: format(updateDate, "yyyy-MM-dd HH:mm:ss"),
       };
       if (isReadingGrade || isHefzGrade) {
         // Update number field for reading/hefz grades
@@ -2344,12 +2425,12 @@ export default function AddNumberPage() {
         };
       }
       console.log("Updating grade with data:", updateData);
-      const updated = await optimizedNumberService.update(editingGrade.id, updateData, accessToken!);
+      await optimizedNumberService.update(editingGrade.id, updateData, accessToken!);
       toast.success("نمره با موفقیت ویرایش شد");
       // Update local state
       setExistingGrades(prev => {
         const grades = prev[editingGrade.studentId]?.map((g: Grade) => {
-          if (g.id === updated.id) {
+          if (g.id === editingGrade.id) {
             return {
               ...g,
               hefz: updateData.hefz ?? g.hefz,
@@ -3411,6 +3492,7 @@ export default function AddNumberPage() {
             isOneGrade={isOneGrade}
             selectedCourse={selectedCourse}
             onFormRefsChange={setFormRefs}
+            isLoading={loading}
           />
         </>
       )}
@@ -3421,6 +3503,7 @@ export default function AddNumberPage() {
           onOpenChange={setEditModalOpen}
           grade={editingGrade}
           onSubmit={handleEditModalSubmit}
+          isLoading={loading}
         />
       )}
 
