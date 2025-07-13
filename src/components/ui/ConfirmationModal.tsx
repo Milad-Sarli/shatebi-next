@@ -5,27 +5,37 @@ import { Loader2 } from "lucide-react";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
   title: string;
-  description: string;
+  description?: string;
   confirmText: string;
-  cancelText: string;
+  cancelText?: string;
   onConfirm: () => void;
   isLoading?: boolean;
   variant?: "default" | "destructive" | "warning";
+  children?: React.ReactNode;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ 
   isOpen, 
   onOpenChange, 
+  onClose,
   title, 
   description, 
   confirmText, 
-  cancelText, 
+  cancelText = "انصراف", 
   onConfirm, 
   isLoading = false,
-  variant = "default"
+  variant = "default",
+  children
 }) => {
+  // Unified close handler for both onOpenChange and onClose
+  const handleClose = () => {
+    if (onOpenChange) onOpenChange(false);
+    if (onClose) onClose();
+  };
+
   const handleConfirm = () => {
     onConfirm();
   };
@@ -53,19 +63,22 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const styles = getVariantStyles();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-center">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-center">
-            {description}
-          </DialogDescription>
+          {description && (
+            <DialogDescription className="text-center">
+              {description}
+            </DialogDescription>
+          )}
         </DialogHeader>
+        {children && <div className="py-2">{children}</div>}
         <div className="flex gap-4 py-4">
           <Button
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
             variant="outline"
             className="flex-1"
             disabled={isLoading}

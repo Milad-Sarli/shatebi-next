@@ -5,6 +5,7 @@ export interface MorakhasiFilters {
   per_page: number;
   search: string;
   type: string;
+  status?: number;
   user_id?: number;
 }
 

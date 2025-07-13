@@ -29,6 +29,15 @@ const leaveTypes = [
   { value: "چندروزه", label: "چندروزه" },
 ];
 
+const statusOptions = [
+  { value: "all", label: "همه وضعیت‌ها" },
+  { value: "1", label: "تائید شده" },
+  { value: "2", label: "در انتظار تائید" },
+  { value: "3", label: "منقضی شده" },
+  { value: "4", label: "رد شده" },
+  { value: "5", label: "استفاده شده" },
+];
+
 function getTypeLabel(type: number | string | undefined) {
   if (type === 1 || type === "ساعتی") return "ساعتی";
   if (type === 2 || type === "یک‌روزه") return "یک‌روزه";
@@ -37,11 +46,12 @@ function getTypeLabel(type: number | string | undefined) {
 }
 
 function getStatusLabel(status: number | string | undefined) {
-  if (status === 1 || status === "تایید شده") return "تایید شده";
-  if (status === 2 || status === "در انتظار تایید") return "در انتظار تایید";
-  if (status === 3 || status === "منقضی شده") return "منقضی شده";
-  if (status === 4 || status === "رد شده") return "رد شده";
-  if (status === 5 || status === "استفاده شده") return "استفاده شده";
+  const statusNum = Number(status);
+  if (statusNum === 1) return "تایید شده";
+  if (statusNum === 2) return "در انتظار تایید";
+  if (statusNum === 3) return "منقضی شده";
+  if (statusNum === 4) return "رد شده";
+  if (statusNum === 5) return "استفاده شده";
   return "در انتظار تایید";
 }
 
@@ -53,9 +63,12 @@ function getStatusWithLateTime(leave: Morakhasi) {
   return status;
 }
 
-function toJalali(date: string | undefined) {
+function toJalali(date: string | undefined, showTime = true) {
   if (!date) return '-';
-  return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
+  const d = dayjs(date).calendar('jalali').locale('fa');
+  return showTime
+    ? d.format('YYYY/MM/DD - HH:mm')
+    : d.format('YYYY/MM/DD');
 }
 
 function getLeaveTimeDisplay(leave: Morakhasi) {
@@ -72,9 +85,9 @@ function getLeaveTimeDisplay(leave: Morakhasi) {
   if (leave.fromdate && leave.todate) {
     return (
       <span className="font-mono">
-        {toJalali(leave.fromdate)}
+        {toJalali(leave.fromdate, false)}
         {' تا '}
-        {toJalali(leave.todate)}
+        {toJalali(leave.todate, false)}
       </span>
     );
   }
@@ -119,11 +132,13 @@ export default function LeavesListPage() {
   const [search, setSearch] = React.useState("");
   const debouncedSearch = useDebounce(search, 400);
   const [selectedType, setSelectedType] = React.useState("all");
+  const [selectedStatus, setSelectedStatus] = React.useState("all");
   const [filters, setFilters] = React.useState<MorakhasiFilters>({
     page: 1,
     per_page: 10,
     search: "",
     type: "all",
+    status: undefined,
   });
   const [pagination, setPagination] = React.useState({
     current_page: 1,
@@ -148,6 +163,7 @@ export default function LeavesListPage() {
       ...filters,
       search: debouncedSearch,
       type: selectedType,
+      status: selectedStatus !== "all" ? parseInt(selectedStatus) : undefined,
     };
 
     if (!isAdmin && user.id) {
@@ -214,7 +230,7 @@ export default function LeavesListPage() {
         });
         setLoading(false);
       });
-  }, [accessToken, user, filters, debouncedSearch, selectedType]);
+  }, [accessToken, user, filters, debouncedSearch, selectedType, selectedStatus]);
 
   // Define columns for TanStack Table
   const columns = React.useMemo<ColumnDef<Morakhasi>[]>(() => [
@@ -240,6 +256,7 @@ export default function LeavesListPage() {
     { accessorKey: 'dalil', header: 'علت', cell: (info) => info.getValue() || '-' },
     { accessorKey: 'fullname', header: 'قرآن آموز', cell: (info) => info.getValue() || '-' },
     { accessorKey: 'accepted_by', header: 'تائید شده توسط', cell: (info) => String(info.getValue() ?? '-') },
+    { accessorKey: 'reject_dalil', header: 'علت رد', cell: (info) => info.getValue() || '-' },
     { accessorKey: 'status', header: 'وضعیت', cell: (info) => (
       <span className={
         getStatusLabel(info.getValue() as string | number | undefined) === 'تایید شده'
@@ -428,19 +445,96 @@ export default function LeavesListPage() {
                 className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
               />
             </div>
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
-                <SelectValue placeholder="نوع مرخصی" />
-              </SelectTrigger>
-              <SelectContent>
-                {leaveTypes.map(type => (
-                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                  <SelectValue placeholder="نوع مرخصی" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaveTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                  <SelectValue placeholder="وضعیت مرخصی" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(status => (
+                    <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          
+          {/* Filter Summary */}
+          {(selectedType !== "all" || selectedStatus !== "all" || search) && (
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2 mb-2">
+              {selectedType !== "all" && (
+                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm">
+                  نوع: {leaveTypes.find(t => t.value === selectedType)?.label}
+                  <button
+                    onClick={() => setSelectedType("all")}
+                    className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-700 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {selectedStatus !== "all" && (
+                <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm">
+                  وضعیت: {statusOptions.find(s => s.value === selectedStatus)?.label}
+                  <button
+                    onClick={() => setSelectedStatus("all")}
+                    className="ml-1 hover:bg-green-200 dark:hover:bg-green-700 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {search && (
+                <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200 px-3 py-1 rounded-full text-sm">
+                  جستجو: {search}
+                  <button
+                    onClick={() => setSearch("")}
+                    className="ml-1 hover:bg-orange-200 dark:hover:bg-orange-700 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+                             <button
+                 onClick={() => {
+                   setSelectedType("all");
+                   setSelectedStatus("all");
+                   setSearch("");
+                 }}
+                 className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 underline"
+               >
+                 پاک کردن همه فیلترها
+               </button>
+               </div>
+               {!loading && (
+                 <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                   تعداد نتایج: {pagination.total} مورد
+                 </div>
+               )}
+             </div>
+           )}
+          
           {/* Desktop Table: match students table design */}
           <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800 hidden md:block">
+            {loading && (
+              <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 flex items-center justify-center z-10">
+                <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+                  <div className="w-4 h-4 border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-400 rounded-full animate-spin"></div>
+                  در حال بارگذاری...
+                </div>
+              </div>
+            )}
             <table className="w-full text-right text-sm">
               <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                 <tr>
@@ -451,6 +545,7 @@ export default function LeavesListPage() {
                   <th className="whitespace-nowrap px-4 py-3 font-medium">علت</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium">قرآن آموز</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium">تایید شده توسط</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">علت رد</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium">وضعیت</th>
                 </tr>
               </thead>
@@ -479,6 +574,7 @@ export default function LeavesListPage() {
                       <td className="whitespace-nowrap px-4 py-3">{leave.dalil || '-'}</td>
                       <td className="whitespace-nowrap px-4 py-3">{leave.fullname || '-'}</td>
                       <td className="whitespace-nowrap px-4 py-3">{String(leave.accepted_by ?? '-')}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{leave.reject_dalil || '-'}</td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <span className={
                           getStatusLabel(leave.status) === 'تایید شده'
@@ -525,6 +621,9 @@ export default function LeavesListPage() {
                     <span>تایید شده توسط: {String(leave.accepted_by ?? '-')}</span>
                     {/* زمان مرخصی */}
                     <span>زمان مرخصی: {getLeaveTimeDisplay(leave)}</span>
+                    {leave.reject_dalil && (
+                      <span>علت رد: {leave.reject_dalil}</span>
+                    )}
                     <span>
                       وضعیت: <span className={
                         getStatusLabel(leave.status) === 'تایید شده'

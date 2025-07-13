@@ -75,7 +75,7 @@ export default function StudentsPage() {
     null
   );
   const [statusFilter, setStatusFilter] = React.useState<
-    "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | undefined | "ترک تحصیل"
+    "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل" | "اخراجی" | undefined
   >(undefined);
 
   // Reference to track if a search is already in progress
@@ -93,27 +93,12 @@ export default function StudentsPage() {
         const searchQuery =
           searchTerm !== undefined ? searchTerm : debouncedSearch;
 
-        let apiStatusFilter: 'active' | 'inactive' | undefined = undefined;
-        if (statusFilter) {
-          switch (statusFilter) {
-            case "در حال تحصیل":
-              apiStatusFilter = 'active';
-              break;
-            case "ترک تحصیل":
-            case "فارغ التحصیل":
-            case "انتقالی":
-              apiStatusFilter = 'inactive';
-              break;
-            // default: // If an unexpected Farsi status comes, it remains undefined
-          }
-        }
-
         const response: any = await StudentService.getStudents(
           {
             page: filters.page,
             per_page: filters.per_page,
             search: searchQuery || undefined,
-            status: apiStatusFilter,
+            status: statusFilter,
           },
           accessToken
         );
@@ -227,39 +212,40 @@ export default function StudentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
                 <Input
-                  placeholder="جستجو..."
+                  placeholder="جستجو در نام، نام خانوادگی، کد ملی..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
-              {/* <Select
-                value={statusFilter}
+              <Select
+                value={statusFilter || "all"}
                 onValueChange={(value) => {
-                  setStatusFilter(value === "all" ? undefined : value as "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل");
+                  setStatusFilter(value === "all" ? undefined : value as "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل" | "اخراجی");
                   setFilters((prev) => ({ ...prev, page: 1 }));
                 }}
               >
-                <SelectTrigger className="w-full sm:w-auto border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
-                  <SelectValue placeholder="وضعیت" />
+                <SelectTrigger dir="rtl" className="w-full sm:w-48 border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                  <SelectValue placeholder="فیلتر وضعیت" />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-zinc-900">
-                  <SelectItem value="all">همه</SelectItem>
-                  <SelectItem value="انتقالی">انتقالی</SelectItem>
-                  <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
+                <SelectContent dir="rtl" className="bg-white dark:bg-zinc-900">
+                  <SelectItem value="all">همه وضعیت‌ها</SelectItem>
                   <SelectItem value="در حال تحصیل">در حال تحصیل</SelectItem>
+                  <SelectItem value="فارغ التحصیل">فارغ التحصیل</SelectItem>
                   <SelectItem value="ترک تحصیل">ترک تحصیل</SelectItem>
+                  <SelectItem value="انتقالی">انتقالی</SelectItem>
+                  <SelectItem value="اخراجی">اخراجی</SelectItem>
                 </SelectContent>
-              </Select> */}
+              </Select>
               <Button
                 variant="outline"
                 size="default"
                 onClick={handleSearch}
-                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 whitespace-nowrap"
               >
                 جستجو
               </Button>

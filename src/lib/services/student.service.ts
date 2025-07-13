@@ -67,7 +67,7 @@ export interface StudentFilters {
   page?: number;
   per_page?: number;
   tenant_id?: number;
-  status?: 'active' | 'inactive';
+  status?: 'در حال تحصیل' | 'فارغ التحصیل' | 'ترک تحصیل' | 'انتقالی' | 'اخراجی';
 }
 
 export class StudentService {

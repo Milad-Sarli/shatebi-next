@@ -184,7 +184,7 @@ const WaitingMorakhasiPage: React.FC = () => {
       setIsLoading(true);
       await MorakhasiService.updateMorakhasi(
         modalState.morakhasiId,
-        { status: 2, reject_dalil: modalState.message }, 
+        { status: 4, reject_dalil: modalState.message }, 
         accessToken
       );
       toast.info('مرخصی رد شد.');
@@ -204,6 +204,29 @@ const WaitingMorakhasiPage: React.FC = () => {
     return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
   }
 
+  function formatTimeRange(morakhasi: Morakhasi) {
+    // Helper to convert to Persian numerals
+    const toPersian = (str: string) => str.replace(/\d/g, d => String.fromCharCode(d.charCodeAt(0) + 1728));
+
+    // Hourly leave (type 1): show from hour to hour, with date
+    if (morakhasi.type === 1 && morakhasi.fromtime_1 && morakhasi.totime_1 && morakhasi.dayli_date) {
+      const from = toPersian(dayjs(morakhasi.fromtime_1).format('HH:mm'));
+      const to = toPersian(dayjs(morakhasi.totime_1).format('HH:mm'));
+      const date = toPersian(dayjs(morakhasi.dayli_date).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
+      return `${from} تا ${to} — ${date}`;
+    }
+    // Daily leave (type 2): show from date to date
+    if (morakhasi.type === 2 && morakhasi.fromdate && morakhasi.todate) {
+      const from = toPersian(dayjs(morakhasi.fromdate).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
+      const to = toPersian(dayjs(morakhasi.todate).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
+      return `${from} تا ${to}`;
+    }
+    // Fallback: show raw times if available
+    if (morakhasi.fromtime_1 && morakhasi.totime_1) {
+      return `${toPersian(toJalali(morakhasi.fromtime_1))} تا ${toPersian(toJalali(morakhasi.totime_1))}`;
+    }
+    return '-';
+  }
 
 
   return (
@@ -255,73 +278,45 @@ const WaitingMorakhasiPage: React.FC = () => {
 
         {!error && morakhasiList.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {morakhasiList.map((morakhasi, index) => (
                 <motion.div
                   key={morakhasi.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.3,
-                    delay: index * 0.05,
-                    ease: [0.4, 0, 0.2, 1],
-                  }}
-                  className="bg-white dark:bg-gray-900 shadow-md rounded-xl p-3 flex flex-col justify-between min-h-[170px] border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-shadow"
+                  transition={{ duration: 0.3, delay: index * 0.05, ease: [0.4, 0, 0.2, 1] }}
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-4 flex flex-col gap-3 shadow hover:shadow-lg transition-shadow min-h-[140px] border border-gray-100 dark:border-gray-800"
                 >
-                  <div>
-                    <div className="flex items-center mb-2">
-                      <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden mr-2 shrink-0 border border-gray-200 dark:border-gray-700">
-                        {(morakhasi.user as User)?.aks ? (
-                          <Image
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${(morakhasi.user as User)?.aks}`}
-                            alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
-                            width={36}
-                            height={36}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.src = '/images/default-avatar.png'; }}
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-gray-400 dark:text-gray-500">
-                            {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <h2 className="text-xs font-semibold text-gray-900 dark:text-white leading-tight mx-2">
-                          {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
-                        </h2>
-                        {(morakhasi.user as User)?.personnel_code && (
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                            کد پرسنلی: {(morakhasi.user as User)?.personnel_code}
-                          </p>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                      {(morakhasi.user as User)?.aks ? (
+                        <Image
+                          src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${(morakhasi.user as User)?.aks}`}
+                          alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.src = '/images/default-avatar.png'; }}
+                        />
+                      ) : (
+                        <span className="text-base font-bold text-gray-400 dark:text-gray-500">
+                          {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-
-                    <p className="text-xs text-gray-500 dark:text-gray-300 mb-1">
-                      <span className="font-medium">دلیل:</span> {morakhasi.dalil || <span className="text-gray-300 dark:text-gray-600 italic">ثبت نشده</span>}
-                    </p>
-                    {morakhasi.type === 1 && (
-                      <>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                          <span className="font-medium">تاریخ:</span> <span className="text-blue-500 dark:text-blue-400 font-semibold">{toJalali(morakhasi.fromtime_1)}</span>
-                        </p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                          <span className="font-medium">تا:</span> <span className="text-red-500 dark:text-red-400 font-semibold">{toJalali(morakhasi.totime_1)}</span>
-                        </p>
-                      </>
-                    )}
-                    {morakhasi.type === 2 && (
-                      <>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                            <span className="font-medium">از:</span> <span className="text-blue-500 dark:text-blue-400 font-semibold">{toJalali(morakhasi.fromtime_1)}</span> <span className="mx-1">|</span> <span className="font-medium">تا:</span> <span className="text-red-500 dark:text-red-400 font-semibold">{toJalali(morakhasi.totime_1)}</span>
-                        </p>
-                      </>
-                    )}
-                    <p className="text-[9px] text-gray-200 dark:text-gray-700 mt-1">#{morakhasi.id}</p>
+                    <div className="flex-1">
+                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                        {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
+                      </h2>
+                    </div>
                   </div>
-
-                  <div className="mt-2 flex justify-end gap-1">
+                  {morakhasi.dalil && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">دلیل :  {morakhasi.dalil}</div>
+                  )}
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
+                    {formatTimeRange(morakhasi)}
+                  </div>
+                  <div className="flex justify-end gap-2 mt-auto">
                     <button
                       onClick={() => openModal('reject', morakhasi.id)}
                       disabled={isLoading}
@@ -376,19 +371,18 @@ const WaitingMorakhasiPage: React.FC = () => {
         onConfirm={handleReject}
         title="رد مرخصی"
         confirmText="رد درخواست"
-        isConfirmDisabled={isLoading || !modalState.message}
       >
         <div className="space-y-3">
             <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              دلیل رد مرخصی (الزامی):
+              دلیل رد مرخصی:
             </label>
             <Textarea
                 id="rejectReason"
                 value={modalState.message}
                 onChange={(e) => setModalState(prev => ({ ...prev, message: e.target.value }))}
-                placeholder="مثال: عدم هماهنگی با سرپرست واحد"
+                placeholder="دلیل رد مرخصی را وارد کنید..."
                 rows={3}
-                className="w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white"
+                className="w-full border my-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white"
             />
         </div>
       </ConfirmationModal>
@@ -408,7 +402,7 @@ const WaitingMorakhasiPage: React.FC = () => {
                 id="guardMessage"
                 value={modalState.message}
                 onChange={(e) => setModalState(prev => ({ ...prev, message: e.target.value }))}
-                placeholder="مثال: لطفا در صورت خروج همکاری لازم صورت پذیرد."
+                placeholder="اگر پیامی برای نگهبان دارید، بنویسید..."
                 rows={3}
                 className="w-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm focus:ring-blue-400 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white"
             />
