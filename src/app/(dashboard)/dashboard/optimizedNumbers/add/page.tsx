@@ -9,7 +9,7 @@ import { MasterService, Master } from "@/lib/services/master.service";
 import { studentActivityService, CreateStudentActivityDto } from "@/lib/services/studentActivity.service";
 import { format, subHours } from "date-fns-jalali";
 import { UseFormReturn } from "react-hook-form";
-import RotatingText from "@/components/reactbit/texts/RotatingText";
+// import RotatingText from "@/components/reactbit/texts/RotatingText";
 import { EditingGrade, ValidationError } from '@/lib/types';
 import { OptimizedClass, Grade, Student, optimizedClassService } from '@/lib/services/optimizedClass.service';
 import SelectCourseModal from './SelectCourseModal';
@@ -301,19 +301,46 @@ export default function AddNumberPage() {
     fetchClasses();
   }, [accessToken]);
 
+  const refetchStudentsAndGrades = React.useCallback(async () => {
+    if (!accessToken || !selectedClass || !selectedDate) return;
+    const jsDate = selectedDate ? selectedDate.toDate() : null;
+    if (!jsDate) return;
+
+    try {
+      const response = await optimizedClassService.getStudents(
+        selectedClass.id,
+        format(jsDate, "yyyy/MM/dd"),
+        accessToken
+      );
+      const gradesMap: Record<number, Grade[]> = {};
+      response.data.forEach((student) => {
+        if (student.grades && student.grades.length > 0) {
+          gradesMap[student.student.id] = student.grades;
+        }
+      });
+      const uniqueStudents = Array.from(
+        new Map(response.data.map(item => [item.student.id, item])).values()
+      );
+      setStudents(uniqueStudents);
+      setExistingGrades(gradesMap);
+    } catch (error) {
+      console.error("Error refetching students and grades:", error);
+      toast.error("خطا در به‌روزرسانی لیست نمرات");
+    }
+  }, [accessToken, selectedClass, selectedDate]);
+
   React.useEffect(() => {
     const fetchStudents = async () => {
       if (!accessToken || !selectedClass || !selectedDate) return;
 
       try {
         const jsDate = selectedDate ? selectedDate.toDate() : null;
-        const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
         if (!jsDate) return;
         
         // Fetch students and their grades
         const response = await optimizedClassService.getStudents(
           selectedClass.id,
-          jsDateStr!,
+          format(jsDate, "yyyy/MM/dd"),
           accessToken
         );
 
@@ -327,7 +354,7 @@ export default function AddNumberPage() {
         console.log("Selected date object:", selectedDate);
         console.log("JS date (Gregorian):", jsDate);
         console.log("Selected date string (Gregorian):", selectedDateGregorianStr);
-        console.log("JS date string (Jalali):", jsDateStr);
+        console.log("JS date string (Jalali):", format(jsDate, "yyyy/MM/dd"));
 
         response.data.forEach((student) => {
           // Show all grades for each student, without filtering by date
@@ -383,13 +410,12 @@ export default function AddNumberPage() {
         master_id: number;
         student_id: number;
         droos_id: number;
-        hefz: number;
-        details: number;
-        tajvid: number;
-        sout: number;
-        number: number;
-        practice_count: number;
-        lesson_area_id: number;
+        hefz?: number;
+        details?: number;
+        tajvid?: number;
+        sout?: number;
+        number?: number;
+        practice_count?: number;
         user_id: number;
         tenant_id: number;
         date: string; // تاریخ انتخاب شده (MySQL datetime format - required)
@@ -432,7 +458,6 @@ export default function AddNumberPage() {
       const isHefzClass = selectedCourse.title?.toLowerCase().includes('حفظ') || false;
 
       const jsDate = selectedDate ? selectedDate.toDate() : null;
-      const jsDateStr = jsDate ? format(jsDate, "yyyy/MM/dd") : null;
       if (!jsDate) return;
 
       // Use the selected date in 'yyyy-MM-dd' format for the 'date' field
@@ -441,16 +466,24 @@ export default function AddNumberPage() {
         master_id: masterId,
         student_id: selectedStudent.id,
         droos_id: selectedCourse.id,
-        hefz: 0,
-        details: 0,
-        tajvid: 0,
-        sout: 0,
-        number: 0,
-        practice_count: 0,
-        lesson_area_id: selectedClass.dars?.id || 0,
+        hefz: data.hefz !== undefined && data.hefz !== "" ? Number(data.hefz) : 0,
+        details: data.details !== undefined && data.details !== "" ? Number(data.details) : 0,
+        tajvid: data.tajvid !== undefined && data.tajvid !== "" ? Number(data.tajvid) : 0,
+        sout: data.sout !== undefined && data.sout !== "" ? Number(data.sout) : 0,
+        number: data.number !== undefined && data.number !== "" ? Number(data.number) : 0,
+        practice_count: data.practice_count !== undefined && data.practice_count !== "" ? Number(data.practice_count) : 0,
         user_id: userId,
         tenant_id: 0,
-        date: format(jsDate, "yyyy-MM-dd"), // <-- fix: use only the date part
+        date: format(jsDate, "yyyy-MM-dd"),
+        created_at: format(jsDate, "yyyy-MM-dd HH:mm:ss"),
+        ...(data.start_page !== undefined && data.start_page !== "" ? { start_page: Number(data.start_page) } : {}),
+        ...(data.end_page !== undefined && data.end_page !== "" ? { end_page: Number(data.end_page) } : {}),
+        ...(typeof data.start_surah === 'string' && data.start_surah !== '' ? { start_surah: data.start_surah } : {}),
+        ...(typeof data.end_surah === 'string' && data.end_surah !== '' ? { end_surah: data.end_surah } : {}),
+        ...(data.start_verse !== undefined && data.start_verse !== "" ? { start_verse: Number(data.start_verse) } : {}),
+        ...(data.end_verse !== undefined && data.end_verse !== "" ? { end_verse: Number(data.end_verse) } : {}),
+        ...(data.start_joze !== undefined && data.start_joze !== "" ? { start_joze: Number(data.start_joze) } : {}),
+        ...(data.end_joze !== undefined && data.end_joze !== "" ? { end_joze: Number(data.end_joze) } : {}),
       };
 
       // Handle different types of droos
@@ -510,36 +543,7 @@ export default function AddNumberPage() {
       toast.success("نمره با موفقیت ثبت شد");
       setIsModalOpen(false);
       setSelectedCourse(null);
-      
-      const response = await optimizedClassService.getStudents(
-        selectedClass.id,
-        jsDateStr!,
-        accessToken
-      );
-      
-      const selectedDateStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
-      const student = response.data.find(s => s.student.id === selectedStudent.id);
-      if (student) {
-        const todayGrades = student.grades.filter(
-          (grade) => {
-            // اولویت با ستون date، اگر نبود از created_at استفاده کن
-            const dateToUse = grade.date || grade.created_at;
-            if (!dateToUse) return false;
-            
-            try {
-              const gradeDate = format(new Date(dateToUse), "yyyy-MM-dd");
-              return gradeDate === selectedDateStr;
-            } catch (error) {
-              console.error("Error parsing date:", dateToUse, error);
-              return false;
-            }
-          }
-        );
-        setExistingGrades(prev => ({
-          ...prev,
-          [selectedStudent.id]: todayGrades
-        }));
-      }
+      await refetchStudentsAndGrades();
     } catch (error: unknown) {
       const validationError = error as ValidationError;
       console.error(validationError);
@@ -738,34 +742,9 @@ export default function AddNumberPage() {
       console.log("Updating grade with data:", updateData);
       await optimizedNumberService.update(editingGrade.id, updateData, accessToken!);
       toast.success("نمره با موفقیت ویرایش شد");
-      // Update local state
-      setExistingGrades(prev => {
-        const grades = prev[editingGrade.studentId]?.map((g: Grade) => {
-          if (g.id === editingGrade.id) {
-            return {
-              ...g,
-              hefz: updateData.hefz ?? g.hefz,
-              tajvid: updateData.tajvid ?? g.tajvid,
-              sout: updateData.sout ?? g.sout,
-              details: updateData.details ?? g.details,
-              number: updateData.number ?? g.number,
-              practice_count: updateData.practice_count,
-              start_page: updateData.start_page,
-              end_page: updateData.end_page,
-              start_surah: updateData.start_surah,
-              start_verse: updateData.start_verse,
-              end_surah: updateData.end_surah,
-              end_verse: updateData.end_verse,
-              start_joze: updateData.start_joze,
-              end_joze: updateData.end_joze,
-            };
-          }
-          return g;
-        }) || [];
-        return { ...prev, [editingGrade.studentId]: grades };
-      });
       setEditModalOpen(false);
       setEditingGrade(null);
+      await refetchStudentsAndGrades();
     } catch (error) {
       console.error("Error updating grade:", error);
       toast.error("خطا در ویرایش نمره: " + (error as ValidationError)?.response?.data?.message || (error as ValidationError)?.message || "خطای نامشخص");
@@ -854,7 +833,6 @@ export default function AddNumberPage() {
         sout: number;
         number: number;
         practice_count: number;
-        lesson_area_id: number;
         user_id: number;
         tenant_id: number;
         date: string;
@@ -872,7 +850,6 @@ export default function AddNumberPage() {
         sout: 0,
         number: 0,
         practice_count: 0,
-        lesson_area_id: selectedClass.dars?.id || 0,
         user_id: userId,
         tenant_id: 0,
         date: format(gradeDate, "yyyy-MM-dd"), // <-- fix: use only the date part
@@ -1051,7 +1028,7 @@ export default function AddNumberPage() {
   return (
     <PageTransition>
       <div className="space-y-4 min-h-[80vh]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 shadow-lg border-0 relative overflow-hidden">
+        {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 shadow-lg border-0 relative overflow-hidden">
           <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-lg"></div>
           <h1 className="text-xl sm:text-2xl font-bold text-white relative z-10 flex items-center gap-2">
             <RotatingText
@@ -1069,7 +1046,7 @@ export default function AddNumberPage() {
             />
             نمرات قرآن آموزان
           </h1>
-        </div>
+        </div> */}
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">

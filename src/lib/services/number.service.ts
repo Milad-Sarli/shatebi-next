@@ -16,7 +16,6 @@ export interface OptimizedNumber {
   number: number;
   practice_count: number;
   description?: string;
-  lesson_area_id: number;
   date?: string; // تاریخ انتخاب شده برای نمره (ISO timestamp with time)
   created_at: string;
   updated_at: string;
@@ -40,7 +39,6 @@ export interface CreateOptimizedNumberDto {
   number: number;
   practice_count: number;
   description?: string;
-  lesson_area_id: number;
   date: string; // تاریخ انتخاب شده برای نمره (ISO timestamp with time) - required
   user_id?: number;
   tenant_id?: number;

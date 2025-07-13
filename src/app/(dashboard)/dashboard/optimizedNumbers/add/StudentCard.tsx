@@ -2,6 +2,7 @@ import React from 'react';
 import GradeDisplay from './GradeDisplay';
 import ActionButtons from './ActionButtons';
 import { Student, Grade } from '@/lib/services/optimizedClass.service';
+import { motion } from 'framer-motion';
 
 interface StudentCardProps {
   studentData: Student;
@@ -38,7 +39,12 @@ const StudentCard: React.FC<StudentCardProps> = ({
 }) => {
   // Main student card UI
   return (
-    <div className="flex flex-col p-3 rounded-lg border transition-all duration-300">
+    <motion.div
+      className="flex flex-col p-3 rounded-lg border transition-all duration-300"
+      whileHover={{ scale: 1.025, boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}
+      whileTap={{ scale: 0.98 }}
+      layout
+    >
       {/* Student info */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -88,7 +94,7 @@ const StudentCard: React.FC<StudentCardProps> = ({
         formatLessonRange={formatLessonRange}
         studentId={studentData.student.id}
       />
-    </div>
+    </motion.div>
   );
 };
 
