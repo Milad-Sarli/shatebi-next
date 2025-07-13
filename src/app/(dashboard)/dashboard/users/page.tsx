@@ -3,13 +3,12 @@
 /* eslint-disable */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search,  ChevronLeft, ChevronRight, Sun, Moon, Edit, Trash2, Mail, Phone, Building, Shield, User as UserIcon, Star, Crown, Link2, Loader2 } from "lucide-react";
+import { Plus, Search,  ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Building, Shield, User as UserIcon, Star, Crown, Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/context/auth.context";
-import { useTheme } from "@/lib/context/theme.context";
 import { UserService, User, UserFilters } from "@/lib/services/user.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -55,7 +54,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function UsersPage() {
   const { accessToken } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -274,17 +272,6 @@ export default function UsersPage() {
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
               مدیریت کاربران
             </h1>
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-              >
-                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </Button>
-           
-            </div>
           </div>
         </div>
 

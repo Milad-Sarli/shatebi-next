@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/context/auth.context';
-import { useTheme } from 'next-themes';
-import { Sun, Moon, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { PageTransition } from '@/components/ui/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -66,12 +65,9 @@ export default function RolesPage() {
   const [roleToDelete, setRoleToDelete] = useState<{ id: number; user_id: number } | null>(null);
   const { toast } = useToast();
   const { accessToken } = useAuth();
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
 
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
+
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -126,14 +122,6 @@ export default function RolesPage() {
               مدیریت نقش‌ها
             </h1>
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-              >
-                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </Button>
               <Button 
                 onClick={() => router.push('/dashboard/roles/add')}
                 className="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10"

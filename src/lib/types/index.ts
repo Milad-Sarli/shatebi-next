@@ -1,3 +1,5 @@
+import { Grade } from '@/lib/services/optimizedClass.service';
+
 export interface MorakhasiFilters {
   page: number;
   per_page: number;
@@ -128,4 +130,18 @@ export interface Morakhasi {
     created_at: string;
     updated_at: string;
   };
+}
+
+export interface ValidationError {
+  response?: {
+    data?: {
+      errors?: Record<string, string[]>;
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
+export interface EditingGrade extends Grade {
+  studentId: number;
 }

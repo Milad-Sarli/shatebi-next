@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/context/auth.context";
-import { useTheme } from "@/lib/context/theme.context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,9 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import PusherTest from "@/components/PusherTest";
+import ThemeToggleButton from "@/components/ui/theme-toggle-button";
+import NotificationDisplay, { Notification } from "@/components/NotificationDisplay";
+import { fetchNotifications } from "@/lib/services/notification.service";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -24,8 +26,16 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { user, accessToken, logout } = useAuth();
+  // const { theme, toggleTheme } = useTheme();
+
+  // Notification state for mobile header
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  React.useEffect(() => {
+    if (!accessToken) return;
+    fetchNotifications(accessToken).then(setNotifications);
+  }, [accessToken]);
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   const getUserInitials = (name: string) => {
     return name
@@ -99,18 +109,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleTheme}
-                  className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                >
-                  {theme === "light" ? (
-                    <Moon className="h-4 w-4" />
-                  ) : (
-                    <Sun className="h-4 w-4" />
-                  )}
-                </Button>
+              
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          aria-label="Notifications"
+                        >
+                          <Bell className="h-4 w-4" />
+                          {/* TODO: Add badge for unread count if needed */}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="w-80 bg-white dark:bg-zinc-900  border border-zinc-200 dark:border-zinc-800 p-0"
+                        align="end"
+                      >
+                        <div className="p-2 border-b  border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 text-sm text-right">اعلان‌ها</div>
+                        <NotificationDisplay />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ThemeToggleButton  variant="circle-blur" start="bottom-right" />
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -207,18 +228,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleTheme}
-                  className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                >
-                  {theme === "light" ? (
-                    <Moon className="h-4 w-4" />
-                  ) : (
-                    <Sun className="h-4 w-4" />
-                  )}
-                </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          aria-label="Notifications"
+                        >
+                          <Bell className="h-4 w-4" />
+                          {/* TODO: Add badge for unread count if needed */}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0"
+                        align="end"
+                      >
+                        <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 text-sm text-right">اعلان‌ها</div>
+                        <NotificationDisplay />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ThemeToggleButton  variant="circle-blur" start="bottom-right" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -283,6 +313,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 }
               `}</style>
             </div>
+          </div>
+          {/* Notification Bell on left */}
+          <div className="relative ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="relative rounded-full p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                  aria-label="اعلان‌ها"
+                >
+                  <Bell className="h-5 w-5 text-blue-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0"
+                align="end"
+              >
+                <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 text-sm text-right">
+                  اعلان‌ها
+                </div>
+                <NotificationDisplay />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

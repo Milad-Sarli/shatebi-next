@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Search, ChevronLeft, ChevronRight, Sun, Moon, Eye } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
-import { useTheme } from "@/lib/context/theme.context";
 import { ApplicantService, Applicant, ApplicantFilters, PaginatedResponse } from "@/lib/services/applicant.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,7 +34,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function ApplicantsPage() {
   const { accessToken } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [applicants, setApplicants] = React.useState<Applicant[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<ApplicantFilters>({
@@ -111,16 +109,6 @@ export default function ApplicantsPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">مدیریت متقاضیان</h1>
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="text-zinc-900 hover:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-200"
-            >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </Button>
-          </div>
         </div>
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">

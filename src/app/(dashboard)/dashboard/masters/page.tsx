@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search, Sun, Moon, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
-import { useTheme } from "@/lib/context/theme.context";
 import { MasterService, Master, MasterFilters, PaginationResponse } from "@/lib/services/master.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,7 +35,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function MastersPage() {
   const { accessToken } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [masters, setMasters] = React.useState<Master[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<MasterFilters>({
@@ -164,14 +162,6 @@ export default function MastersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">مدیریت استادها</h1>
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="text-zinc-900 hover:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-200"
-            >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </Button>
             <Link href="/dashboard/masters/add" passHref>
               <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
                 <Plus className="ml-2 h-4 w-4" />

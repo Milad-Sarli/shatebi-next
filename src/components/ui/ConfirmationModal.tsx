@@ -1,80 +1,94 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import * as React from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
   title: string;
-  children: React.ReactNode;
-  confirmText?: string;
-  cancelText?: string;
-  isConfirmDisabled?: boolean;
+  description: string;
+  confirmText: string;
+  cancelText: string;
+  onConfirm: () => void;
+  isLoading?: boolean;
+  variant?: "default" | "destructive" | "warning";
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  children,
-  confirmText = "تایید",
-  cancelText = "انصراف",
-  isConfirmDisabled = false,
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ 
+  isOpen, 
+  onOpenChange, 
+  title, 
+  description, 
+  confirmText, 
+  cancelText, 
+  onConfirm, 
+  isLoading = false,
+  variant = "default"
 }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 bg-opacity-50 p-4"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                aria-label="Close modal"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="mb-6 text-gray-700 dark:text-gray-300">
-              {children}
-            </div>
+  const handleConfirm = () => {
+    onConfirm();
+  };
 
-            <div className="flex justify-end space-x-3 space-x-reverse">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-900 dark:focus:ring-gray-400 transition-colors"
-              >
-                {cancelText}
-              </button>
-              <button
-                onClick={onConfirm}
-                disabled={isConfirmDisabled}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {confirmText}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "destructive":
+        return {
+          button: "bg-red-600 hover:bg-red-700 text-white",
+          icon: "text-red-500"
+        };
+      case "warning":
+        return {
+          button: "bg-orange-600 hover:bg-orange-700 text-white",
+          icon: "text-orange-500"
+        };
+      default:
+        return {
+          button: "bg-blue-600 hover:bg-blue-700 text-white",
+          icon: "text-blue-500"
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-4 py-4">
+          <Button
+            onClick={() => onOpenChange(false)}
+            variant="outline"
+            className="flex-1"
+            disabled={isLoading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className={`flex-1 ${styles.button}`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                در حال انجام...
+              </div>
+            ) : (
+              confirmText
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

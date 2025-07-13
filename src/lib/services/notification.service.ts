@@ -184,7 +184,7 @@ export class NotificationService {
       // Subscribe to push notifications
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey)
+        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey) as unknown as ArrayBuffer
       });
 
       // Save subscription to backend
@@ -287,4 +287,47 @@ export class NotificationService {
       return false;
     }
   }
+} 
+
+export async function fetchNotifications(token: string, search?: string) {
+  let url = `${process.env.NEXT_PUBLIC_API_URL}/api/notifications`;
+  if (search) {
+    url += `?search=${encodeURIComponent(search)}`;
+  }
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch notifications');
+  const response = await res.json();
+  return response.data; // Only return the notifications array
+} 
+
+export async function deleteNotification(token: string, id: string | number) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to delete notification');
+  return true;
+}
+
+export async function markNotificationAsRead(token: string, id: string | number) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/${id}/mark-as-read`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to mark notification as read');
+  return true;
 } 

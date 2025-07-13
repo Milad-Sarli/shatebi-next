@@ -1,13 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Trophy, AlertCircle } from "lucide-react";
+import { GraduationCap, Trophy, AlertCircle, Bell } from "lucide-react";
 import { useAuth } from "@/lib/context/auth.context";
 import { DashboardService } from "@/lib/services/dashboard.service";
 import { PageTransition } from "@/components/ui/page-transition";
 import AverageScoresChart from "@/components/charts/AverageScoresChart";
+import NotificationDisplay, { Notification } from "@/components/NotificationDisplay";
+import { fetchNotifications } from "@/lib/services/notification.service";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Simple skeleton component for stat cards
 function StatCardSkeleton({ index }: { index: number }) {
@@ -81,7 +89,7 @@ const ModernStatCard = ({
 );
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
 
   const [countyData, setCountyData] = React.useState<
     Array<{
@@ -94,7 +102,11 @@ export default function DashboardPage() {
   >([]);
   const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Removed notifLoading (was unused)
+
+  useEffect(() => {
     setLoading(true);
     const { state } = JSON.parse(localStorage.getItem("auth-storage") || "{}");
     if (state && state.accessToken) {
@@ -120,6 +132,15 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // Fetch notifications for badge
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchNotifications(accessToken)
+      .then((data) => setNotifications(data));
+  }, [accessToken]);
+
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
   // Map API data to stat cards, using iconMap and color from API
   const stats = React.useMemo(() => {
     if (!Array.isArray(countyData)) return [];
@@ -137,8 +158,36 @@ export default function DashboardPage() {
   return (
     <PageTransition>
       <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-1 sm:mb-2">
+        {/* Header with Notification Bell */}
+        <div className="flex md:flex-row-reverse items-center justify-between gap-2 sm:gap-4 mb-1 sm:mb-2">
+          {/* Notification Bell */}
+          <div className="relative hidden md:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="relative rounded-full p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                  aria-label="اعلان‌ها"
+                >
+                  <Bell className="h-6 w-6 text-blue-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-0"
+                align="end"
+              >
+                <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 text-sm text-right">
+                  اعلان‌ها
+                </div>
+                <NotificationDisplay />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {/* Header */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="rounded-full bg-blue-100 p-1.5 sm:p-2">
               <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
