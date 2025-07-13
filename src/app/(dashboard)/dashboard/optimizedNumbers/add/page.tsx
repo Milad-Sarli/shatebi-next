@@ -410,12 +410,12 @@ export default function AddNumberPage() {
         master_id: number;
         student_id: number;
         droos_id: number;
-        hefz?: number;
-        details?: number;
-        tajvid?: number;
-        sout?: number;
-        number?: number;
-        practice_count?: number;
+        hefz: number;
+        details: number;
+        tajvid: number;
+        sout: number;
+        number: number;
+        practice_count: number;
         user_id: number;
         tenant_id: number;
         date: string; // تاریخ انتخاب شده (MySQL datetime format - required)
@@ -654,11 +654,11 @@ export default function AddNumberPage() {
         practice_count: number;
         date: string; // تاریخ انتخاب شده (MySQL datetime format - required)
         created_at?: string;
-        number?: number;
-        hefz?: number;
-        tajvid?: number;
-        sout?: number;
-        details?: number;
+        number: number;
+        hefz: number;
+        tajvid: number;
+        sout: number;
+        details: number;
         start_page?: number;
         end_page?: number;
         start_surah?: string;
@@ -683,6 +683,11 @@ export default function AddNumberPage() {
         practice_count,
         date: format(updateDate, "yyyy-MM-dd"), // <-- fix: use only the date part
         created_at: format(updateDate, "yyyy-MM-dd HH:mm:ss"),
+        number: 0,
+        hefz: 0,
+        tajvid: 0,
+        sout: 0,
+        details: 0,
       };
       if (isReadingGrade || isHefzGrade) {
         // Update number field for reading/hefz grades

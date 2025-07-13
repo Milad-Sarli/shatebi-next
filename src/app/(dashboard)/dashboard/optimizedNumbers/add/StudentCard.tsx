@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import GradeDisplay from './GradeDisplay';
 import ActionButtons from './ActionButtons';
 import { Student, Grade } from '@/lib/services/optimizedClass.service';
@@ -51,9 +52,11 @@ const StudentCard: React.FC<StudentCardProps> = ({
           <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center overflow-hidden">
             {/* Avatar logic: show image if available, else initial */}
             {studentData.student.aks ? (
-              <img
+              <Image
                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${studentData.student.aks}`}
                 alt={studentData.student.name}
+                width={40}
+                height={40}
                 className="w-full h-full object-cover"
               />
             ) : (

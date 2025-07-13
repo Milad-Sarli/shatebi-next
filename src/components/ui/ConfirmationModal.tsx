@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
   cancelText?: string;
   onConfirm: () => void;
   isLoading?: boolean;
+  isConfirmDisabled?: boolean;
   variant?: "default" | "destructive" | "warning";
   children?: React.ReactNode;
 }
@@ -27,6 +28,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelText = "انصراف", 
   onConfirm, 
   isLoading = false,
+  isConfirmDisabled = false,
   variant = "default",
   children
 }) => {
@@ -88,7 +90,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <Button
             onClick={handleConfirm}
             className={`flex-1 ${styles.button}`}
-            disabled={isLoading}
+            disabled={isLoading || isConfirmDisabled}
           >
             {isLoading ? (
               <div className="flex items-center gap-2">

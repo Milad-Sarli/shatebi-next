@@ -367,19 +367,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       محدوده درسی
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={multiGradeForm.control}
-                        name="end_page"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">صفحه پایان</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" placeholder="صفحه پایان" className="text-center" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                
                       <FormField
                         control={multiGradeForm.control}
                         name="start_page"
@@ -388,6 +376,19 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                             <FormLabel className="text-sm font-medium text-right block">صفحه شروع</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" placeholder="صفحه شروع" className="text-center" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                            <FormField
+                        control={multiGradeForm.control}
+                        name="end_page"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-right block">صفحه پایان</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="صفحه پایان" className="text-center" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -402,19 +403,20 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       نمرات
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
+                    <FormField
                         control={multiGradeForm.control}
-                        name="details"
+                        name="hefz"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                      
                       <FormField
                         control={multiGradeForm.control}
                         name="sout"
@@ -443,17 +445,18 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       />
                       <FormField
                         control={multiGradeForm.control}
-                        name="hefz"
+                        name="details"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                      
                     </div>
                   </div>
 
@@ -480,6 +483,24 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       محدوده درسی (سوره)
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                        control={surahForm.control}
+                        name="start_surah"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-right block">سوره شروع</FormLabel>
+                            <FormControl>
+                              <SingleSelectCombobox
+                                options={surahs.map(surah => ({ value: surah.id.toString(), label: surah.titleAr }))}
+                                onChange={value => { field.onChange(value); handleStartSurahChange(value); }}
+                                value={field.value}
+                                placeholder="انتخاب سوره"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={surahForm.control}
                         name="start_verse"
@@ -498,16 +519,16 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      <FormField
+                   <FormField
                         control={surahForm.control}
-                        name="start_surah"
+                        name="end_surah"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">سوره شروع</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">سوره پایان</FormLabel>
                             <FormControl>
                               <SingleSelectCombobox
                                 options={surahs.map(surah => ({ value: surah.id.toString(), label: surah.titleAr }))}
-                                onChange={value => { field.onChange(value); handleStartSurahChange(value); }}
+                                onChange={value => { field.onChange(value); handleEndSurahChange(value); }}
                                 value={field.value}
                                 placeholder="انتخاب سوره"
                               />
@@ -534,24 +555,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={surahForm.control}
-                        name="end_surah"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">سوره پایان</FormLabel>
-                            <FormControl>
-                              <SingleSelectCombobox
-                                options={surahs.map(surah => ({ value: surah.id.toString(), label: surah.titleAr }))}
-                                onChange={value => { field.onChange(value); handleEndSurahChange(value); }}
-                                value={field.value}
-                                placeholder="انتخاب سوره"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                     
                     </div>
                   </div>
 
@@ -561,14 +565,14 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       نمرات
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
+                    <FormField
                         control={surahForm.control}
-                        name="details"
+                        name="hefz"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -600,14 +604,15 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      <FormField
+                    
+                                            <FormField
                         control={surahForm.control}
-                        name="hefz"
+                        name="details"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -639,19 +644,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       محدوده درسی (جز)
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={partForm.control}
-                        name="end_joze"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">جز پایان</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" min="1" max="30" placeholder="جز پایان" className="text-center" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    
                       <FormField
                         control={partForm.control}
                         name="start_joze"
@@ -660,6 +653,19 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                             <FormLabel className="text-sm font-medium text-right block">جز شروع</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" min="1" max="30" placeholder="جز شروع" className="text-center" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                        <FormField
+                        control={partForm.control}
+                        name="end_joze"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-right block">جز پایان</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min="1" max="30" placeholder="جز پایان" className="text-center" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -674,14 +680,14 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                       نمرات
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
+                    <FormField
                         control={partForm.control}
-                        name="details"
+                        name="hefz"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -713,14 +719,15 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      <FormField
+                   
+                         <FormField
                         control={partForm.control}
-                        name="hefz"
+                        name="details"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره حفظ (0-70)</FormLabel>
+                            <FormLabel className="text-sm font-medium text-right block">نمره مشخصات (0-10)</FormLabel>
                             <FormControl>
-                              <Input {...field} type="number" min="0" max="70" placeholder="نمره حفظ" className="text-center text-lg" />
+                              <Input {...field} type="number" min="0" max="10" placeholder="نمره مشخصات" className="text-center text-lg" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
