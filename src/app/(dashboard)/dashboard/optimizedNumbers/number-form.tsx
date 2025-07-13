@@ -38,7 +38,6 @@ const formSchema = z.object({
   sout: z.string().min(1, "لطفا نمره صوت را وارد کنید"),
   number: z.string().min(1, "لطفا نمره کل را وارد کنید"),
   practice_count: z.string().min(1, "لطفا تعداد تمرین را وارد کنید"),
-  lesson_area_id: z.string().min(1, "لطفا حوزه درس را انتخاب کنید"),
   date: z.string().min(1, "لطفا تاریخ را انتخاب کنید"),
 });
 
@@ -57,7 +56,6 @@ export function NumberForm({
   const [loading, setLoading] = React.useState(false);
   const [students, setStudents] = React.useState([]);
   const [teachers, setTeachers] = React.useState([]);
-  const [lessonAreas, setLessonAreas] = React.useState([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -70,7 +68,6 @@ export function NumberForm({
       sout: initialData?.sout?.toString() || "",
       number: initialData?.number?.toString() || "",
       practice_count: initialData?.practice_count?.toString() || "",
-      lesson_area_id: initialData?.lesson_area_id?.toString() || "",
       date: initialData?.date || "",
     },
   });
@@ -88,15 +85,6 @@ export function NumberForm({
         });
         const teachersData = await teachersResponse.json();
         setTeachers(teachersData);
-
-        // Fetch lesson areas
-        const lessonAreasResponse = await fetch('/api/lesson-areas', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
-        const lessonAreasData = await lessonAreasResponse.json();
-        setLessonAreas(lessonAreasData);
 
         // Fetch students
         const studentsResponse = await fetch('/api/students', {
@@ -130,7 +118,6 @@ export function NumberForm({
         sout: parseFloat(values.sout),
         number: parseFloat(values.number),
         practice_count: parseInt(values.practice_count),
-        lesson_area_id: parseInt(values.lesson_area_id),
         class_id: 0,
         droos_id: 0,
         date: values.date,
@@ -285,31 +272,6 @@ export function NumberForm({
               <FormControl>
                 <Input type="number" step="1" {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="lesson_area_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>حوزه درس</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="انتخاب حوزه درس" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {lessonAreas.map((area: { id: number; name: string }) => (
-                    <SelectItem key={area.id} value={area.id.toString()}>
-                      {area.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <FormMessage />
             </FormItem>
           )}

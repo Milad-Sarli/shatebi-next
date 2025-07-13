@@ -289,8 +289,30 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
   };
 
   const handleSubmit = (data: Record<string, unknown>) => {
-    onSubmit({ ...data, type: activeTab });
-    
+    // Remove lesson_area_id and filter out empty values
+    const filteredData = Object.entries(data)
+      .filter(([key, value]) =>
+        key !== "lesson_area_id" &&
+        value !== "" &&
+        value !== null &&
+        value !== undefined
+      )
+      .reduce((acc, [key, value]) => {
+        // Convert string numbers to numbers
+        if (
+          typeof value === "string" &&
+          value.trim() !== "" &&
+          !isNaN(Number(value))
+        ) {
+          acc[key] = Number(value);
+        } else {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, unknown>);
+
+    onSubmit({ ...filteredData, type: activeTab });
+
     // Clear forms after successful submission
     setTimeout(() => {
       oneGradeForm.reset();
@@ -323,8 +345,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <div dir="rtl" className="text-right space-y-4">
           <DialogHeader className="text-center">
-            <DialogTitle className="text-xl font-bold">افزودن نمره برای {student.name}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold text-right">افزودن نمره برای {student.name}</DialogTitle>
+            <DialogDescription className="text-right">
               لطفاً اطلاعات مربوط به نمره را وارد کنید.
             </DialogDescription>
           </DialogHeader>

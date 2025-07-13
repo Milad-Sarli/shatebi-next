@@ -1,6 +1,7 @@
 import React from 'react';
 import StudentCard from './StudentCard';
 import { Student, Grade } from '@/lib/services/optimizedClass.service';
+import { motion, AnimatePresence } from "framer-motion";
 
 interface StudentCardListProps {
   students: Student[];
@@ -34,23 +35,33 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {students.map((studentData) => (
-          <StudentCard
-            key={studentData.student.id}
-            studentData={studentData}
-            grades={existingGrades[studentData.student.id] || []}
-            handleAddNumber={handleAddNumber}
-            handleProvideless={handleProvideless}
-            handleAbsent={handleAbsent}
-            handleEditGrade={handleEditGrade}
-            loading={loading}
-            actionLoading={actionLoading}
-            selectedStudentForAction={selectedStudentForAction}
-            isProvideConfirmOpen={isProvideConfirmOpen}
-            isGradeWithin24Hours={isGradeWithin24Hours}
-            formatLessonRange={formatLessonRange}
-          />
-        ))}
+        <AnimatePresence>
+          {students.map((studentData, idx) => (
+            <motion.div
+              key={studentData.student.id}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              transition={{ duration: 0.35, delay: idx * 0.05 }}
+              layout
+            >
+              <StudentCard
+                studentData={studentData}
+                grades={existingGrades[studentData.student.id] || []}
+                handleAddNumber={handleAddNumber}
+                handleProvideless={handleProvideless}
+                handleAbsent={handleAbsent}
+                handleEditGrade={handleEditGrade}
+                loading={loading}
+                actionLoading={actionLoading}
+                selectedStudentForAction={selectedStudentForAction}
+                isProvideConfirmOpen={isProvideConfirmOpen}
+                isGradeWithin24Hours={isGradeWithin24Hours}
+                formatLessonRange={formatLessonRange}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
