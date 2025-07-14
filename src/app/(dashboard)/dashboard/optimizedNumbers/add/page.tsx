@@ -11,7 +11,7 @@ import { format, subHours } from "date-fns-jalali";
 import { UseFormReturn } from "react-hook-form";
 // import RotatingText from "@/components/reactbit/texts/RotatingText";
 import { EditingGrade, ValidationError } from '@/lib/types';
-import { OptimizedClass, Grade, Student, optimizedClassService } from '@/lib/services/optimizedClass.service';
+import { OptimizedClass, Grade, Student, optimizedClassService, StudentActivity } from '@/lib/services/optimizedClass.service';
 import SelectCourseModal from './SelectCourseModal';
 import EditGradeModal from './EditGradeModal';
 import AbsentModal from './AbsentModal';
@@ -135,6 +135,7 @@ export default function AddNumberPage() {
   const [loading, setLoading] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<DateObject | null>(null);
   const [existingGrades, setExistingGrades] = React.useState<Record<number, Grade[]>>({});
+  const [existingActivities, setExistingActivities] = React.useState<Record<number, StudentActivity[]>>({});
   const [selectedStudent, setSelectedStudent] = React.useState<StudentType | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isOneGrade, setIsOneGrade] = React.useState(false);
@@ -313,9 +314,30 @@ export default function AddNumberPage() {
         accessToken
       );
       const gradesMap: Record<number, Grade[]> = {};
+      const activitiesMap: Record<number, StudentActivity[]> = {};
+      const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+      
       response.data.forEach((student) => {
         if (student.grades && student.grades.length > 0) {
           gradesMap[student.student.id] = student.grades;
+        }
+        if (student.activities && student.activities.length > 0) {
+          // Filter activities by the selected date
+          const todayActivities = student.activities.filter((activity) => {
+            const activityDate = activity.created_at;
+            if (!activityDate) return false;
+            
+            try {
+              const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
+              return activityDateGregorian === selectedDateGregorianStr;
+            } catch {
+              return false;
+            }
+          });
+          
+          if (todayActivities.length > 0) {
+            activitiesMap[student.student.id] = todayActivities;
+          }
         }
       });
       const uniqueStudents = Array.from(
@@ -323,6 +345,7 @@ export default function AddNumberPage() {
       );
       setStudents(uniqueStudents);
       setExistingGrades(gradesMap);
+      setExistingActivities(activitiesMap);
     } catch (error) {
       console.error("Error refetching students and grades:", error);
       toast.error("خطا در به‌روزرسانی لیست نمرات");
@@ -345,6 +368,7 @@ export default function AddNumberPage() {
         );
 
         const gradesMap: Record<number, Grade[]> = {};
+        const activitiesMap: Record<number, StudentActivity[]> = {};
         // تاریخ انتخاب شده را به میلادی تبدیل کن
         // Always use Gregorian yyyy-MM-dd for comparison
         const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
@@ -361,6 +385,35 @@ export default function AddNumberPage() {
           if (student.grades && student.grades.length > 0) {
             gradesMap[student.student.id] = student.grades;
           }
+          
+          // Process activities for each student, filter by selected date
+          if (student.activities && student.activities.length > 0) {
+            console.log(`📋 Activities for student ${student.student.name}:`, student.activities);
+            
+            // Filter activities by the selected date
+            const todayActivities = student.activities.filter((activity) => {
+              const activityDate = activity.created_at;
+              if (!activityDate) return false;
+              
+              try {
+                const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
+                const isToday = activityDateGregorian === selectedDateGregorianStr;
+                console.log(`📅 Activity date check for ${student.student.name}:`, {
+                  activityDate,
+                  activityDateGregorian,
+                  selectedDateGregorianStr,
+                  isToday
+                });
+                return isToday;
+              } catch {
+                return false;
+              }
+            });
+            
+            if (todayActivities.length > 0) {
+              activitiesMap[student.student.id] = todayActivities;
+            }
+          }
         });
 
         const uniqueStudents = Array.from(
@@ -369,6 +422,7 @@ export default function AddNumberPage() {
 
         setStudents(uniqueStudents);
         setExistingGrades(gradesMap);
+        setExistingActivities(activitiesMap);
 
 
       } catch (error) {
@@ -879,10 +933,40 @@ export default function AddNumberPage() {
             accessToken
           );
           
+          const gradesMap: Record<number, Grade[]> = {};
+          const activitiesMap: Record<number, StudentActivity[]> = {};
+          const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+          
+          response.data.forEach((student) => {
+            if (student.grades && student.grades.length > 0) {
+              gradesMap[student.student.id] = student.grades;
+            }
+            if (student.activities && student.activities.length > 0) {
+              // Filter activities by the selected date
+              const todayActivities = student.activities.filter((activity) => {
+                const activityDate = activity.created_at;
+                if (!activityDate) return false;
+                
+                try {
+                  const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
+                  return activityDateGregorian === selectedDateGregorianStr;
+                } catch {
+                  return false;
+                }
+              });
+              
+              if (todayActivities.length > 0) {
+                activitiesMap[student.student.id] = todayActivities;
+              }
+            }
+          });
+          
           const uniqueStudents = Array.from(
             new Map(response.data.map(item => [item.student.id, item])).values()
           );
           setStudents(uniqueStudents);
+          setExistingGrades(gradesMap);
+          setExistingActivities(activitiesMap);
         } catch (refreshError) {
           console.error("Error refreshing students:", refreshError);
         }
@@ -1008,10 +1092,40 @@ export default function AddNumberPage() {
             accessToken
           );
           
+          const gradesMap: Record<number, Grade[]> = {};
+          const activitiesMap: Record<number, StudentActivity[]> = {};
+          const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
+          
+          response.data.forEach((student) => {
+            if (student.grades && student.grades.length > 0) {
+              gradesMap[student.student.id] = student.grades;
+            }
+            if (student.activities && student.activities.length > 0) {
+              // Filter activities by the selected date
+              const todayActivities = student.activities.filter((activity) => {
+                const activityDate = activity.created_at;
+                if (!activityDate) return false;
+                
+                try {
+                  const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
+                  return activityDateGregorian === selectedDateGregorianStr;
+                } catch {
+                  return false;
+                }
+              });
+              
+              if (todayActivities.length > 0) {
+                activitiesMap[student.student.id] = todayActivities;
+              }
+            }
+          });
+          
           const uniqueStudents = Array.from(
             new Map(response.data.map(item => [item.student.id, item])).values()
           );
           setStudents(uniqueStudents);
+          setExistingGrades(gradesMap);
+          setExistingActivities(activitiesMap);
         } catch (refreshError) {
           console.error("Error refreshing students:", refreshError);
         }
@@ -1033,26 +1147,6 @@ export default function AddNumberPage() {
   return (
     <PageTransition>
       <div className="space-y-4 min-h-[80vh]">
-        {/* <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 shadow-lg border-0 relative overflow-hidden">
-          <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-lg"></div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white relative z-10 flex items-center gap-2">
-            <RotatingText
-              texts={['ایجاد', 'ویرایش', 'حذف']}
-              mainClassName="px-2 sm:px-2 md:px-3 bg-cyan-300 text-black overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg"
-              staggerFrom="last"
-              initial={{ y: "100%" }}
-              splitBy="word"
-              animate={{ y: 0 }}
-              exit={{ y: "-120%" }}
-              staggerDuration={0.025}
-              splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1 md:pb-1"
-              transition={{ type: "spring", damping: 30, stiffness: 400 }}
-              rotationInterval={2000}
-            />
-            نمرات قرآن آموزان
-          </h1>
-        </div> */}
-
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">
@@ -1079,6 +1173,7 @@ export default function AddNumberPage() {
               <StudentCardList
                 students={students}
                 existingGrades={existingGrades}
+                existingActivities={existingActivities}
                 handleAddNumber={handleAddNumber}
                 handleProvideless={handleProvideless}
                 handleAbsent={handleAbsent}

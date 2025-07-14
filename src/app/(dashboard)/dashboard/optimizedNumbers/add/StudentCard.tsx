@@ -2,12 +2,13 @@ import React from 'react';
 import Image from 'next/image';
 import GradeDisplay from './GradeDisplay';
 import ActionButtons from './ActionButtons';
-import { Student, Grade } from '@/lib/services/optimizedClass.service';
+import { Student, Grade, StudentActivity } from '@/lib/services/optimizedClass.service';
 import { motion } from 'framer-motion';
 
 interface StudentCardProps {
   studentData: Student;
   grades: Grade[];
+  activities: StudentActivity[];
   handleAddNumber: (studentId: number) => void;
   handleProvideless: (studentId: number) => void;
   handleAbsent: (studentId: number) => void;
@@ -18,13 +19,12 @@ interface StudentCardProps {
   isProvideConfirmOpen: boolean;
   isGradeWithin24Hours: (grade: Grade) => boolean;
   formatLessonRange: (grade: Grade) => string;
-  absentActivity?: { reason?: string } | null;
-  provideActivity?: object | null;
 }
 
 const StudentCard: React.FC<StudentCardProps> = ({
   studentData,
   grades,
+  activities,
   handleAddNumber,
   handleProvideless,
   handleAbsent,
@@ -35,9 +35,40 @@ const StudentCard: React.FC<StudentCardProps> = ({
   isProvideConfirmOpen,
   isGradeWithin24Hours,
   formatLessonRange,
-  absentActivity,
-  provideActivity,
 }) => {
+  // Find all absent activities
+  const absentActivities = activities.filter(activity => {
+    const isExplicitlyAbsent = activity.class_absent === "1" || activity.class_absent === "true";
+    const hasReason = activity.reason && activity.reason.trim() !== "";
+    const isAbsentWithReason = hasReason && (!activity.class_absent);
+    return isExplicitlyAbsent || isAbsentWithReason;
+  });
+  // Sort by created_at descending and pick the latest
+  const latestAbsentActivity = absentActivities.length > 0
+    ? absentActivities.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+    : null;
+
+  const provideActivity = activities.find(activity => 
+    activity.provideless === "1" || activity.provideless === "true"
+  );
+
+  // Debug logging
+  if (activities.length > 0) {
+    console.log(`🎯 Activities for ${studentData.student.name}:`, activities);
+    console.log(`🎯 Absent activity:`, latestAbsentActivity);
+    console.log(`🎯 Provide activity:`, provideActivity);
+    console.log(`🎯 Activity details:`, activities.map(a => ({
+      id: a.id,
+      class_absent: a.class_absent,
+      provideless: a.provideless,
+      reason: a.reason,
+      created_at: a.created_at,
+      isExplicitlyAbsent: a.class_absent === "1" || a.class_absent === "true",
+      hasReason: a.reason && a.reason.trim() !== "",
+      isAbsentWithReason: (a.reason && a.reason.trim() !== "") && (!a.class_absent)
+    })));
+  }
+
   // Main student card UI
   return (
     <motion.div
@@ -67,12 +98,12 @@ const StudentCard: React.FC<StudentCardProps> = ({
             <span className="text-zinc-900 font-medium">{studentData.student.name}</span>
             <span className="text-xs text-zinc-500">{studentData.student.student_code}</span>
             {/* Absent/provideless status badge */}
-            {absentActivity && (
+            {latestAbsentActivity && (
               <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full mt-1">
-                غایب{absentActivity.reason ? ` (${absentActivity.reason})` : ''}
+                غایب{latestAbsentActivity.reason ? ` (${latestAbsentActivity.reason})` : ''}
               </span>
             )}
-            {!absentActivity && provideActivity && (
+            {!latestAbsentActivity && provideActivity && (
               <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full mt-1">
                 عدم تحویل
               </span>

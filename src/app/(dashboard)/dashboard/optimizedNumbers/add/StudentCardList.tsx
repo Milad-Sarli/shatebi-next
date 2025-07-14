@@ -1,11 +1,12 @@
 import React from 'react';
 import StudentCard from './StudentCard';
-import { Student, Grade } from '@/lib/services/optimizedClass.service';
+import { Student, Grade, StudentActivity } from '@/lib/services/optimizedClass.service';
 import { motion, AnimatePresence } from "framer-motion";
 
 interface StudentCardListProps {
   students: Student[];
   existingGrades: Record<number, Grade[]>;
+  existingActivities: Record<number, StudentActivity[]>;
   handleAddNumber: (studentId: number) => void;
   handleProvideless: (studentId: number) => void;
   handleAbsent: (studentId: number) => void;
@@ -21,6 +22,7 @@ interface StudentCardListProps {
 const StudentCardList: React.FC<StudentCardListProps> = ({
   students,
   existingGrades,
+  existingActivities,
   handleAddNumber,
   handleProvideless,
   handleAbsent,
@@ -48,6 +50,7 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
               <StudentCard
                 studentData={studentData}
                 grades={existingGrades[studentData.student.id] || []}
+                activities={existingActivities[studentData.student.id] || []}
                 handleAddNumber={handleAddNumber}
                 handleProvideless={handleProvideless}
                 handleAbsent={handleAbsent}
