@@ -222,7 +222,7 @@ export default function OptimizedClassesPage() {
                 ?.toLowerCase().includes(searchLower);
               
               // Search in status
-              const statusMatch = (classItem.status === "active" ? "فعال" : "غیرفعال")
+              const statusMatch = (classItem.status ? "فعال" : "غیرفعال")
                 .includes(searchQuery);
               
               return studentMatch || masterMatch || statusMatch;

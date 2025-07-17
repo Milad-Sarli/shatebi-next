@@ -507,10 +507,6 @@ export default function AddNumberPage() {
         console.log("📋 Grade submission - Class master data:", classMaster);
       }
 
-      // Check if this is a reading class or hefz class
-      const isReadingClassType = isReadingClass(selectedCourse.title);
-      const isHefzClass = selectedCourse.title?.toLowerCase().includes('حفظ') || false;
-
       const jsDate = selectedDate ? selectedDate.toDate() : null;
       if (!jsDate) return;
 
@@ -542,27 +538,15 @@ export default function AddNumberPage() {
 
       // Handle different types of droos
       if (isOneGrade) {
-        if (isHefzClass) {
-          // Hefz class - store grade in number field (0-100)
-          payload.number = parseFloat(data.number as string);
-          
-          if (data.type === 'surah') {
-            payload.start_surah = data.start_surah as string;
-            payload.start_verse = parseInt(data.start_verse as string);
-            payload.end_surah = data.end_surah as string;
-            payload.end_verse = parseInt(data.end_verse as string);
-          } else if (data.type === 'page') {
-            payload.start_page = parseInt(data.start_page as string);
-            payload.end_page = parseInt(data.end_page as string);
-          }
-        } else if (isReadingClassType) {
-          // Reading class - store grade in number field
-          payload.number = parseFloat(data.number as string);
-          payload.start_page = parseInt(data.start_page as string);
-          payload.end_page = parseInt(data.end_page as string);
-        } else {
-          // Other is_one_grade droos - store grade in hefz field
-          payload.hefz = parseFloat(data.hefz as string);
+        // For is_one_grade droos, always store grade in number field (0-100)
+        payload.number = parseFloat(data.number as string);
+        
+        if (data.type === 'surah') {
+          payload.start_surah = data.start_surah as string;
+          payload.start_verse = parseInt(data.start_verse as string);
+          payload.end_surah = data.end_surah as string;
+          payload.end_verse = parseInt(data.end_verse as string);
+        } else if (data.type === 'page') {
           payload.start_page = parseInt(data.start_page as string);
           payload.end_page = parseInt(data.end_page as string);
         }
@@ -1206,6 +1190,7 @@ export default function AddNumberPage() {
               onOpenChange={setIsModalOpen}
               onFormRefsChange={setFormRefs}
               isLoading={loading}
+              isOneGrade={isOneGrade}
             />
           </>
         )}

@@ -52,23 +52,6 @@ const StudentCard: React.FC<StudentCardProps> = ({
     activity.provideless === "1" || activity.provideless === "true"
   );
 
-  // Debug logging
-  if (activities.length > 0) {
-    console.log(`🎯 Activities for ${studentData.student.name}:`, activities);
-    console.log(`🎯 Absent activity:`, latestAbsentActivity);
-    console.log(`🎯 Provide activity:`, provideActivity);
-    console.log(`🎯 Activity details:`, activities.map(a => ({
-      id: a.id,
-      class_absent: a.class_absent,
-      provideless: a.provideless,
-      reason: a.reason,
-      created_at: a.created_at,
-      isExplicitlyAbsent: a.class_absent === "1" || a.class_absent === "true",
-      hasReason: a.reason && a.reason.trim() !== "",
-      isAbsentWithReason: (a.reason && a.reason.trim() !== "") && (!a.class_absent)
-    })));
-  }
-
   // Main student card UI
   return (
     <motion.div

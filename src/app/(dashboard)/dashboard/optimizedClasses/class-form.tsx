@@ -31,7 +31,7 @@ const formSchema = z.object({
   tenant_id: z.number().min(1, "Tenant ID is required"),
   user_id: z.number().min(1, "User ID is required"),
   droos_id: z.number().min(1, "Lesson ID is required"),
-  status: z.enum(["active", "inactive"]),
+  status: z.boolean(),
 });
 
 interface ClassFormProps {
@@ -48,7 +48,7 @@ export function ClassForm({ initialData, classId, onSuccess }: ClassFormProps) {
       tenant_id: 0,
       user_id: 0,
       droos_id: 0,
-      status: "active",
+      status: true,
     },
   });
 
@@ -135,8 +135,8 @@ export function ClassForm({ initialData, classId, onSuccess }: ClassFormProps) {
               <FormItem>
                 <FormLabel>Status</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
+                  onValueChange={(value) => field.onChange(value === "true")}
+                  value={field.value ? "true" : "false"}
                 >
                   <FormControl>
                     <SelectTrigger className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -144,8 +144,8 @@ export function ClassForm({ initialData, classId, onSuccess }: ClassFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent className="bg-white dark:bg-zinc-900">
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

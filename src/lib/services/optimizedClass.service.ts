@@ -9,7 +9,7 @@ export interface OptimizedClass {
   tenant_id: number;
   user_id: number;
   droos_id: number;
-  status: "active" | "inactive";
+  status: boolean; // true for active, false for inactive
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -48,7 +48,7 @@ export interface CreateOptimizedClassDto {
   tenant_id: number;
   user_id: number;
   droos_id: number;
-  status?: "active" | "inactive";
+  status?: boolean; // true for active, false for inactive
   students?: number[];
   masters?: MasterDataItem[];
 }

@@ -109,6 +109,10 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
     Number(grade.tajvid) === 0 && 
     Number(grade.sout) === 0 && 
     Number(grade.details) === 0;
+  
+  // Check if this is a single-grade lesson
+  const isSingleGradeLesson = grade.dars?.is_one_grade || grade.droos_id?.is_one_grade || 
+                            (Number(grade.number) > 0 && Number(grade.hefz) === 0 && Number(grade.tajvid) === 0 && Number(grade.sout) === 0 && Number(grade.details) === 0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -124,6 +128,7 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
     if (isReadingGrade) return "ویرایش نمره روخوانی";
     if (isHefzGrade) return "ویرایش نمره حفظ";
     if (isProvidelessGrade) return "ویرایش نمره عدم تحویل";
+    if (isSingleGradeLesson) return "ویرایش نمره تک نمره‌ای";
     return "ویرایش نمره";
   };
 
@@ -131,6 +136,7 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
     if (isReadingGrade) return "نمره روخوانی را ویرایش کنید";
     if (isHefzGrade) return "نمره حفظ را ویرایش کنید";
     if (isProvidelessGrade) return "نمره عدم تحویل را ویرایش کنید";
+    if (isSingleGradeLesson) return "نمره تک نمره‌ای را ویرایش کنید";
     return "مقادیر را ویرایش و ذخیره کنید";
   };
 
@@ -154,11 +160,11 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
                 نمرات
               </h3>
               
-              {isReadingGrade || isHefzGrade ? (
+              {isReadingGrade || isHefzGrade || isSingleGradeLesson ? (
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 text-right">
-                      {isReadingGrade ? "نمره روخوانی (0-100)" : "نمره حفظ (0-100)"}
+                      {isReadingGrade ? "نمره روخوانی (0-100)" : isHefzGrade ? "نمره حفظ (0-100)" : "نمره (0-100)"}
                     </label>
                     <Input 
                       name="number" 
@@ -167,7 +173,7 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
                       max="100"
                       value={form.number || ''} 
                       onChange={handleChange} 
-                      placeholder={isReadingGrade ? "نمره روخوانی" : "نمره حفظ"}
+                      placeholder={isReadingGrade ? "نمره روخوانی" : isHefzGrade ? "نمره حفظ" : "نمره"}
                       className="text-center text-lg h-12"
                     />
                   </div>

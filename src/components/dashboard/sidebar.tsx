@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
+import { Calendar } from "react-multi-date-picker";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   setSidebarOpen?: (open: boolean) => void;
@@ -92,6 +93,12 @@ const items: NavItem[] = [
     title: "متقاضیان ثبت نام",
     href: "/dashboard/applicants",
     icon: UserPlus,
+    requiredRole: "admin",
+  },
+  {
+    title: "حضور غیاب هفتگی",
+    href: "/dashboard/week-absents",
+    icon: Clock,
     requiredRole: "admin",
   },
   {

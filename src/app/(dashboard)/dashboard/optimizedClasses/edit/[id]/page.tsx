@@ -116,7 +116,7 @@ export default function EditClassPage() {
     user_ids: [] as number[],
     droos_ids: [] as number[],
     teacher_ids: [] as number[],
-    status: "active" as "active" | "inactive",
+    status: true as boolean, // true for active, false for inactive
   });
 
   // Search students function
@@ -439,11 +439,11 @@ export default function EditClassPage() {
                     وضعیت
                   </label>
                   <Select
-                    value={formData.status}
-                    onValueChange={(value: "active" | "inactive") =>
+                    value={formData.status ? "true" : "false"}
+                    onValueChange={(value) =>
                       setFormData((prev) => ({
                         ...prev,
-                        status: value,
+                        status: value === "true",
                       }))
                     }
                   >
@@ -451,8 +451,8 @@ export default function EditClassPage() {
                       <SelectValue placeholder="انتخاب وضعیت" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-zinc-900">
-                      <SelectItem value="active">فعال</SelectItem>
-                      <SelectItem value="inactive">غیرفعال</SelectItem>
+                      <SelectItem value="true">فعال</SelectItem>
+                      <SelectItem value="false">غیرفعال</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

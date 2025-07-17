@@ -14,6 +14,13 @@ import { MasterService } from "@/lib/services/master.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { MultiSelectComboBoxWithInfiniteScroll } from "@/components/ui/MultiSelectComboBoxWithInfiniteScroll";
 import { ArrowLeft } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Student {
   id: number;
@@ -70,6 +77,7 @@ export default function AddClassPage() {
     user_ids: [] as number[],
     droos_ids: [] as number[],
     teacher_ids: [] as number[],
+    status: true as boolean, // true for active, false for inactive
   });
 
   React.useEffect(() => {
@@ -173,6 +181,7 @@ export default function AddClassPage() {
       tenant_id: formData.tenant_id,
       user_id: mainStudentId,
       droos_id: formData.droos_ids[0],
+      status: formData.status,
       students: additionalStudents,
       masters: formData.teacher_ids.map(teacherId => ({
         master_id: teacherId,
@@ -265,6 +274,29 @@ export default function AddClassPage() {
                   hasMore={teachersHasMore}
                   loading={teachersLoading}
                 />
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    وضعیت
+                  </label>
+                  <Select
+                    value={formData.status ? "true" : "false"}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: value === "true",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                      <SelectValue placeholder="انتخاب وضعیت" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-zinc-900">
+                      <SelectItem value="true">فعال</SelectItem>
+                      <SelectItem value="false">غیرفعال</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">
                 <Button
