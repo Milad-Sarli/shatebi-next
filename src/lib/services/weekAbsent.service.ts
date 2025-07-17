@@ -107,7 +107,7 @@ export class WeekAbsentService {
             try {
                 errorPayload.data = await response.json() as { message?: string;[key: string]: unknown };
             }
-            catch (_e) {
+            catch {
                 errorPayload.data = { message: `Request failed with status ${response.status}. No parsable error details from server.` };
             }
 

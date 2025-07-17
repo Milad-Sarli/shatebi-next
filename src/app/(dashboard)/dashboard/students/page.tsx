@@ -9,10 +9,13 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  Printer,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/context/auth.context";
 import { Student, StudentService } from "@/lib/services/student.service";
 import { toast } from "sonner";
@@ -57,6 +60,7 @@ export default function StudentsPage() {
   const router = useRouter();
   const [students, setStudents] = React.useState<Student[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [selectedStudents, setSelectedStudents] = React.useState<Set<number>>(new Set());
   const [filters, setFilters] = React.useState({
     page: 1,
     per_page: 10,
@@ -80,6 +84,12 @@ export default function StudentsPage() {
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
+
+  // Check if all students on current page are selected
+  const allSelected = students.length > 0 && students.every(student => selectedStudents.has(student.id));
+  
+  // Check if some students are selected (for indeterminate state)
+  const someSelected = students.some(student => selectedStudents.has(student.id)) && !allSelected;
 
   const fetchStudents = React.useCallback(
     async (searchTerm?: string) => {
@@ -188,6 +198,108 @@ export default function StudentsPage() {
       fetchStudents(searchInput);
     }
   };
+
+  // Handle individual student selection
+  const handleStudentSelect = (studentId: number, checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      newSelected.add(studentId);
+    } else {
+      newSelected.delete(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  // Handle select all students on current page
+  const handleSelectAll = (checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      students.forEach(student => newSelected.add(student.id));
+    } else {
+      students.forEach(student => newSelected.delete(student.id));
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  // Print selected students
+  const handlePrintSelected = () => {
+    if (selectedStudents.size === 0) {
+      toast.error("لطفاً حداقل یک قرآن آموز را انتخاب کنید");
+      return;
+    }
+
+    const selectedStudentsList = students.filter(student => selectedStudents.has(student.id));
+    
+    // Create print content
+    const printContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="fa">
+      <head>
+        <meta charset="UTF-8">
+        <title>لیست قرآن آموزان انتخاب شده</title>
+        <style>
+          body { font-family: 'Tahoma', sans-serif; margin: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header h1 { color: #333; }
+          .print-info { margin-bottom: 20px; font-size: 14px; color: #666; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>لیست قرآن آموزان انتخاب شده</h1>
+          <div class="print-info">
+            تاریخ چاپ: ${new Date().toLocaleDateString('fa-IR')}<br>
+            تعداد: ${selectedStudentsList.length} قرآن آموز
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ردیف</th>
+              <th>نام</th>
+              <th>نام خانوادگی</th>
+              <th>نام پدر</th>
+              <th>کد ملی</th>
+              <th>وضعیت</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${selectedStudentsList.map((student, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${student.Fname}</td>
+                <td>${student.Lname}</td>
+                <td>${student.FatherName}</td>
+                <td>${student.Mellicode}</td>
+                <td>${student.status}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="no-print" style="margin-top: 20px; text-align: center;">
+          <button onclick="window.print()">چاپ</button>
+          <button onclick="window.close()">بستن</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Open print window
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+    }
+  };
+
   console.log(students);
 
   return (
@@ -197,12 +309,24 @@ export default function StudentsPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             مدیریت قرآن آموزان
           </h1>
-          <Link href="/dashboard/students/add" passHref>
-            <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-              <Plus className="ml-2 h-4 w-4" />
-              افزودن قرآن آموز
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            {selectedStudents.size > 0 && (
+              <Button
+                variant="outline"
+                onClick={handlePrintSelected}
+                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <Printer className="ml-2 h-4 w-4" />
+                چاپ انتخاب شده ({selectedStudents.size})
+              </Button>
+            )}
+            <Link href="/dashboard/students/add" passHref>
+              <Button className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
+                <Plus className="ml-2 h-4 w-4" />
+                افزودن قرآن آموز
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
@@ -257,6 +381,20 @@ export default function StudentsPage() {
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      <div className="relative">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={handleSelectAll}
+                          className="border-zinc-300 dark:border-zinc-600"
+                        />
+                        {someSelected && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-2 h-0.5 bg-current rounded-sm" />
+                          </div>
+                        )}
+                      </div>
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
                       #
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
@@ -284,7 +422,7 @@ export default function StudentsPage() {
                     {loading ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           در حال بارگذاری...
@@ -293,7 +431,7 @@ export default function StudentsPage() {
                     ) : !Array.isArray(students) || students.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           هیچ قرآن آموزی یافت نشد
@@ -309,6 +447,13 @@ export default function StudentsPage() {
                           transition={{ duration: 0.2 }}
                           className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                         >
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <Checkbox
+                              checked={selectedStudents.has(student.id)}
+                              onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
+                              className="border-zinc-300 dark:border-zinc-600"
+                            />
+                          </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                             {pagination.from
                               ? pagination.from + index
@@ -389,10 +534,17 @@ export default function StudentsPage() {
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
                       <div className="p-4">
-                        <div className="mb-2">
-                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                            {student.Fname} {student.Lname}
-                          </h3>
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedStudents.has(student.id)}
+                              onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
+                              className="border-zinc-300 dark:border-zinc-600"
+                            />
+                            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              {student.Fname} {student.Lname}
+                            </h3>
+                          </div>
                           <Badge
                             className={
                               student.status === "در حال تحصیل"

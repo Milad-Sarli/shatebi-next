@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { useToast } from '@/components/ui/use-toast';
 import { WeekAbsentService, WeekAbsent, WeekAbsentStudent, WeekAbsentFilters } from '@/lib/services/weekAbsent.service';
 import { useAuth } from '@/lib/context/auth.context';
-import { Calendar, Plus, Search, Filter, Edit, Trash2, Eye, Clock, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { faIR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -35,8 +35,7 @@ export default function WeekAbsentsPage() {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [perPage, setPerPage] = useState(15);
+  const [perPage] = useState(15);
   
   // Filters
   const [filters, setFilters] = useState<WeekAbsentFilters>({
@@ -58,7 +57,7 @@ export default function WeekAbsentsPage() {
   });
 
   // Load attendance records
-  const loadAttendanceRecords = async () => {
+  const loadAttendanceRecords = useCallback(async () => {
     if (!accessToken) {
       console.log('No access token available');
       return;
@@ -78,11 +77,10 @@ export default function WeekAbsentsPage() {
       if (response.status === 'success') {
         setAttendanceRecords(response.data.data);
         setTotalPages(Math.ceil(response.data.total / perPage));
-        setTotalRecords(response.data.total);
         console.log('Attendance records set:', response.data.data);
       }
-    } catch (error) {
-      console.error('Error loading attendance records:', error);
+    } catch {
+      console.error('Error loading attendance records');
       toast({
         title: 'خطا',
         description: 'خطا در بارگذاری رکوردهای حضور و غیاب',
@@ -91,7 +89,7 @@ export default function WeekAbsentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, filters, perPage, toast]);
 
   // Update attendance record
   const handleUpdate = async () => {
@@ -107,7 +105,7 @@ export default function WeekAbsentsPage() {
         setIsEditDialogOpen(false);
         loadAttendanceRecords();
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'خطا',
         description: 'خطا در بروزرسانی حضور و غیاب',
@@ -131,7 +129,7 @@ export default function WeekAbsentsPage() {
         });
         loadAttendanceRecords();
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'خطا',
         description: 'خطا در حذف رکورد',
@@ -141,7 +139,7 @@ export default function WeekAbsentsPage() {
   };
 
   // Update student attendance
-  const updateStudentAttendance = (studentId: number, field: keyof WeekAbsentStudent, value: any) => {
+  const updateStudentAttendance = (studentId: number, field: keyof WeekAbsentStudent, value: string | boolean | null) => {
     setFormData(prev => ({
       ...prev,
       students: prev.students.map(student => 
@@ -153,7 +151,7 @@ export default function WeekAbsentsPage() {
   };
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof WeekAbsentFilters, value: any) => {
+  const handleFilterChange = (key: keyof WeekAbsentFilters, value: string | number) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
@@ -163,7 +161,7 @@ export default function WeekAbsentsPage() {
       console.log('Initial load with access token');
       loadAttendanceRecords();
     }
-  }, [accessToken]);
+  }, [accessToken, loadAttendanceRecords]);
 
   // Load data on filter changes
   useEffect(() => {
@@ -175,7 +173,7 @@ export default function WeekAbsentsPage() {
     if (accessToken) {
       loadAttendanceRecords();
     }
-  }, [currentPage, perPage, filters]); // فقط فیلترها و صفحه
+  }, [currentPage, perPage, filters, accessToken, loadAttendanceRecords]);
 
   const getStatusBadge = (status: number) => {
     switch (status) {
@@ -382,8 +380,7 @@ export default function WeekAbsentsPage() {
                           
                           {student.delay && student.delay_time && (
                             <div className="flex items-center text-sm text-gray-500">
-                              <Clock className="w-4 h-4 mr-1" />
-                              {student.delay_time}
+                              <span className="mr-1">{student.delay_time}</span>
                             </div>
                           )}
                           

@@ -266,12 +266,20 @@ export default function UsersPage() {
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
-          
           {/* Content */}
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
               مدیریت کاربران
             </h1>
+            <Button
+              variant="default"
+              size="sm"
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10"
+              onClick={() => router.push("/dashboard/users/add")}
+            >
+              <Plus className="w-4 h-4" />
+              افزودن کاربر
+            </Button>
           </div>
         </div>
 

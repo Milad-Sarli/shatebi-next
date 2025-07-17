@@ -7,25 +7,20 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/context/auth.context";
 import { UserService, User } from "@/lib/services/user.service";
 import { toast } from "sonner";
 
 const userSchema = z.object({
-  username: z.string().min(3, "نام کاربری باید حداقل 3 کاراکتر باشد"),
+  username: z
+    .string()
+    .min(3, "نام کاربری باید حداقل 3 کاراکتر باشد")
+    .max(10, "کد ملی باید حداکثر 10 رقم باشد"),
   fname: z.string().optional(),
   name: z.string().min(2, "نام باید حداقل 2 کاراکتر باشد"),
   lname: z.string().optional(),
   phone: z.string().regex(/^09\d{9}$/, "شماره موبایل باید با 09 شروع شود و 11 رقم باشد"),
-  email: z.string().optional().refine((val) => !val || val === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
-    message: "ایمیل نامعتبر است",
-  }),
-  password: z.string().optional(),
   tenant_id: z.number().min(1, "مرکز را انتخاب کنید"),
-  send_sms: z.boolean(),
-  is_superuser: z.boolean(),
-  is_admin: z.boolean(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -54,12 +49,7 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
           name: initialData.name || getUserFullName(initialData),
           lname: initialData.lname || "",
           phone: initialData.phone || "",
-          email: initialData.email || "",
-          password: "",
           tenant_id: initialData.tenant_id || 1,
-          send_sms: initialData.send_sms || false,
-          is_superuser: initialData.is_superuser || false,
-          is_admin: initialData.is_admin || false,
         }
       : {
           username: "",
@@ -67,38 +57,21 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
           name: "",
           lname: "",
           phone: "",
-          email: "",
-          password: "",
           tenant_id: 1,
-          send_sms: false,
-          is_superuser: false,
-          is_admin: false,
         },
   });
 
   const onSubmit = async (data: UserFormValues) => {
     if (!accessToken) return;
 
-    // Custom validation for password
-    if (!initialData && (!data.password || data.password.length < 6)) {
-      toast.error("رمز عبور باید حداقل 6 کاراکتر باشد");
-      return;
-    }
-
     try {
       setLoading(true);
       
-      // For edit mode, only include password if it's provided
-      const submitData: Partial<UserFormValues> = { ...data };
-      if (initialData && (!data.password || data.password === "")) {
-        delete submitData.password;
-      }
-
       if (initialData) {
-        await UserService.updateUser(initialData.id, submitData, accessToken);
+        await UserService.updateUser(initialData.id, data, accessToken);
         toast.success("کاربر با موفقیت بروزرسانی شد");
       } else {
-        await UserService.createUser(submitData, accessToken);
+        await UserService.createUser(data, accessToken);
         toast.success("کاربر با موفقیت ایجاد شد");
       }
       onSuccess();
@@ -118,7 +91,9 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
           <Input
             id="username"
             {...form.register("username")}
-            placeholder="نام کاربری (کد ملی)" 
+            placeholder="نام کاربری (کد ملی)"
+            maxLength={10}
+            inputMode="numeric"
             className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
           />
           {form.formState.errors.username && (
@@ -176,75 +151,6 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
               {form.formState.errors.phone.message}
             </p>
           )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-zinc-900 dark:text-zinc-100">ایمیل</Label>
-          <Input
-            id="email"
-            type="email"
-            {...form.register("email")}
-            placeholder="ایمیل"
-            className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
-          />
-          {form.formState.errors.email && (
-            <p className="text-sm text-red-500 dark:text-red-400">
-              {form.formState.errors.email.message}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password" className="text-zinc-900 dark:text-zinc-100">
-            رمز عبور{initialData ? " (اختیاری)" : ""}
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            {...form.register("password")}
-            placeholder={initialData ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}
-            className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
-          />
-          {form.formState.errors.password && (
-            <p className="text-sm text-red-500 dark:text-red-400">
-              {form.formState.errors.password.message}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="send_sms" className="text-zinc-900 dark:text-zinc-100">ارسال پیامک</Label>
-          <Switch
-            dir="ltr"
-            id="send_sms"
-            checked={form.watch("send_sms")}
-            onCheckedChange={(checked) => form.setValue("send_sms", checked)}
-            className="data-[state=checked]:bg-zinc-900 dark:data-[state=checked]:bg-zinc-100"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label htmlFor="is_superuser" className="text-zinc-900 dark:text-zinc-100">کاربر ویژه</Label>
-          <Switch
-            dir="ltr"
-            id="is_superuser"
-            checked={form.watch("is_superuser")}
-            onCheckedChange={(checked) => form.setValue("is_superuser", checked)}
-            className="data-[state=checked]:bg-zinc-900 dark:data-[state=checked]:bg-zinc-100"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label htmlFor="is_admin" className="text-zinc-900 dark:text-zinc-100">مدیر</Label>
-          <Switch
-            dir="ltr"
-            id="is_admin"
-            checked={form.watch("is_admin")}
-            onCheckedChange={(checked) => form.setValue("is_admin", checked)}
-            className="data-[state=checked]:bg-zinc-900 dark:data-[state=checked]:bg-zinc-100"
-          />
         </div>
       </div>
 

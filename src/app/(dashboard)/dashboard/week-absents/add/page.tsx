@@ -15,21 +15,10 @@ import { useRouter } from 'next/navigation';
 import DateSelector from '../../optimizedNumbers/add/DateSelector';
 import { DateObject } from 'react-multi-date-picker';
 
-interface AttendanceFormData {
-  date: string;
-  students: WeekAbsentStudent[];
-}
-
 export default function AddWeekAbsentPage() {
   const { user, accessToken } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-
-  // Form data
-  const [formData, setFormData] = useState<AttendanceFormData>({
-    date: '',
-    students: []
-  });
 
   // Date state for picker
   const [selectedDate, setSelectedDate] = useState<DateObject | null>(null);
@@ -54,7 +43,6 @@ export default function AddWeekAbsentPage() {
     setPage(1);
     setHasMore(true);
     setTotalStudents(0);
-    setFormData(prev => ({ ...prev, date: selectedDate ? selectedDate.format('YYYY/MM/DD') : '' }));
   }, [selectedDate]);
 
   // Load students paginated
@@ -89,7 +77,7 @@ export default function AddWeekAbsentPage() {
           return [...prev, ...filtered];
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'خطا',
         description: 'خطا در بارگذاری دانش آموزان',
@@ -130,8 +118,7 @@ export default function AddWeekAbsentPage() {
       const current = prev[student.id];
       if (current?.absent) {
         // Remove absent
-        const { absent_reason, ...rest } = current;
-        return { ...prev, [student.id]: { ...rest, absent: false, absent_reason: undefined } };
+        return { ...prev, [student.id]: { ...current, absent: false, absent_reason: undefined } };
       } else {
         return {
           ...prev,
@@ -160,8 +147,7 @@ export default function AddWeekAbsentPage() {
       const current = prev[student.id];
       if (current?.delay) {
         // Remove delay
-        const { delay_time, ...rest } = current;
-        return { ...prev, [student.id]: { ...rest, delay: false, delay_time: undefined } };
+        return { ...prev, [student.id]: { ...current, delay: false, delay_time: undefined } };
       } else {
         return {
           ...prev,
@@ -237,7 +223,6 @@ export default function AddWeekAbsentPage() {
     if (!accessToken || !selectedDate) return;
     
     const allAttendanceRecords = createAllAttendanceRecords();
-    setFormData(prev => ({ ...prev, students: allAttendanceRecords }));
     
     try {
       const response = await WeekAbsentService.create({ 
@@ -253,7 +238,7 @@ export default function AddWeekAbsentPage() {
         });
         router.push('/dashboard/week-absents');
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'خطا',
         description: 'خطا در ثبت حضور و غیاب',
@@ -275,7 +260,6 @@ export default function AddWeekAbsentPage() {
   // Calculate attendance statistics
   const absentCount = Object.values(attendance).filter(a => a.absent).length;
   const delayCount = Object.values(attendance).filter(a => a.delay).length;
-  const presentCount = students.length - absentCount - delayCount;
 
   return (
     <div className="container mx-auto p-6 space-y-6">

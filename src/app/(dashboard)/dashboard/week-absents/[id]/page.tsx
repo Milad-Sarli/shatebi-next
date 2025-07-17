@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';
 import { format } from 'date-fns-jalali';
 import { motion, AnimatePresence } from 'framer-motion';
 
