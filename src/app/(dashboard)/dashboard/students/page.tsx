@@ -141,28 +141,23 @@ export default function StudentsPage() {
 
   // Effect to handle page and per_page changes
   React.useEffect(() => {
-    if (!searchInProgress.current) {
-      fetchStudents();
-    }
-  }, [filters.page, filters.per_page, fetchStudents]);
+    fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.page, filters.per_page]);
 
   // Effect to handle debounced search changes
   React.useEffect(() => {
-    if (filters.page !== 1) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    } else {
-      fetchStudents();
-    }
-  }, [debouncedSearch, fetchStudents, filters.page]);
+    setFilters((prev) => ({ ...prev, page: 1 }));
+    // fetchStudents() will be called by the above effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   // Effect to handle status filter changes
   React.useEffect(() => {
-    if (filters.page !== 1) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    } else {
-      fetchStudents();
-    }
-  }, [statusFilter, fetchStudents, filters.page]);
+    setFilters((prev) => ({ ...prev, page: 1 }));
+    // fetchStudents() will be called by the above effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
