@@ -9,15 +9,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
 import { useToast } from '@/components/ui/use-toast';
 import { WeekAbsentService, WeekAbsent, WeekAbsentStudent, WeekAbsentFilters } from '@/lib/services/weekAbsent.service';
 import { useAuth } from '@/lib/context/auth.context';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { faIR } from 'date-fns/locale';
-import { useRouter } from 'next/navigation';
-
+import persian from 'react-date-object/calendars/persian';
+import persian_fa from 'react-date-object/locales/persian_fa';  
+import { useRouter } from 'next/navigation'; 
+import { DateObject } from 'react-multi-date-picker';
+import DateSelector from '../optimizedNumbers/add/DateSelector'; 
+  
 interface AttendanceFormData {
   date: string;
   students: WeekAbsentStudent[];
@@ -33,17 +37,23 @@ export default function WeekAbsentsPage() {
   
   const [attendanceRecords, setAttendanceRecords] = useState<WeekAbsent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [perPage] = useState(15);
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    links: [] as Array<{ url: string | null; label: string; active: boolean }>,
+  });
+  const [perPage] = useState(10);
   
   // Filters
   const [filters, setFilters] = useState<WeekAbsentFilters>({
+    page: 1,
     search: '',
     date: '',
     sort_by: 'date',
     sort_order: 'desc'
   });
+  const [selectedDate, setSelectedDate] = useState<DateObject | null>(null);
   
   // Dialog states
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -57,30 +67,35 @@ export default function WeekAbsentsPage() {
   });
 
   // Load attendance records
-  const loadAttendanceRecords = useCallback(async () => {
+  const loadAttendanceRecords = useCallback(async (page = 1, limit = 10, currentFilters = filters) => {
     if (!accessToken) {
       console.log('No access token available');
       return;
     }
     
-    console.log('API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
     setLoading(true);
     try {
-      console.log('Loading attendance records with filters:', filters);
+      console.log('Loading attendance records with filters:', currentFilters);
       const response = await WeekAbsentService.getAll(accessToken, {
-        ...filters,
-        per_page: perPage
+        ...currentFilters,
+        page: page,
+        per_page: limit
       });
       
       console.log('API Response:', response);
       
       if (response.status === 'success') {
         setAttendanceRecords(response.data.data);
-        setTotalPages(Math.ceil(response.data.total / perPage));
+        setPagination({
+          current_page: response.data.current_page,
+          last_page: Math.ceil(response.data.total / response.data.per_page),
+          total: response.data.total,
+          links: [],
+        });
         console.log('Attendance records set:', response.data.data);
       }
-    } catch {
-      console.error('Error loading attendance records');
+    } catch (error) {
+      console.error('Error loading attendance records:', error);
       toast({
         title: 'خطا',
         description: 'خطا در بارگذاری رکوردهای حضور و غیاب',
@@ -89,7 +104,7 @@ export default function WeekAbsentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, filters, perPage, toast]);
+  }, [accessToken, toast, filters]);
 
   // Update attendance record
   const handleUpdate = async () => {
@@ -153,27 +168,46 @@ export default function WeekAbsentsPage() {
   // Handle filter changes
   const handleFilterChange = (key: keyof WeekAbsentFilters, value: string | number) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    if (key === 'search' && !value) {
+      setSelectedDate(null);
+      setFilters(prev => ({...prev, date: ''}))
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
+  };
+
+  const handleDateChange = (date: DateObject | null) => {
+    setSelectedDate(date);
+    if (date) {
+      handleFilterChange('date', date.format('YYYY-MM-DD'));
+    } else {
+      handleFilterChange('date', '');
+    }
   };
 
   // Initial load when accessToken becomes available
   useEffect(() => {
     if (accessToken) {
       console.log('Initial load with access token');
-      loadAttendanceRecords();
+      loadAttendanceRecords(1, perPage, filters);
     }
-  }, [accessToken, loadAttendanceRecords]);
+  }, [accessToken, loadAttendanceRecords, perPage, filters]);
 
-  // Load data on filter changes
+  // Effect to load attendance records when page changes
   useEffect(() => {
-    console.log('useEffect triggered - loading attendance records');
-    console.log('Current filters:', filters);
-    console.log('Current page:', currentPage);
-    console.log('Access token available:', !!accessToken);
-    
     if (accessToken) {
-      loadAttendanceRecords();
+      loadAttendanceRecords(filters.page, perPage, filters);
     }
-  }, [currentPage, perPage, filters, accessToken, loadAttendanceRecords]);
+  }, [filters.page, accessToken, loadAttendanceRecords, perPage, filters]);
+
+  // Effect to reset page when other filters change
+  useEffect(() => {
+    if (filters.page !== 1) {
+      setFilters(prev => ({ ...prev, page: 1 }));
+    }
+  }, [filters.search, filters.date, filters.sort_by, filters.sort_order, filters.page]);
 
   const getStatusBadge = (status: number) => {
     switch (status) {
@@ -197,76 +231,87 @@ export default function WeekAbsentsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-white dark:bg-zinc-950 min-h-screen">
       {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">حضور و غیاب هفتگی</h1>
-          <h2 className="text-xl font-bold text-gray-900 mt-2">لیست حضور و غیاب</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-zinc-100">حضور و غیاب هفتگی</h1>
+          <h2 className="text-lg sm:text-xl font-medium text-gray-600 dark:text-zinc-400">لیست حضور و غیاب</h2>
         </div>
-        <Button 
+        <Button  
           onClick={() => router.push('/dashboard/week-absents/add')}
-          className="bg-gray-700 text-white hover:bg-gray-800 rounded-lg"
+          className="bg-gray-700 dark:bg-zinc-700 text-white hover:bg-gray-800 dark:hover:bg-zinc-600 rounded-lg w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 ml-2" />
-          افزودن حضور و غیاب جدید
+          <span className="hidden sm:inline">افزودن حضور و غیاب جدید</span>
+          <span className="sm:hidden">افزودن جدید</span>
         </Button>
       </div>
 
       {/* Search Section */}
-      <div className="flex gap-4 mb-6">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:gap-4 mb-6">
         <div className="flex-1 relative">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-zinc-500 w-4 h-4" />
           <Input
             placeholder="جستجو..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="pr-10 bg-gray-100 border-gray-300 rounded-lg"
+            className="pr-10 bg-gray-50 dark:bg-zinc-900 border-gray-300 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-zinc-100 placeholder:text-gray-500 dark:placeholder:text-zinc-400"
           />
         </div>
-        <Button variant="outline" className="bg-gray-100 text-gray-700 border-gray-300 rounded-lg hover:bg-gray-200">
-          جستجو
+        <div className="flex-1">
+          <DateSelector selectedDate={selectedDate} onChange={handleDateChange} />
+        </div>
+        <Button 
+          variant="outline" 
+          className="bg-gray-50 dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 border-gray-300 dark:border-zinc-700 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 w-full sm:w-auto" 
+          onClick={() => loadAttendanceRecords()}
+        >
+          <Search className="w-4 h-4 ml-2 sm:ml-1" />
+          <span className="sm:hidden">جستجو</span>
+          <span className="hidden sm:inline">جستجو</span>
         </Button>
       </div>
 
-      {/* Attendance Records Table */}
+      {/* Attendance Records Table - Desktop */}
       {loading ? (
-        <div className="text-center py-8">در حال بارگذاری...</div>
+        <div className="text-center py-8 text-gray-600 dark:text-gray-400">در حال بارگذاری...</div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200">
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm dark:shadow-zinc-900/20">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-gray-200">
-                  <TableHead className="text-gray-700 font-medium">#</TableHead>
-                  <TableHead className="text-gray-700 font-medium">تاریخ</TableHead>
-                  <TableHead className="text-gray-700 font-medium">تعداد دانش آموز</TableHead>
-                  <TableHead className="text-gray-700 font-medium">وضعیت</TableHead>
-                  <TableHead className="text-gray-700 font-medium">ثبت کننده</TableHead>
-                  <TableHead className="text-gray-700 font-medium">عملیات</TableHead>
+                <TableRow className="border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">#</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">تاریخ</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">تعداد دانش آموز</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">وضعیت</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">ثبت کننده</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-zinc-300 font-medium">عملیات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {attendanceRecords.map((record, index) => (
-                  <TableRow key={record.id} className="border-b border-gray-100">
-                    <TableCell className="text-gray-900">{index + 1}</TableCell>
-                    <TableCell className="text-gray-900">
-                      {format(new Date(record.date), 'yyyy/MM/dd', { locale: faIR })}
-                    </TableCell>
-                    <TableCell className="text-gray-900">{record.students.length} نفر</TableCell>
-                    <TableCell>{getStatusBadge(record.students[0]?.status || 0)}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-100 text-green-800 border-green-300 rounded-lg px-3 py-1">
+                  <TableRow key={record.id} className="border-b border-gray-100 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800/50">
+                    <TableCell className="text-right text-gray-900 dark:text-zinc-100">{index + 1}</TableCell>
+                    <TableCell className="text-right text-gray-900 dark:text-zinc-100">
+                      {new DateObject({ date: record.date }).convert(persian, persian_fa).format('YYYY/MM/DD')}
+                    </TableCell> 
+                    <TableCell className="text-right text-gray-900 dark:text-zinc-100">{record.students.length} نفر</TableCell>
+                    <TableCell className="text-right">{getStatusBadge(record.students[0]?.status || 0)}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge className="bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800 rounded-lg px-3 py-1">
                         {record.user ? `${record.user.fname} ${record.user.lname}` : '-'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> 
+                    <TableCell className="text-right">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/dashboard/week-absents/${record.id}`)}
-                          className="bg-gray-100 text-gray-700 border-gray-300 rounded-lg hover:bg-gray-200"
+                          className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 border-gray-300 dark:border-zinc-600 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700"
                         >
                           <Eye className="w-4 h-4 ml-1" />
                           مشاهده
@@ -283,7 +328,7 @@ export default function WeekAbsentsPage() {
                             });
                             setIsEditDialogOpen(true);
                           }}
-                          className="bg-gray-100 text-gray-700 border-gray-300 rounded-lg hover:bg-gray-200"
+                          className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 border-gray-300 dark:border-zinc-600 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700"
                         >
                           <Edit className="w-4 h-4 ml-1" />
                           ویرایش
@@ -293,7 +338,7 @@ export default function WeekAbsentsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => record.id && handleDelete(record.id)}
-                          className="bg-gray-100 text-red-600 border-gray-300 rounded-lg hover:bg-red-50"
+                          className="bg-gray-50 dark:bg-zinc-800 text-red-600 dark:text-red-400 border-gray-300 dark:border-zinc-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50"
                         >
                           <Trash2 className="w-4 h-4 ml-1" />
                           حذف
@@ -306,71 +351,207 @@ export default function WeekAbsentsPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(page)}
-                      isActive={currentPage === page}
-                      className="cursor-pointer"
+          {/* Mobile Card View - Minimalist Design */}
+          <div className="md:hidden space-y-4">
+            {attendanceRecords.map((record, index) => (
+              <Card key={record.id} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden dark:shadow-zinc-900/20">
+                {/* Minimalist Header */}
+                <div className="border-b border-gray-100 dark:border-zinc-700 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-zinc-300">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">
+                          {new DateObject({ date: record.date }).convert(persian, persian_fa).format('YYYY/MM/DD')}
+                        </div>
+                      </div>
+                    </div>
+                    {getStatusBadge(record.students[0]?.status || 0)}
+                  </div>
+                </div>
+
+                <div className="p-4 space-y-3">
+                  {/* Compact Stats */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{record.students.length}</span>
+                      </div>
+                      <span className="text-gray-600 dark:text-zinc-400">دانش آموز</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                        <span className="text-xs text-green-600 dark:text-green-400">✓</span>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-zinc-400 truncate max-w-20">
+                        {record.user ? `${record.user.fname} ${record.user.lname}` : 'نامشخص'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Icon-based Action Buttons */}
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/dashboard/week-absents/${record.id}`)}
+                      className="h-9 w-9 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-blue-600 dark:text-blue-400"
+                      title="مشاهده"
                     >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRecord(record);
+                        setFormData({
+                          date: record.date,
+                          students: record.students
+                        });
+                        setIsEditDialogOpen(true);
+                      }}
+                      className="h-9 w-9 p-0 hover:bg-amber-50 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400"
+                      title="ویرایش"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => record.id && handleDelete(record.id)}
+                      className="h-9 w-9 p-0 hover:bg-red-50 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400"
+                      title="حذف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {!loading && attendanceRecords.length > 0 && ( 
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <span className="hidden sm:inline">نمایش {pagination.current_page} از {pagination.last_page} صفحه</span>
+                  <span className="hidden sm:inline mx-2">|</span>
+                  نمایش {(pagination.current_page - 1) * perPage + 1} تا {Math.min(pagination.current_page * perPage, pagination.total)} از {pagination.total} رکورد حضور و غیاب
+                </div>
+              </div> 
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(1)}
+                    disabled={pagination.current_page === 1}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    اولین
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                    disabled={pagination.current_page === 1}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="hidden sm:flex items-center gap-1">
+                  {pagination.links.map((link, index) => {
+                    if (link.label === "...") {
+                      return (
+                        <span key={index} className="px-2 text-zinc-900 dark:text-slate-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    if (link.url === null) return null;
+                    const page = parseInt(link.label);
+                    if (isNaN(page)) return null;
+                    return (
+                      <Button
+                        key={index}
+                        variant={link.active ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className={`${
+                          link.active
+                            ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                            : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        {link.label}
+                      </Button>
+                    );
+                  })}
+                </div>
                 
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                    disabled={pagination.current_page === pagination.last_page}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.last_page)}
+                    disabled={pagination.current_page === pagination.last_page}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    آخرین
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700">
           <DialogHeader>
-            <DialogTitle>جزئیات حضور و غیاب</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-zinc-100">جزئیات حضور و غیاب</DialogTitle>
           </DialogHeader>
           {selectedRecord && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>تاریخ</Label>
-                  <p>{format(new Date(selectedRecord.date), 'yyyy/MM/dd', { locale: faIR })}</p>
+                  <Label className="text-zinc-700 dark:text-zinc-300">تاریخ</Label>
+                  <p className="text-zinc-900 dark:text-zinc-100">{format(new Date(selectedRecord.date), 'yyyy/MM/dd', { locale: faIR })}</p>
                 </div>
                 <div>
-                  <Label>ثبت کننده</Label>
-                  <p>{selectedRecord.user ? `${selectedRecord.user.fname} ${selectedRecord.user.lname}` : '-'}</p>
+                  <Label className="text-zinc-700 dark:text-zinc-300">ثبت کننده</Label>
+                  <p className="text-zinc-900 dark:text-zinc-100">{selectedRecord.user ? `${selectedRecord.user.fname} ${selectedRecord.user.lname}` : '-'}</p>
                 </div>
               </div>
               
               <div>
-                <Label>دانش آموزان</Label>
+                <Label className="text-zinc-700 dark:text-zinc-300">دانش آموزان</Label>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {selectedRecord.students.map((student) => (
-                    <Card key={student.student_id} className="p-4">
+                    <Card key={student.student_id} className="p-4 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <p className="font-medium">
+                          <p className="font-medium text-zinc-900 dark:text-zinc-100">
                             {student.student?.Fname} {student.student?.Lname}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-gray-500 dark:text-zinc-400">
                             کد دانش آموزی: {student.student?.StudentCode}
                           </p>
                         </div>
@@ -379,13 +560,13 @@ export default function WeekAbsentsPage() {
                           {getAttendanceStatus(student)}
                           
                           {student.delay && student.delay_time && (
-                            <div className="flex items-center text-sm text-gray-500">
+                            <div className="flex items-center text-sm text-gray-500 dark:text-zinc-400">
                               <span className="mr-1">{student.delay_time}</span>
                             </div>
                           )}
                           
                           {student.absent && student.absent_reason && (
-                            <p className="text-sm text-gray-500">{student.absent_reason}</p>
+                            <p className="text-sm text-gray-500 dark:text-zinc-400">{student.absent_reason}</p>
                           )}
                         </div>
                       </div>
@@ -400,32 +581,33 @@ export default function WeekAbsentsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700">
           <DialogHeader>
-            <DialogTitle>ویرایش حضور و غیاب</DialogTitle>
+            <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش حضور و غیاب</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-date">تاریخ</Label>
+              <Label htmlFor="edit-date" className="text-zinc-700 dark:text-zinc-300">تاریخ</Label>
               <Input
                 id="edit-date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                className="border-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               />
             </div>
             
             <div className="space-y-2">
-              <Label>دانش آموزان</Label>
+              <Label className="text-zinc-700 dark:text-zinc-300">دانش آموزان</Label>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {formData.students.map((student) => (
-                  <Card key={student.student_id} className="p-4">
+                  <Card key={student.student_id} className="p-4 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-medium">
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
                           {student.student?.Fname} {student.student?.Lname}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-zinc-400">
                           کد دانش آموزی: {student.student?.StudentCode}
                         </p>
                       </div>
@@ -438,13 +620,13 @@ export default function WeekAbsentsPage() {
                             updateStudentAttendance(student.student_id, 'delay', value === 'delay');
                           }}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32 border-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="present">حاضر</SelectItem>
-                            <SelectItem value="delay">تاخیر</SelectItem>
-                            <SelectItem value="absent">غایب</SelectItem>
+                          <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700">
+                            <SelectItem value="present" className="dark:text-zinc-100 dark:focus:bg-zinc-700">حاضر</SelectItem>
+                            <SelectItem value="delay" className="dark:text-zinc-100 dark:focus:bg-zinc-700">تاخیر</SelectItem>
+                            <SelectItem value="absent" className="dark:text-zinc-100 dark:focus:bg-zinc-700">غایب</SelectItem>
                           </SelectContent>
                         </Select>
                         
@@ -453,7 +635,7 @@ export default function WeekAbsentsPage() {
                             type="time"
                             value={student.delay_time || ''}
                             onChange={(e) => updateStudentAttendance(student.student_id, 'delay_time', e.target.value)}
-                            className="w-32"
+                            className="w-32 border-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                           />
                         )}
                         
@@ -462,7 +644,7 @@ export default function WeekAbsentsPage() {
                             placeholder="دلیل غیبت"
                             value={student.absent_reason || ''}
                             onChange={(e) => updateStudentAttendance(student.student_id, 'absent_reason', e.target.value)}
-                            className="w-48"
+                            className="w-48 border-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                           />
                         )}
                       </div>
@@ -473,10 +655,17 @@ export default function WeekAbsentsPage() {
             </div>
             
             <div className="flex justify-end space-x-2 space-x-reverse">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(false)}
+                className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
                 انصراف
               </Button>
-              <Button onClick={handleUpdate}>
+              <Button 
+                onClick={handleUpdate}
+                className="bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
                 بروزرسانی
               </Button>
             </div>

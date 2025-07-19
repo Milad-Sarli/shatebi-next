@@ -38,6 +38,7 @@ export interface WeekAbsent {
 
 export interface WeekAbsentFilters {
     per_page?: number;
+    page?: number;
     paginate?: 'on' | 'off';
     search?: string;
     date?: string;
@@ -275,4 +276,4 @@ export class WeekAbsentService {
         });
         return this.handleResponse<ApiResponse<PaginatedResponse<WeekAbsent>>>(response);
     }
-} 
+}
