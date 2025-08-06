@@ -72,7 +72,7 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({
               ) : isReadingGrade ? (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full">روخوانی</span>
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full">{grade.dars?.title || grade.droos_id?.title || "روخوانی"}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>{grade.number}</span>
                       {isNegative && (
@@ -172,4 +172,4 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({
   );
 };
 
-export default GradeDisplay; 
+export default GradeDisplay;
