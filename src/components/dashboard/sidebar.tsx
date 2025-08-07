@@ -136,6 +136,12 @@ const items: NavItem[] = [
     icon: BookOpen,
     requiredRole: "admin",
   },
+    {
+    title: "درجه بندی",
+    href: "/dashboard/degrees",
+    icon: GraduationCap, // Changed to GraduationCap icon which better represents ranking/degrees
+    requiredRole: "admin",
+  },
 ];
 
 export function Sidebar({ className, setSidebarOpen, ...props }: SidebarProps) {
