@@ -118,15 +118,26 @@ export class StudentService {
     return this.handleResponse<PaginatedResponse<Student>>(response);
   }
 
-  static async createStudent(studentData: Partial<Student>, token: string): Promise<{ data: Student }> {
+  static async createStudent(studentData: Partial<Student> | FormData, token: string): Promise<{ data: Student }> {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json'
+    };
+    
+    let body: string | FormData;
+    
+    if (studentData instanceof FormData) {
+      body = studentData;
+      // Do not set Content-Type for FormData; browser will set it
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(studentData);
+    }
+    
     const response = await fetch(`${API_URL}/api/students`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(studentData)
+      headers,
+      body
     });
     return this.handleResponse<{ data: Student }>(response);
   }
@@ -141,15 +152,26 @@ export class StudentService {
     return this.handleResponse<{ data: Student }>(response);
   }
 
-  static async updateStudent(id: number, studentData: Partial<Student>, token: string): Promise<{ data: Student }> {
+  static async updateStudent(id: number, studentData: Partial<Student> | FormData, token: string): Promise<{ data: Student }> {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json'
+    };
+    
+    let body: string | FormData;
+    
+    if (studentData instanceof FormData) {
+      body = studentData;
+      // Do not set Content-Type for FormData; browser will set it
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(studentData);
+    }
+    
     const response = await fetch(`${API_URL}/api/students/${id}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(studentData)
+      headers,
+      body
     });
     return this.handleResponse<{ data: Student }>(response);
   }
@@ -174,4 +196,4 @@ export class StudentService {
     });
     return this.handleResponse<PaginatedResponse<Student>>(response);
   }
-} 
+}

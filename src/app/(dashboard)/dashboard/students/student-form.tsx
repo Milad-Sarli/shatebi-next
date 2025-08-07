@@ -24,18 +24,23 @@ import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import DatePicker from "react-multi-date-picker";
+import { FileInput } from "@/components/ui/file-input";
+import Image from "next/image";
 
 const educationLevels = [
   { value: "پنجم", label: "پنجم" },
   { value: "ششم", label: "ششم" },
   { value: "هفتم", label: "هفتم" },
   { value: "هشتم", label: "هشتم" },
-  { value: "نهم", label: "نهم" },
+  { value: "نهم", label: "نهم" }, 
   { value: "دهم", label: "دهم" },
   { value: "یازدهم", label: "یازدهم" },
   { value: "دوازدهم", label: "دوازدهم" },
   { value: "دانشگاه", label: "دانشگاه" },
 ];
+
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+const MAX_FILE_SIZE = 300 * 1024; // 300KB
 
 const studentSchema = z.object({
   Fname: z.string().min(1, "نام الزامی است"),
@@ -54,7 +59,23 @@ const studentSchema = z.object({
     "انتقالی",
     "اخراجی",
   ]),
-  Aks: z.string().optional(),
+  Aks: z
+    .any()
+    .optional()
+    .refine(
+      (file) => {
+        if (!file || typeof file === "string") return true; // Allow undefined, null, or existing URL string
+        return (file as File).size <= MAX_FILE_SIZE;
+      },
+      `حداکثر حجم فایل ${MAX_FILE_SIZE / 1024}KB میباشد.`
+    )
+    .refine(
+      (file) => {
+        if (!file || typeof file === "string") return true; // Allow undefined, null, or existing URL string
+        return ACCEPTED_IMAGE_TYPES.includes((file as File).type);
+      },
+      "فرمت فایل باید JPEG, PNG, یا JPG باشد."
+    ),
   juz: z.string().optional(),
   ziafat: z.string().optional(),
   ziafatdate: z.string().optional(),
@@ -104,6 +125,9 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
   const [provinces, setProvinces] = React.useState<Province[]>([]);
   const [cities, setCities] = React.useState<City[]>([]);
   const [selectedProvinceId, setSelectedProvinceId] = React.useState<number | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [fileInputKey, setFileInputKey] = React.useState<number>(0);
 
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
@@ -165,6 +189,15 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       }
     };
     fetchProvinces();
+    
+    // Set image preview for existing student
+    if (student?.Aks) {
+      // Handle relative paths by converting to absolute URL using API base
+      const imageUrl = student.Aks.startsWith('http') 
+        ? student.Aks 
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${student.Aks}`;
+      setImagePreview(imageUrl);
+    } 
   }, [student]);
 
   React.useEffect(() => {
@@ -184,6 +217,34 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
     };
     fetchCities();
   }, [selectedProvinceId]);
+
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      form.setValue("Aks", file);
+    } else {
+      setImagePreview(null);
+      form.setValue("Aks", undefined);
+    }
+  };
+
+  const resetFileInput = () => {
+    setSelectedFile(null);
+    // Handle relative paths when resetting
+    const imageUrl = student?.Aks 
+      ? (student.Aks.startsWith('http') 
+          ? student.Aks 
+          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${student.Aks}`)
+      : null;
+    setImagePreview(imageUrl);
+    setFileInputKey(prev => prev + 1);
+    form.setValue("Aks", student?.Aks || undefined);
+  };
 
   const handleProvinceChange = (value: string) => {
     const province = provinces.find(p => p.name === value);
@@ -209,13 +270,44 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
 
     try {
       setLoading(true);
+      
+      let submitData: StudentFormData | FormData;
+      
+      if (selectedFile || (student && !selectedFile && !imagePreview)) {
+        // Use FormData if there's a new file or if removing existing image
+        const formData = new FormData();
+        
+        // Add all form fields to FormData
+        Object.entries(data).forEach(([key, value]) => {
+          if (key !== 'Aks' && value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Handle image field
+        if (selectedFile) {
+          formData.append('Aks', selectedFile);
+        } else if (student && !imagePreview) {
+          // User removed existing image
+          formData.append('Aks', '');
+        }
+        
+        submitData = formData;
+      } else {
+        // Use regular JSON if no file changes
+        submitData = {
+          ...data,
+          ...(student?.Aks && imagePreview ? { Aks: student.Aks } : {})
+        };
+      }
+
       if (student) {
-        await StudentService.updateStudent(student.id, data, accessToken);
+        await StudentService.updateStudent(student.id, submitData, accessToken);
         sonnerToast.success("قرآن آموز با موفقیت ویرایش شد", {
           style: { background: '#22c55e', color: '#fff' }
         });
       } else {
-        await StudentService.createStudent(data, accessToken);
+        await StudentService.createStudent(submitData, accessToken);
         sonnerToast.success("قرآن آموز با موفقیت ایجاد شد", {
           style: { background: '#22c55e', color: '#fff' }
         });
@@ -472,6 +564,41 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
         <div className="space-y-2">
           <Label htmlFor="Adress">آدرس</Label>
           <Input id="Adress" {...form.register("Adress")} placeholder="آدرس" />
+        </div>
+
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <Label htmlFor="Aks">عکس</Label>
+          <div className="space-y-4">
+            <FileInput
+              key={fileInputKey}
+              label="انتخاب عکس"
+              onFileChange={handleFileChange}
+              accept="image/*"
+            />
+            {imagePreview && (
+              <div className="relative w-32 h-32 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <Image
+                  src={imagePreview}
+                  alt="پیش‌نمایش عکس"
+                  fill
+                  className="object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={resetFileInput}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+          {form.formState.errors.Aks && (
+            <p className="text-sm text-red-500">
+              {String(form.formState.errors.Aks.message || 'Invalid file')}
+            </p>
+          )}
         </div>
 
         {/* Entry Date */}

@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   Plus,
   Search,
@@ -109,6 +110,7 @@ export default function StudentsPage() {
             per_page: filters.per_page,
             search: searchQuery || undefined,
             status: statusFilter,
+            with: 'tenant',
           },
           accessToken
         );
@@ -142,21 +144,18 @@ export default function StudentsPage() {
   // Effect to handle page and per_page changes
   React.useEffect(() => {
     fetchStudents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.per_page]);
 
   // Effect to handle debounced search changes
   React.useEffect(() => {
     setFilters((prev) => ({ ...prev, page: 1 }));
     // fetchStudents() will be called by the above effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
   // Effect to handle status filter changes
   React.useEffect(() => {
     setFilters((prev) => ({ ...prev, page: 1 }));
     // fetchStudents() will be called by the above effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const handlePageChange = (page: number) => {
@@ -393,6 +392,9 @@ export default function StudentsPage() {
                       #
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      عکس
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
                       نام
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
@@ -417,7 +419,7 @@ export default function StudentsPage() {
                     {loading ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           در حال بارگذاری...
@@ -426,7 +428,7 @@ export default function StudentsPage() {
                     ) : !Array.isArray(students) || students.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           هیچ قرآن آموزی یافت نشد
@@ -453,6 +455,27 @@ export default function StudentsPage() {
                             {pagination.from
                               ? pagination.from + index
                               : index + 1}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="flex items-center justify-center">
+                              {student.Aks ? (
+                                <Image
+                                   src={student.Aks.startsWith('http') ? student.Aks : `${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi/uploads/avatars_tenant_${student.tenant.id}/${student.Aks}`}
+                                   alt={`${student.Fname} ${student.Lname}`}
+                                   width={40}
+                                   height={40}
+                                   className="rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700"
+                                   onError={(e) => {
+                                     const target = e.target as HTMLImageElement;
+                                     target.style.display = 'none';
+                                   }}
+                                 />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
+                                  {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
                             {student.Fname}
@@ -530,12 +553,29 @@ export default function StudentsPage() {
                     >
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <Checkbox
                               checked={selectedStudents.has(student.id)}
                               onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
                               className="border-zinc-300 dark:border-zinc-600"
                             />
+                            {student.Aks ? (
+                              <Image
+                                 src={student.Aks.startsWith('http') ? student.Aks : `${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi/uploads/avatars_tenant_${student.tenant.id}/${student.Aks}`}
+                                 alt={`${student.Fname} ${student.Lname}`}
+                                 width={40}
+                                 height={40}
+                                 className="rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700"
+                                 onError={(e) => {
+                                   const target = e.target as HTMLImageElement;
+                                   target.style.display = 'none';
+                                 }}
+                               />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
+                                {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
+                              </div>
+                            )}
                             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
                               {student.Fname} {student.Lname}
                             </h3>
