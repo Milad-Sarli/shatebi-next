@@ -460,7 +460,7 @@ export default function StudentsPage() {
                             <div className="flex items-center justify-center">
                               {student.Aks ? (
                                 <Image
-                                   src={student.Aks.startsWith('http') ? student.Aks : `${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi/uploads/avatars_tenant_${student.tenant.id}/${student.Aks}`}
+                                   src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
                                    alt={`${student.Fname} ${student.Lname}`}
                                    width={40}
                                    height={40}
@@ -469,7 +469,7 @@ export default function StudentsPage() {
                                      const target = e.target as HTMLImageElement;
                                      target.style.display = 'none';
                                    }}
-                                 />
+                                 /> 
                               ) : (
                                 <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
                                   {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
@@ -561,7 +561,7 @@ export default function StudentsPage() {
                             />
                             {student.Aks ? (
                               <Image
-                                 src={student.Aks.startsWith('http') ? student.Aks : `${process.env.NEXT_PUBLIC_API_URL}/storage/shatebi/uploads/avatars_tenant_${student.tenant.id}/${student.Aks}`}
+                                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
                                  alt={`${student.Fname} ${student.Lname}`}
                                  width={40}
                                  height={40}

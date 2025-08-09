@@ -3,30 +3,22 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/auth.context";
-import { Degree, DegreeService } from "@/lib/services/degree.service";
+import { Degree, DegreeService, DegreeItem } from "@/lib/services/degree.service";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { useParams } from 'next/navigation';
 import {
-  Carousel,
+  Carousel, 
   CarouselContent,   
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-interface DegreeItem {
-  id: string;
-  degree: string;
-  number: number;
-  student: {
-    Fname: string;
-    Lname: string;
-  };
-}
+// Remove the local DegreeItem interface since we're importing it from the service
 
-export default function DegreeDetailsPage(): JSX.Element {
+export default function DegreeDetailsPage() {
   const { accessToken } = useAuth();
   const [degree, setDegree] = React.useState<Degree | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -61,7 +53,7 @@ export default function DegreeDetailsPage(): JSX.Element {
 
     if (!degree) return allDegrees;
 
-    degree.items.forEach((item: DegreeItem) => {
+    degree.items.forEach((item) => {
       if (item.student && allDegrees.has(item.degree)) {
         allDegrees.get(item.degree)?.push(item);
       }
