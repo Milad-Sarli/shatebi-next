@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/auth.context";
 import { Degree, DegreeService } from "@/lib/services/degree.service";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Badge } from "@/components/ui/badge";
-import { useParams } from 'next/navigation';
 import {
   Table,
-  TableBody,
+  TableBody, 
   TableCell,
   TableHead,
   TableHeader,
@@ -33,6 +35,7 @@ export default function DegreeDetailsPage() {
   const [degree, setDegree] = React.useState<Degree | null>(null);
   const [loading, setLoading] = React.useState(true);
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedDegree, setSelectedDegree] = React.useState<string>("all");
@@ -100,11 +103,17 @@ export default function DegreeDetailsPage() {
       <Card dir="rtl">
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="flex-1">
-              <CardTitle>{degree.name}</CardTitle>
-              <p className="text-sm text-muted-foreground pt-2">
-                لیست دانش آموزان و نمرات کسب شده در این درجه بندی
-              </p>
+            <div className="flex flex-1 items-center gap-4">
+              <Button variant="outline" onClick={() => router.back()}>
+                <span>بازگشت</span>
+                <ArrowRight className="mr-2 h-4 w-4" />
+              </Button>
+              <div className="flex-1">
+                <CardTitle>{degree.name}</CardTitle>
+                <p className="text-sm text-muted-foreground pt-2">
+                  لیست دانش آموزان و نمرات کسب شده در این درجه بندی
+                </p>
+              </div>
             </div>
             <Badge variant="outline" className="mt-4 md:mt-0">{`ماه ${degree.month} سال ${degree.year}`}</Badge>
           </div>
@@ -135,66 +144,67 @@ export default function DegreeDetailsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">نام دانش آموز</TableHead>
-                  <TableHead className="text-right">درجه</TableHead>
-                  <TableHead className="text-right">نمره</TableHead>
-                  <TableHead className="text-right">پیشرفت</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedItems.length > 0 ? (
-                  paginatedItems.map((item) => {
-                    const progress =
-                      item.last_degree != null
-                        ? parseFloat(item.number) -
-                          parseFloat(item.last_degree)
-                        : null;
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead className="text-right">نام دانش آموز</TableHead>
+                <TableHead className="text-right">درجه</TableHead>
+                <TableHead className="text-right">نمره</TableHead>
+                <TableHead className="text-right">پیشرفت</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedItems.length > 0 ? (
+                paginatedItems.map((item, index) => {
+                  const progress =
+                    item.last_degree != null
+                      ? parseFloat(item.number) -
+                        parseFloat(item.last_degree)
+                      : null;
 
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          {item.student
-                            ? `${item.student.Fname} ${item.student.Lname}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{item.degree}</TableCell>
-                        <TableCell>
-                          {parseFloat(item.number).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          {progress !== null ? (
-                            <span
-                              className={
-                                progress >= 0
-                                  ? "text-green-500"
-                                  : "text-red-500"
-                              }
-                              dir="ltr"
-                            >
-                              {progress >= 0 ? "+" : "-"}
-                              {Math.abs(progress).toFixed(2)}
-                            </span>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      نتیجه ای یافت نشد.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  return (
+                    <TableRow
+                      key={item.id}
+                      className={index % 2 === 0 ? "bg-muted/20" : ""}
+                    >
+                      <TableCell>
+                        {item.student
+                          ? `${item.student.Fname} ${item.student.Lname}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell>{item.degree}</TableCell>
+                      <TableCell>
+                        {parseFloat(item.number).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {progress !== null ? (
+                          <span
+                            className={
+                              progress >= 0
+                                ? "text-green-500"
+                                : "text-red-500"
+                            }
+                            dir="ltr"
+                          >
+                            {progress >= 0 ? "+" : "-"}
+                            {Math.abs(progress).toFixed(2)}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    نتیجه ای یافت نشد.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
           <div className="flex items-center justify-between space-x-2 py-4">
             <Button
               variant="outline"

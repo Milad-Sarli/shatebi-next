@@ -227,42 +227,53 @@ export default function DegreesPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <div className="rounded-md border">
-                  <Table className="min-w-full">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">شناسه</TableHead>
-                        <TableHead className="text-right">سال</TableHead>
-                        <TableHead className="text-right">ماه</TableHead>
-                        <TableHead className="text-right">تعداد دانش‌آموزان</TableHead>
-                        <TableHead className="text-right">عملیات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {degrees.length > 0 ? (
-                        degrees.map((degree) => (
-                          <TableRow key={degree.id}>
-                            <TableCell>{degree.id}</TableCell>
-                            <TableCell>{degree.year}</TableCell>
-                            <TableCell>{degree.month}</TableCell>
-                            <TableCell>{degree.items?.length || 0}</TableCell>
-                            <TableCell>
-                              <Link href={`/dashboard/degrees/${degree.id}`}>
-                                <Button className="cursor-pointer" variant="ghost" size="sm">مشاهده جزئیات</Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center">
-                            {searchInput ? `نتیجه‌ای برای "${searchInput}" یافت نشد` : "هیچ درجه‌بندی یافت نشد"}
+                <Table className="min-w-full">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="text-right">شناسه</TableHead>
+                      <TableHead className="text-right">سال</TableHead>
+                      <TableHead className="text-right">ماه</TableHead>
+                      <TableHead className="text-right">
+                        تعداد دانش‌آموزان
+                      </TableHead> 
+                      <TableHead className="text-right">عملیات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {degrees.length > 0 ? (
+                      degrees.map((degree, index) => (
+                        <TableRow
+                          key={degree.id}
+                          className={index % 2 === 0 ? "bg-muted/20" : ""}
+                        >
+                          <TableCell>{degree.id}</TableCell>
+                          <TableCell>{degree.year}</TableCell>
+                          <TableCell>{degree.month}</TableCell>
+                          <TableCell>{degree.items?.length || 0}</TableCell>
+                          <TableCell>
+                            <Link href={`/dashboard/degrees/${degree.id}`}>
+                              <Button
+                                className="cursor-pointer"
+                                variant="ghost"
+                                size="sm"
+                              >
+                                مشاهده جزئیات
+                              </Button>
+                            </Link>
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          {searchInput
+                            ? `نتیجه‌ای برای "${searchInput}" یافت نشد`
+                            : "هیچ درجه‌بندی یافت نشد"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
 
                 {pagination.last_page > 1 && (
                   <div className="flex justify-center items-center gap-2 mt-4">
