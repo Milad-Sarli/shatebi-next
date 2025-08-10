@@ -3,20 +3,30 @@
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/context/auth.context";
-import { Degree, DegreeService, DegreeItem } from "@/lib/services/degree.service";
+import { Degree, DegreeService } from "@/lib/services/degree.service";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Badge } from "@/components/ui/badge";
 import { useParams } from 'next/navigation';
 import {
-  Carousel, 
-  CarouselContent,   
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
-// Remove the local DegreeItem interface since we're importing it from the service
+const ITEMS_PER_PAGE = 10;
 
 export default function DegreeDetailsPage() {
   const { accessToken } = useAuth();
@@ -24,6 +34,9 @@ export default function DegreeDetailsPage() {
   const [loading, setLoading] = React.useState(true);
   const params = useParams();
   const id = params.id as string;
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedDegree, setSelectedDegree] = React.useState<string>("all");
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   React.useEffect(() => {
     if (!accessToken || !id) return;
@@ -45,75 +58,164 @@ export default function DegreeDetailsPage() {
     void fetchDegreeDetails();
   }, [accessToken, id]);
 
-  const groupedStudents = React.useMemo(() => {
-    const allDegrees = new Map<string, DegreeItem[]>();
-    for (let i = 1; i <= 10; i++) {
-      allDegrees.set(i.toString(), []);
+  const filteredAndSortedItems = React.useMemo(() => {
+    if (!degree?.items) return [];
+
+    let items = [...degree.items];
+
+    if (selectedDegree !== "all") {
+      items = items.filter(item => item.degree === selectedDegree);
     }
 
-    if (!degree) return allDegrees;
+    if (searchTerm) {
+      items = items.filter(item =>
+        item.student && `${item.student.Fname} ${item.student.Lname}`
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    items.sort((a, b) => parseInt(a.degree, 10) - parseInt(b.degree, 10));
 
-    degree.items.forEach((item) => {
-      if (item.student && allDegrees.has(item.degree)) {
-        allDegrees.get(item.degree)?.push(item);
-      }
-    });
+    return items;
+  }, [degree, searchTerm, selectedDegree]);
 
-    return allDegrees;
-  }, [degree]);
+  const paginatedItems = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredAndSortedItems, currentPage]);
+
+  const totalPages = Math.ceil(filteredAndSortedItems.length / ITEMS_PER_PAGE);
 
   if (loading) {
-    return <p>در حال بارگذاری...</p>;
+    return <p className="text-center pt-10">در حال بارگذاری...</p>;
   }
 
   if (!degree) {
-    return <p>اطلاعاتی برای نمایش وجود ندارد.</p>;
+    return <p className="text-center pt-10">اطلاعاتی برای نمایش وجود ندارد.</p>;
   }
 
   return (
     <PageTransition>
-      <Card>
+      <Card dir="rtl">
         <CardHeader>
-          <CardTitle>{degree.name}</CardTitle>
-          <Badge>{`${degree.year}/${degree.month}`}</Badge>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex-1">
+              <CardTitle>{degree.name}</CardTitle>
+              <p className="text-sm text-muted-foreground pt-2">
+                لیست دانش آموزان و نمرات کسب شده در این درجه بندی
+              </p>
+            </div>
+            <Badge variant="outline" className="mt-4 md:mt-0">{`ماه ${degree.month} سال ${degree.year}`}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <Carousel dir="rtl" opts={{ align: "start" }} className="w-full">
-            <CarouselContent className="-ml-4">
-              {Array.from({ length: 10 }, (_, i) => 10 - i).map((studentDegreeNum) => {
-                const studentDegree = studentDegreeNum.toString();
-                const items = groupedStudents.get(studentDegree) || [];
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <Input
+              placeholder="جستجوی دانش آموز..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="max-w-sm"
+            />
+            <Select value={selectedDegree} onValueChange={(value) => {
+              setSelectedDegree(value);
+              setCurrentPage(1);
+            }}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="فیلتر بر اساس درجه" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه درجات</SelectItem>
+                {Array.from({ length: 10 }, (_, i) => (i + 1).toString()).map(d => (
+                  <SelectItem key={d} value={d}>درجه {d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">نام دانش آموز</TableHead>
+                  <TableHead className="text-right">درجه</TableHead>
+                  <TableHead className="text-right">نمره</TableHead>
+                  <TableHead className="text-right">پیشرفت</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.length > 0 ? (
+                  paginatedItems.map((item) => {
+                    const progress =
+                      item.last_degree != null
+                        ? parseFloat(item.number) -
+                          parseFloat(item.last_degree)
+                        : null;
 
-                return (
-                  <CarouselItem key={studentDegree} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                    <div className="p-1">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-center">درجه {studentDegree}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm">
-                          {items.length > 0 ? (
-                            <ul className="space-y-2">
-                              {items.map((item) => (
-                                <li key={item.id} className="flex justify-between items-center">
-                                  <span>{`${item.student.Fname} ${item.student.Lname}`}</span>
-                                  <Badge variant="secondary">{parseFloat(item.number).toFixed(2)}</Badge>
-                                </li>
-                              ))}
-                            </ul>
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          {item.student
+                            ? `${item.student.Fname} ${item.student.Lname}`
+                            : "-"}
+                        </TableCell>
+                        <TableCell>{item.degree}</TableCell>
+                        <TableCell>
+                          {parseFloat(item.number).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          {progress !== null ? (
+                            <span
+                              className={
+                                progress >= 0
+                                  ? "text-green-500"
+                                  : "text-red-500"
+                              }
+                              dir="ltr"
+                            >
+                              {progress >= 0 ? "+" : "-"}
+                              {Math.abs(progress).toFixed(2)}
+                            </span>
                           ) : (
-                            <p className="text-center text-gray-500">-</p>
+                            "-"
                           )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                );
-              })}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      نتیجه ای یافت نشد.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between space-x-2 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              قبلی
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              صفحه {currentPage} از {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              بعدی
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </PageTransition>

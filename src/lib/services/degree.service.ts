@@ -16,6 +16,7 @@ export interface DegreeItem {
   created_at: string | null;
   updated_at: string | null;
   student: Student;
+  last_degree?: string;
 }
 
 export interface Degree {
@@ -27,6 +28,12 @@ export interface Degree {
   updated_at: string;
   deleted_at: string | null;
   items: DegreeItem[];
+}
+
+export interface DegreesResponse {
+  data: Degree[];
+  current_page: number;
+  last_page: number;
 }
 
 const axiosInstance = axios.create({
@@ -42,8 +49,9 @@ axiosInstance.interceptors.response.use(
 );
 
 export class DegreeService {
-  static async getAllDegrees(token: string): Promise<Degree[]> {
+  static async getAllDegrees(token: string, page: number, search: string): Promise<DegreesResponse> {
     const response = await axiosInstance.get('/api/degrees', {
+      params: { page, search },
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
@@ -74,5 +82,14 @@ export class DegreeService {
       }
     );
     return response.data;
+  }
+
+  static async deleteDegree(id: number, token: string): Promise<void> {
+    await axiosInstance.delete(`/api/degrees/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
   }
 }
