@@ -158,8 +158,8 @@ export default function DegreeDetailsPage() {
                 paginatedItems.map((item, index) => {
                   const progress =
                     item.last_degree != null
-                      ? parseFloat(item.number) -
-                        parseFloat(item.last_degree)
+                      ? parseInt(item.last_degree, 10) -
+                        parseInt(item.degree, 10)
                       : null;
 
                   return (
@@ -187,7 +187,7 @@ export default function DegreeDetailsPage() {
                             dir="ltr"
                           >
                             {progress >= 0 ? "+" : "-"}
-                            {Math.abs(progress).toFixed(2)}
+                            {Math.abs(progress)}
                           </span>
                         ) : (
                           "-"
