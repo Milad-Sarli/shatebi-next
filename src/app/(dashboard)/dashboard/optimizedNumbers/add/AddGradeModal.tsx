@@ -148,10 +148,17 @@ interface AddGradeModalProps {
   onOpenChange: (open: boolean) => void;
   onFormRefsChange?: (refs: FormRefs) => void;
   isLoading?: boolean;
-  isOneGrade?: boolean;
+  isOneGrade?: boolean;  
+  selectedCourse?: Course | null; // اضافه کردن prop جدید
 }
 
-function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChange, isLoading = false, isOneGrade = false }: AddGradeModalProps) {
+interface Course {
+  id: number;
+  title: string;
+  is_one_grade: boolean | null;
+}
+
+function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChange, isLoading = false, isOneGrade = false, selectedCourse }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
   const [surahs, setSurahs] = React.useState<Surah[]>([]);
   const [startSurahVerses, setStartSurahVerses] = React.useState<number[]>([]);
@@ -347,6 +354,13 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
         <div dir="rtl" className="text-right space-y-4">
           <DialogHeader className="text-center">
             <DialogTitle className="text-xl font-bold text-right">افزودن نمره برای {student.name}</DialogTitle>
+            {selectedCourse && (
+              <div className="flex justify-center mt-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700">
+                  درس انتخاب شده: {selectedCourse.title}
+                </span>
+              </div>
+            )}
             <DialogDescription className="text-right">
               لطفاً اطلاعات مربوط به نمره را وارد کنید.
             </DialogDescription>
@@ -623,7 +637,19 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      
+                           <FormField
+                        control={multiGradeForm.control}
+                        name="tajvid"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-right block">نمره تجوید (0-10)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min="0" max="10" placeholder="نمره تجوید" className="text-center text-lg" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={multiGradeForm.control}
                         name="sout"
@@ -637,19 +663,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={multiGradeForm.control}
-                        name="tajvid"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-right block">نمره تجوید (0-10)</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" min="0" max="10" placeholder="نمره تجوید" className="text-center text-lg" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                 
                       <FormField
                         control={multiGradeForm.control}
                         name="details"
@@ -964,4 +978,4 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
   );
 }
 
-export default AddGradeModal; 
+export default AddGradeModal;

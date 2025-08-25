@@ -1191,7 +1191,8 @@ export default function AddNumberPage() {
               onFormRefsChange={setFormRefs}
               isLoading={loading}
               isOneGrade={isOneGrade}
-            />
+              selectedCourse={selectedCourse}
+            /> 
           </>
         )}
 
