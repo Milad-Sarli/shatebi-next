@@ -165,10 +165,18 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
   const [endSurahVerses, setEndSurahVerses] = React.useState<number[]>([]);
   const { accessToken } = useAuth();
   
-  // Determine if this is a reading class
-  // const isReadingClassType = selectedCourse ? isReadingClass(selectedCourse.title) : false;
-  // const shouldUseOneGrade = isOneGrade || isReadingClassType; // unused
-  // const isHefzClass = selectedCourse?.title?.toLowerCase().includes('حفظ') || false; // unused
+  // تشخیص نوع درس
+  const isNewHefzClass = selectedCourse?.title?.toLowerCase().includes('حفظ جدید') || 
+                        selectedCourse?.title?.toLowerCase().includes('hefz jadid') || false;
+  
+  // تنظیم تب پیش‌فرض بر اساس نوع درس
+  React.useEffect(() => {
+    if (isNewHefzClass) {
+      setActiveTab("surah");
+    } else {
+      setActiveTab("page");
+    }
+  }, [isNewHefzClass, isOpen]);
 
   const oneGradeForm = useForm({
     resolver: zodResolver(oneGradeSchema),
@@ -286,7 +294,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
       surahForm.setValue("end_surah", surahId);
       handleEndSurahChange(surahId);
     }
-  };
+  }; 
+
   const handleEndSurahChange = (surahId: string) => {
     const selectedSurah = surahs.find(s => s.id.toString() === surahId);
     if (selectedSurah) {
@@ -352,6 +361,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <div dir="rtl" className="text-right space-y-4">
+          {/* Container for right-to-left content */}
           <DialogHeader className="text-center">
             <DialogTitle className="text-xl font-bold text-right">افزودن نمره برای {student.name}</DialogTitle>
             {selectedCourse && (
@@ -366,90 +376,102 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
             </DialogDescription>
           </DialogHeader>
           
-          {isOneGrade ? (
+          {isOneGrade ? ( 
             // Single Grade Forms
             <div className="space-y-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="page" className="text-sm">صفحه</TabsTrigger>
-                  <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
-                </TabsList>
+                {isNewHefzClass ? (
+                  // برای حفظ جدید فقط تب سوره نمایش داده می‌شود
+                  <TabsList className="grid w-full grid-cols-1 mb-6">
+                    <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
+                  </TabsList>
+                ) : (
+                  // برای سایر دروس هر دو تب نمایش داده می‌شود
+                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsTrigger value="page" className="text-sm">صفحه</TabsTrigger>
+                    <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
+                  </TabsList>
+                )}
 
-                <TabsContent value="page" className="space-y-6">
-                  <Form {...oneGradePageForm}>
-                    <form onSubmit={oneGradePageForm.handleSubmit(handleSubmit)} className="space-y-6">
-                      {/* محدوده درسی */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 border-b pb-2 text-right">
-                          محدوده درسی
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <FormField
-                            control={oneGradePageForm.control}
-                            name="start_page"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-right block">صفحه شروع</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" placeholder="صفحه شروع" className="text-center" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={oneGradePageForm.control}
-                            name="end_page"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-right block">صفحه پایان</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" placeholder="صفحه پایان" className="text-center" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                {!isNewHefzClass && (
+                  <TabsContent value="page" className="space-y-6">
+                    {/* محتوای فرم صفحه */}
+                    <Form {...oneGradePageForm}>
+                      <form onSubmit={oneGradePageForm.handleSubmit(handleSubmit)} className="space-y-6">
+                        {/* محدوده درسی */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 border-b pb-2 text-right">
+                            محدوده درسی
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField
+                              control={oneGradePageForm.control}
+                              name="start_page"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium text-right block">صفحه شروع</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" placeholder="صفحه شروع" className="text-center" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={oneGradePageForm.control}
+                              name="end_page"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium text-right block">صفحه پایان</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" placeholder="صفحه پایان" className="text-center" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      {/* نمره */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 border-b pb-2 text-right">
-                          نمره
-                        </h3>
-                        <div className="grid grid-cols-1 gap-4">
-                          <FormField
-                            control={oneGradePageForm.control}
-                            name="number"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm font-medium text-right block">نمره (0-100)</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" max="100" placeholder="نمره" className="text-center text-lg" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                        {/* نمره */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 border-b pb-2 text-right">
+                            نمره
+                          </h3>
+                          <div className="grid grid-cols-1 gap-4">
+                            <FormField
+                              control={oneGradePageForm.control}
+                              name="number"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium text-right block">نمره (0-100)</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" min="0" max="100" placeholder="نمره" className="text-center text-lg" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            در حال ارسال...
-                          </>
-                        ) : (
-                          "ثبت نمره"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
-                </TabsContent>
+                        <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              در حال ارسال...
+                            </>
+                          ) : (
+                            "ثبت نمره"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </TabsContent>
+                )}
 
                 <TabsContent value="surah" className="space-y-6">
+                  {/* محتوای فرم سوره */}
                   <Form {...oneGradeSurahForm}>
                     <form onSubmit={oneGradeSurahForm.handleSubmit(handleSubmit)} className="space-y-6">
                       {/* محدوده درسی */}
@@ -570,16 +592,25 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                 </TabsContent>
               </Tabs>
             </div>
-          ) : (
+            ) : ( 
             // Multi Grade Forms
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="page" className="text-sm">صفحه</TabsTrigger>
-                <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
-                <TabsTrigger value="part" className="text-sm">جز</TabsTrigger>
-              </TabsList>
+              {isNewHefzClass ? (
+                // برای حفظ جدید فقط تب سوره نمایش داده می‌شود
+                <TabsList className="grid w-full grid-cols-1 mb-6">
+                  <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
+                </TabsList>
+              ) : (
+                // برای سایر دروس همه تب‌ها نمایش داده می‌شود
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="page" className="text-sm">صفحه</TabsTrigger>
+                  <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
+                  <TabsTrigger value="part" className="text-sm">جز</TabsTrigger>
+                </TabsList>
+              )}
 
-              <TabsContent value="page" className="space-y-6">
+              {!isNewHefzClass && (
+                <TabsContent value="page" className="space-y-6">
               <Form {...multiGradeForm}>
                 <form onSubmit={multiGradeForm.handleSubmit(handleSubmit)} className="space-y-6">
                   {/* محدوده درسی */}
@@ -693,7 +724,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                   </Button>
                 </form>
               </Form>
-            </TabsContent>
+                </TabsContent>
+              )}
 
             <TabsContent value="surah" className="space-y-6">
               <Form {...surahForm}>
@@ -856,7 +888,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
               </Form>
             </TabsContent>
 
-            <TabsContent value="part" className="space-y-6">
+            {!isNewHefzClass && (
+              <TabsContent value="part" className="space-y-6">
               <Form {...partForm}>
                 <form onSubmit={partForm.handleSubmit(handleSubmit)} className="space-y-6">
                   {/* محدوده درسی */}
@@ -969,7 +1002,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                   </Button>
                 </form>
               </Form>
-            </TabsContent>
+              </TabsContent>
+            )}
           </Tabs>
           )}
         </div>
