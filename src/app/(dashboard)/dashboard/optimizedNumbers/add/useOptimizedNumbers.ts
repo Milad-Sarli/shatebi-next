@@ -497,6 +497,17 @@ export async function handleConfirmProvideless({ selectedStudentForAction, acces
         return;
       }
     }
+    if (!selectedDate) {
+      toast.error('لطفا تاریخ را انتخاب کنید');
+      return;
+    }
+
+    const dateValue = selectedDate.toDate();
+    if (!dateValue || isNaN(dateValue.getTime())) {
+      toast.error('تاریخ انتخابی معتبر نیست');
+      return;
+    }
+
     const activityData: CreateStudentActivityDto = {
       student_id: studentId,
       master_id: masterId,
@@ -504,7 +515,13 @@ export async function handleConfirmProvideless({ selectedStudentForAction, acces
       class_absent: false,
       provideless: true,
       user_id: userId,
+      date: dateValue.toISOString(), // تاریخ انتخابی ارسال می‌شود
     };
+
+    // اضافه کردن console.log برای بررسی payload
+    console.log('Activity Data being sent:', activityData);
+    console.log('Date value:', dateValue.toISOString());
+
     await studentActivityService.create(activityData, accessToken);
     const gradeDate = selectedDate.toDate();
     const gradePayload = {
@@ -520,7 +537,7 @@ export async function handleConfirmProvideless({ selectedStudentForAction, acces
       practice_count: 0,
       user_id: userId,
       tenant_id: 0,
-      date: gradeDate.toISOString(),
+      date: gradeDate.toISOString(), // تاریخ انتخابی به صورت ISO string
       created_at: format(gradeDate, 'yyyy-MM-dd HH:mm:ss'),
     };
     await optimizedNumberService.create(gradePayload, accessToken);
@@ -530,7 +547,7 @@ export async function handleConfirmProvideless({ selectedStudentForAction, acces
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
       const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
-    } catch {}
+    } catch { }
     toast.success('عدم تحویل با موفقیت ثبت شد');
     setIsProvideConfirmOpen(false);
     setSelectedStudentForAction(null);
@@ -632,6 +649,7 @@ export async function handleAbsentSubmit({ reason, accessToken, selectedClass, a
       provideless: false,
       reason: reason,
       user_id: userId,
+      date: selectedDate.toDate().toISOString(), // تاریخ انتخابی اضافه شده
     };
     await studentActivityService.create(activityData, accessToken);
     const jsDate = selectedDate.toDate();
@@ -640,7 +658,7 @@ export async function handleAbsentSubmit({ reason, accessToken, selectedClass, a
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
       const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
-    } catch {}
+    } catch { }
     toast.success(`غیبت با دلیل "${reason}" ثبت شد`);
     setIsAbsentModalOpen(false);
     setAbsentStudent(null);
@@ -674,7 +692,7 @@ export async function handleRemoveAbsent({ activityId, accessToken, selectedClas
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
       const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
-    } catch {}
+    } catch { }
     toast.success('غیبت با موفقیت حذف شد');
   } catch (error: unknown) {
     const errorObj = error as { response?: { data?: { message?: string } }; message?: string };
@@ -708,7 +726,7 @@ export async function handleRemoveProvideless({ studentId, activityId, accessTok
       if (provideGrade) {
         try {
           await optimizedNumberService.delete(provideGrade.id, accessToken);
-        } catch {}
+        } catch { }
       }
     }
     await studentActivityService.delete(activityId, accessToken);
@@ -736,7 +754,7 @@ export async function handleRemoveProvideless({ studentId, activityId, accessTok
         }
       });
       setExistingGrades(gradesMap);
-    } catch {}
+    } catch { }
     toast.success('عدم تحویل و نمره مربوطه با موفقیت حذف شد');
   } catch (error: unknown) {
     const errorObj = error as { response?: { data?: { message?: string } }; message?: string };
@@ -744,4 +762,4 @@ export async function handleRemoveProvideless({ studentId, activityId, accessTok
   } finally {
     setActionLoading(false);
   }
-} 
+}

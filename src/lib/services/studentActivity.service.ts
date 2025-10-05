@@ -12,6 +12,7 @@ export interface StudentActivity {
     provideless: boolean;
     reason?: string;
     user_id: number;
+    date: string; // ستون جدید اضافه شده
     created_at: string;
     updated_at: string;
     student?: any;
@@ -27,6 +28,7 @@ export interface CreateStudentActivityDto {
     provideless: boolean;
     reason?: string;
     user_id: number;
+    date: string; // ستون جدید اضافه شده
 }
 
 export interface UpdateStudentActivityDto extends Partial<CreateStudentActivityDto> { }
@@ -98,4 +100,4 @@ export const studentActivityService = {
         });
         return response.data.data;
     },
-}; 
+};
