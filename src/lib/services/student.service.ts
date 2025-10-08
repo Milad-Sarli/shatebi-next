@@ -161,6 +161,8 @@ export class StudentService {
     let body: string | FormData;
     
     if (studentData instanceof FormData) {
+      // Add _method field for Laravel to handle PUT with FormData
+      studentData.append('_method', 'PUT');
       body = studentData;
       // Do not set Content-Type for FormData; browser will set it
     } else {
@@ -169,7 +171,7 @@ export class StudentService {
     }
     
     const response = await fetch(`${API_URL}/api/students/${id}`, {
-      method: 'PUT',
+      method: studentData instanceof FormData ? 'POST' : 'PUT',
       headers,
       body
     });

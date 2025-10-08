@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth.context";
@@ -15,10 +15,12 @@ export default function EditStudentPage() {
   const { accessToken } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const [student, setStudent] = React.useState<Student | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   const studentId = params?.id as string;
+  const returnPage = searchParams.get('returnPage') || '1';
 
   React.useEffect(() => {
     const fetchStudent = async () => {
@@ -31,18 +33,22 @@ export default function EditStudentPage() {
       } catch (error) {
         console.error("خطا در دریافت اطلاعات قرآن آموز:", error);
         toast.error("خطا در دریافت اطلاعات قرآن آموز");
-        router.push("/dashboard/students");
+        router.push(`/dashboard/students?page=${returnPage}`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStudent();
-  }, [accessToken, studentId, router]);
+  }, [accessToken, studentId, router, returnPage]);
 
   const handleSuccess = () => {
     toast.success("قرآن آموز با موفقیت ویرایش شد");
-    router.push("/dashboard/students");
+    router.push(`/dashboard/students?page=${returnPage}`);
+  };
+
+  const handleBackClick = () => {
+    router.push(`/dashboard/students?page=${returnPage}`);
   };
 
   if (loading) {
@@ -68,7 +74,7 @@ export default function EditStudentPage() {
             </h2>
             <Button
               variant="outline"
-              onClick={() => router.push("/dashboard/students")}
+              onClick={handleBackClick}
               className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -89,7 +95,7 @@ export default function EditStudentPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/dashboard/students")}
+              onClick={handleBackClick}
               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
             >
               <ArrowRight className="h-4 w-4" />
@@ -111,10 +117,11 @@ export default function EditStudentPage() {
             <StudentForm
               student={student}
               onSuccess={handleSuccess}
-            />
+              onCancel={handleBackClick}
+            /> 
           </CardContent>
         </Card>
       </div>
     </PageTransition>
   );
-} 
+}

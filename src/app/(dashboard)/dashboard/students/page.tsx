@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -60,15 +60,20 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function StudentsPage() {
   const { accessToken } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get initial page from URL params or default to 1
+  const initialPage = parseInt(searchParams.get('page') || '1', 10);
+  
   const [students, setStudents] = React.useState<Student[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedStudents, setSelectedStudents] = React.useState<Set<number>>(new Set());
   const [filters, setFilters] = React.useState({
-    page: 1,
+    page: initialPage,
     per_page: 10,
   });
   const [pagination, setPagination] = React.useState({
-    current_page: 1,
+    current_page: initialPage,
     last_page: 1,
     total: 0,
     per_page: 10,
@@ -88,6 +93,15 @@ export default function StudentsPage() {
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
+
+  // Sync page state with URL params when returning from edit page
+  React.useEffect(() => {
+    const currentPage = parseInt(searchParams.get('page') || '1', 10);
+    if (currentPage !== filters.page) {
+      setFilters(prev => ({ ...prev, page: currentPage }));
+      setPagination(prev => ({ ...prev, current_page: currentPage }));
+    }
+  }, [searchParams, filters.page]);
 
   // Check if all students on current page are selected
   const allSelected = students.length > 0 && students.every(student => selectedStudents.has(student.id));
@@ -147,22 +161,26 @@ export default function StudentsPage() {
   // Effect to handle page and per_page changes
   React.useEffect(() => {
     fetchStudents();
-  }, [filters.page, filters.per_page]);
+  }, [fetchStudents, filters.page, filters.per_page]);
 
   // Effect to handle debounced search changes
   React.useEffect(() => {
     setFilters((prev) => ({ ...prev, page: 1 }));
-    // fetchStudents() will be called by the above effect
-  }, [debouncedSearch]);
+    fetchStudents();
+  }, [debouncedSearch, fetchStudents]);
 
   // Effect to handle status filter changes
   React.useEffect(() => {
     setFilters((prev) => ({ ...prev, page: 1 }));
-    // fetchStudents() will be called by the above effect
-  }, [statusFilter]);
+    fetchStudents();
+  }, [statusFilter, fetchStudents]);
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
+    // Update URL with new page
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page.toString());
+    router.replace(`/dashboard/students?${params.toString()}`);
   };
 
   const handleDeleteStudent = async (id: number) => {
@@ -178,14 +196,16 @@ export default function StudentsPage() {
       fetchStudents();
     } catch (error) {
       toast.error("خطا در حذف قرآن آموز");
-      console.error(error);
     } finally {
       setStudentToDelete(null);
     }
   };
 
   const handleEditStudent = (student: Student) => {
-    router.push(`/dashboard/students/edit/${student.id}`);
+    // Preserve current page in URL when navigating to edit
+    const params = new URLSearchParams();
+    params.set('page', filters.page.toString());
+    router.push(`/dashboard/students/edit/${student.id}?returnPage=${filters.page}`);
   };
 
   const handleViewStudentDetails = (student: Student) => {
@@ -352,7 +372,6 @@ export default function StudentsPage() {
                 value={statusFilter || "all"}
                 onValueChange={(value) => {
                   setStatusFilter(value === "all" ? undefined : value as "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل" | "اخراجی");
-                  setFilters((prev) => ({ ...prev, page: 1 }));
                 }}
               >
                 <SelectTrigger dir="rtl" className="w-full sm:w-48 border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
@@ -367,14 +386,6 @@ export default function StudentsPage() {
                   <SelectItem value="اخراجی">اخراجی</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleSearch}
-                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 whitespace-nowrap"
-              >
-                جستجو
-              </Button>
             </div>
 
             {/* Desktop table view */}
@@ -575,36 +586,15 @@ export default function StudentsPage() {
                       className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => handleViewStudentDetails(student)}
                     >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div onClick={(e) => e.stopPropagation()}>
-                                <Checkbox
-                                  checked={selectedStudents.has(student.id)}
-                                  onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
-                                  className="border-zinc-300 dark:border-zinc-600"
-                                />
-                              </div>
-                            {student.Aks ? (
-                              <Image
-                                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
-                                 alt={`${student.Fname} ${student.Lname}`}
-                                 width={40}
-                                 height={40}
-                                 className="rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700"
-                                 onError={(e) => {
-                                   const target = e.target as HTMLImageElement;
-                                   target.style.display = 'none';
-                                 }}
-                               />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
-                                {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
-                              </div>
-                            )}
-                            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                              {student.Fname} {student.Lname}
-                            </h3>
+                      <div className="p-3 sm:p-4">
+                        {/* Header with checkbox and status */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedStudents.has(student.id)}
+                              onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
+                              className="border-zinc-300 dark:border-zinc-600"
+                            />
                           </div>
                           <Badge
                             className={
@@ -618,38 +608,73 @@ export default function StudentsPage() {
                             {student.status}
                           </Badge>
                         </div>
-                        <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-                          <p>نام پدر: {student.FatherName}</p>
-                          <p>کد ملی: {student.Mellicode}</p>
+
+                        {/* Main content with image and info */}
+                        <div className="flex items-center gap-3 mb-3">
+                          {/* Student Image */}
+                          <div className="flex-shrink-0">
+                            {student.Aks ? (
+                              <Image
+                                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
+                                 alt={`${student.Fname} ${student.Lname}`}
+                                 width={50}
+                                 height={50}
+                                 className="rounded-full object-cover w-12 h-12 sm:w-14 sm:h-14 border-2 border-zinc-200 dark:border-zinc-700"
+                                 onError={(e) => {
+                                   const target = e.target as HTMLImageElement;
+                                   target.style.display = 'none';
+                                 }}
+                               />
+                            ) : (
+                              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
+                                {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Student Name and Info */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 truncate">
+                              {student.Fname} {student.Lname}
+                            </h3>
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                              نام پدر: {student.FatherName}
+                            </p>
+                            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-500 truncate">
+                              کد ملی: {student.Mellicode}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap justify-end gap-1 sm:gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                             <div onClick={(e) => e.stopPropagation()}>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 text-xs sm:text-sm px-2 sm:px-3"
                                 onClick={() => handleViewStudentDetails(student)}
                               >
-                                <Eye className="h-4 w-4 ml-1" />
-                                مشاهده جزئیات
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                                <span className="hidden xs:inline">مشاهده</span>
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 text-xs sm:text-sm px-2 sm:px-3"
                                 onClick={() => handleEditStudent(student)}
                               >
-                                <Edit className="h-4 w-4 ml-1" />
-                                ویرایش
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                                <span className="hidden xs:inline">ویرایش</span>
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 text-xs sm:text-sm px-2 sm:px-3"
                                 onClick={() => handleDeleteStudent(student.id)}
                               >
-                                <Trash2 className="h-4 w-4 ml-1" />
-                                حذف
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
+                                <span className="hidden xs:inline">حذف</span>
                               </Button>
                             </div>
                           </div>
@@ -801,7 +826,7 @@ export default function StudentsPage() {
           open={studentToDelete !== null}
           onOpenChange={(open: boolean) => !open && setStudentToDelete(null)}
         >
-          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
+          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md p-2">
             <DialogHeader>
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">
                 تایید حذف قرآن آموز
@@ -837,17 +862,17 @@ export default function StudentsPage() {
           }
           setIsViewStudentOpen(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-zinc-900 dark:text-zinc-100 text-right">
+          <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 mx-2 sm:mx-auto">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 text-right">
                 جزئیات قرآن آموز
               </DialogTitle>
             </DialogHeader>
             
             {selectedStudent && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Student Image and Basic Info */}
-                <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                   <div className="flex-shrink-0">
                     {selectedStudent.Aks ? (
                       <Image
@@ -855,95 +880,97 @@ export default function StudentsPage() {
                         alt={`${selectedStudent.Fname} ${selectedStudent.Lname}`}
                         width={80}
                         height={80}
-                        className="rounded-full object-cover h-20 w-20 border-4 border-white dark:border-zinc-700"
+                        className="rounded-full object-cover h-16 w-16 sm:h-20 sm:w-20 border-4 border-white dark:border-zinc-700"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-2xl font-bold">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-lg sm:text-2xl font-bold">
                         {selectedStudent.Fname?.charAt(0)}{selectedStudent.Lname?.charAt(0)}
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                  <div className="flex-1 text-center sm:text-right">
+                    <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
                       {selectedStudent.Fname} {selectedStudent.Lname}
                     </h3>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                       کد ملی: {selectedStudent.Mellicode}
                     </p>
-                    <Badge className={
-                      selectedStudent.status === "در حال تحصیل"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        : selectedStudent.status === "فارغ التحصیل"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                        : selectedStudent.status === "ترک تحصیل"
-                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                        : selectedStudent.status === "انتقالی"
-                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                        : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
-                    }>
-                      {selectedStudent.status}
-                    </Badge>
+                    <div className="mt-2">
+                      <Badge className={
+                        selectedStudent.status === "در حال تحصیل"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                          : selectedStudent.status === "فارغ التحصیل"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                          : selectedStudent.status === "ترک تحصیل"
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                          : selectedStudent.status === "انتقالی"
+                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
+                      }>
+                        {selectedStudent.status}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
 
                 {/* Student Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">نام:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.Fname || '-'}
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام خانوادگی:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">نام خانوادگی:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.Lname || '-'}
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام پدر:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">نام پدر:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.FatherName || '-'}
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">کد ملی:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">کد ملی:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.Mellicode || '-'}
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">شماره موبایل:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">شماره موبایل:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.Phone || '-'}
                     </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">تلفن والدین:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">تلفن والدین:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.ParentPhone || '-'}
                     </p>
                   </div>
                   
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">تحصیلات:</label>
-                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">تحصیلات:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 sm:p-3 rounded">
                       {selectedStudent.Educating || '-'}
                     </p>
                   </div>
                 </div>
 
                 {/* Close Button */}
-                <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                <div className="flex justify-center sm:justify-end pt-3 sm:pt-4 border-t border-zinc-200 dark:border-zinc-800">
                   <Button
                     variant="outline"
                     onClick={() => setIsViewStudentOpen(false)}
-                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    className="w-full sm:w-auto border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                   >
                     بستن
                   </Button>

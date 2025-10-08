@@ -7,10 +7,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'test.bikerasol.ir',
         port: '',
-        pathname: '/storage/**', // Adjusted to match the new path structure
+        pathname: '/shatebi/**', // Updated to match the actual storage path structure
       },
     ],
   },
-};
+}; 
 
-module.exports = nextConfig; 
+module.exports = nextConfig;

@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/context/auth.context";
 import { Student, StudentService } from "@/lib/services/student.service";
 import { toast as sonnerToast } from "sonner";
 import {
-  Select,
+  Select, 
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -106,6 +106,7 @@ type StudentFormData = z.infer<typeof studentSchema>;
 interface StudentFormProps {
   student?: Student;
   onSuccess: () => void;
+  onCancel?: () => void;
 }
 
 interface ApiErrorLike {
@@ -118,7 +119,7 @@ interface ApiErrorLike {
   message?: string;
 }
 
-export function StudentForm({ student, onSuccess }: StudentFormProps) {
+export function StudentForm({ student, onSuccess, onCancel }: StudentFormProps) {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const { toast: customToast } = useToast();
@@ -195,7 +196,7 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       // Handle relative paths by converting to absolute URL using API base
       const imageUrl = student.Aks.startsWith('http') 
         ? student.Aks 
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${student.Aks}`;
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${student.Aks}`;
       setImagePreview(imageUrl);
     } 
   }, [student]);
@@ -239,9 +240,9 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
     const imageUrl = student?.Aks 
       ? (student.Aks.startsWith('http') 
           ? student.Aks 
-          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/${student.Aks}`)
+          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${student.Aks}`)
       : null;
-    setImagePreview(imageUrl);
+    setImagePreview(imageUrl); 
     setFileInputKey(prev => prev + 1);
     form.setValue("Aks", student?.Aks || undefined);
   };
@@ -273,13 +274,13 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
       
       let submitData: StudentFormData | FormData;
       
-      if (selectedFile || (student && !selectedFile && !imagePreview)) {
-        // Use FormData if there's a new file or if removing existing image
+      // Always use FormData for updates to ensure proper handling
+      if (student) {
         const formData = new FormData();
         
         // Add all form fields to FormData
         Object.entries(data).forEach(([key, value]) => {
-          if (key !== 'Aks' && value !== undefined && value !== null) {
+          if (key !== 'Aks' && value !== undefined && value !== null && value !== '') {
             formData.append(key, value.toString());
           }
         });
@@ -287,18 +288,31 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
         // Handle image field
         if (selectedFile) {
           formData.append('Aks', selectedFile);
-        } else if (student && !imagePreview) {
+        } else if (!imagePreview && student?.Aks) {
           // User removed existing image
           formData.append('Aks', '');
         }
+        // If no changes to image, don't include Aks field
         
         submitData = formData;
       } else {
-        // Use regular JSON if no file changes
-        submitData = {
-          ...data,
-          ...(student?.Aks && imagePreview ? { Aks: student.Aks } : {})
-        };
+        // For creation, use FormData only if there's a file
+        if (selectedFile) {
+          const formData = new FormData();
+          
+          // Add all form fields to FormData
+          Object.entries(data).forEach(([key, value]) => {
+            if (key !== 'Aks' && value !== undefined && value !== null) {
+              formData.append(key, value.toString());
+            }
+          });
+          
+          formData.append('Aks', selectedFile);
+          submitData = formData;
+        } else {
+          // Use regular JSON if no file
+          submitData = data;
+        }
       }
 
       if (student) {
@@ -630,7 +644,7 @@ export function StudentForm({ student, onSuccess }: StudentFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => onSuccess()}
+          onClick={() => onCancel?.()}
           disabled={loading}
         >
           انصراف
