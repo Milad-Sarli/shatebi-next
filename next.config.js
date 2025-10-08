@@ -7,7 +7,13 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'test.bikerasol.ir',
         port: '',
-        pathname: '/shatebi/**', // Updated to match the actual storage path structure
+        pathname: '/storage/**', // Pattern to match /storage/ paths
+      },
+      {
+        protocol: 'https',
+        hostname: 'test.bikerasol.ir',
+        port: '',
+        pathname: '/shatebi/**', // Pattern to match /shatebi/ paths
       },
     ],
   },

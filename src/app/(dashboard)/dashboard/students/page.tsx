@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -49,15 +50,14 @@ function useDebounce<T>(value: T, delay: number): T {
       setDebouncedValue(value);
     }, delay);
 
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [value, delay]);
 
   return debouncedValue;
 }
 
-export default function StudentsPage() {
+// Component that uses useSearchParams - needs to be wrapped in Suspense
+function StudentsPageContent() {
   const { accessToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -981,5 +981,19 @@ export default function StudentsPage() {
         </Dialog>
       </div>
     </PageTransition>
+  );
+}
+
+// Main component wrapped with Suspense
+export default function StudentsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-zinc-600 dark:text-zinc-400">در حال بارگذاری...</p>
+      </div>
+    </div>}>
+      <StudentsPageContent />
+    </Suspense>
   );
 }

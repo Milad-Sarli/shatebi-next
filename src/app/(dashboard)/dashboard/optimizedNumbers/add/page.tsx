@@ -855,6 +855,7 @@ export default function AddNumberPage() {
         class_absent: false,
         provideless: true,
         user_id: userId,
+        date: selectedDate ? selectedDate.toDate().toISOString() : new Date().toISOString(),
       };
 
       console.log("activityData:", activityData);
@@ -1058,6 +1059,7 @@ export default function AddNumberPage() {
         provideless: false,
         reason: reason,
         user_id: userId,
+        date: selectedDate ? selectedDate.toDate().toISOString() : new Date().toISOString(),
       };
 
       console.log("activityData:", activityData);
