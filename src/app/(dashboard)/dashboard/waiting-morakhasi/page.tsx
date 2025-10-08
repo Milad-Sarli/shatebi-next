@@ -291,12 +291,17 @@ const WaitingMorakhasiPage: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
                       {(morakhasi.user as User)?.aks ? (
                         <Image
-                          src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${(morakhasi.user as User)?.aks}`}
+                          src={(() => {
+                            const aks = (morakhasi.user as User)?.aks;
+                            if (!aks) return '/avatars/default.svg';
+                            if (aks.startsWith('http')) return aks;
+                            return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${aks.startsWith('storage/') ? aks : `storage/${aks}`}`;
+                          })()}
                           alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
                           width={40}
                           height={40}
                           className="w-full h-full object-cover"
-                          onError={(e) => { e.currentTarget.src = '/images/default-avatar.png'; }}
+                          onError={(e) => { e.currentTarget.src = '/avatars/default.svg'; }}
                         />
                       ) : (
                         <span className="text-base font-bold text-gray-400 dark:text-gray-500">

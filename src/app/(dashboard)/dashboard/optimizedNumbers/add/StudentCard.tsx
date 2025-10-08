@@ -67,7 +67,9 @@ const StudentCard: React.FC<StudentCardProps> = ({
             {/* Avatar logic: show image if available, else initial */}
             {studentData.student.aks ? (
               <Image
-                src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${studentData.student.aks}`}
+                src={studentData.student.aks.startsWith('http') 
+                  ? studentData.student.aks 
+                  : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${studentData.student.aks.startsWith('storage/') ? studentData.student.aks : `storage/${studentData.student.aks}`}`}
                 alt={studentData.student.name}
                 width={40}
                 height={40}
@@ -115,4 +117,4 @@ const StudentCard: React.FC<StudentCardProps> = ({
   );
 };
 
-export default StudentCard; 
+export default StudentCard;

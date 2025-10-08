@@ -241,7 +241,9 @@ export default function MastersPage() {
                             <div className="relative h-8 w-8 overflow-hidden rounded-full">
                               {master.aks ? (
                                 <Image
-                                  src={master.aks}
+                                  src={master.aks.startsWith('http') 
+                                    ? master.aks 
+                                    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${master.aks.startsWith('storage/') ? master.aks : `storage/${master.aks}`}`}
                                   alt={master.fullname}
                                   className="h-full w-full object-cover"
                                   width={32}
@@ -312,7 +314,9 @@ export default function MastersPage() {
                           <div className="relative h-12 w-12 overflow-hidden rounded-full mr-3">
                             {master.aks ? (
                               <Image
-                                src={master.aks}
+                                src={master.aks.startsWith('http') 
+                                  ? master.aks 
+                                  : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${master.aks.startsWith('storage/') ? master.aks : `storage/${master.aks}`}`}
                                 alt={master.fullname}
                                 className="h-full w-full object-cover"
                                 width={48}

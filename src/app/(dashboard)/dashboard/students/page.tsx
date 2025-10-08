@@ -482,7 +482,9 @@ function StudentsPageContent() {
                             <div className="flex items-center justify-center">
                               {student.Aks ? (
                                 <Image
-                                   src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
+                                   src={student.Aks.startsWith('http') 
+                                     ? student.Aks 
+                                     : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${student.Aks.startsWith('storage/') ? student.Aks : `storage/${student.Aks}`}`}
                                    alt={`${student.Fname} ${student.Lname}`}
                                    width={40}
                                    height={40}
@@ -615,7 +617,9 @@ function StudentsPageContent() {
                           <div className="flex-shrink-0">
                             {student.Aks ? (
                               <Image
-                                 src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
+                                 src={student.Aks.startsWith('http') 
+                                   ? student.Aks 
+                                   : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${student.Aks.startsWith('storage/') ? student.Aks : `storage/${student.Aks}`}`}
                                  alt={`${student.Fname} ${student.Lname}`}
                                  width={50}
                                  height={50}
@@ -876,7 +880,9 @@ function StudentsPageContent() {
                   <div className="flex-shrink-0">
                     {selectedStudent.Aks ? (
                       <Image
-                        src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${selectedStudent.Aks}`}
+                        src={selectedStudent.Aks.startsWith('http') 
+                          ? selectedStudent.Aks 
+                          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${selectedStudent.Aks.startsWith('storage/') ? selectedStudent.Aks : `storage/${selectedStudent.Aks}`}`}
                         alt={`${selectedStudent.Fname} ${selectedStudent.Lname}`}
                         width={80}
                         height={80}

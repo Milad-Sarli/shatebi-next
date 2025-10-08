@@ -317,14 +317,8 @@ export function StudentForm({ student, onSuccess, onCancel }: StudentFormProps) 
 
       if (student) {
         await StudentService.updateStudent(student.id, submitData, accessToken);
-        sonnerToast.success("قرآن آموز با موفقیت ویرایش شد", {
-          style: { background: '#22c55e', color: '#fff' }
-        });
       } else {
         await StudentService.createStudent(submitData, accessToken);
-        sonnerToast.success("قرآن آموز با موفقیت ایجاد شد", {
-          style: { background: '#22c55e', color: '#fff' }
-        });
       }
       onSuccess();
     } catch (error: unknown) {
