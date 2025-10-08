@@ -12,6 +12,7 @@ import {
   Trash2,
   Printer,
   Check,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,8 @@ export default function StudentsPage() {
   const [statusFilter, setStatusFilter] = React.useState<
     "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل" | "اخراجی" | undefined
   >(undefined);
+  const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(null);
+  const [isViewStudentOpen, setIsViewStudentOpen] = React.useState(false);
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -183,6 +186,11 @@ export default function StudentsPage() {
 
   const handleEditStudent = (student: Student) => {
     router.push(`/dashboard/students/edit/${student.id}`);
+  };
+
+  const handleViewStudentDetails = (student: Student) => {
+    setSelectedStudent(student);
+    setIsViewStudentOpen(true);
   };
 
   const handleSearch = () => {
@@ -442,14 +450,17 @@ export default function StudentsPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -20 }}
                           transition={{ duration: 0.2 }}
-                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
+                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 cursor-pointer"
+                          onClick={() => handleViewStudentDetails(student)}
                         >
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Checkbox
-                              checked={selectedStudents.has(student.id)}
-                              onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
-                              className="border-zinc-300 dark:border-zinc-600"
-                            />
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedStudents.has(student.id)}
+                                onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
+                                className="border-zinc-300 dark:border-zinc-600"
+                              />
+                            </div>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                             {pagination.from
@@ -464,12 +475,13 @@ export default function StudentsPage() {
                                    alt={`${student.Fname} ${student.Lname}`}
                                    width={40}
                                    height={40}
-                                   className="rounded-full object-cover border-2 border-zinc-200 dark:border-zinc-700"
+                                   className="rounded-full object-cover h-10 w-10 border-2 border-zinc-200 dark:border-zinc-700"
+                                   style={{ borderRadius: '50%' }}
                                    onError={(e) => {
                                      const target = e.target as HTMLImageElement;
                                      target.style.display = 'none';
                                    }}
-                                 /> 
+                                 />
                               ) : (
                                 <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-sm font-medium">
                                   {student.Fname?.charAt(0)}{student.Lname?.charAt(0)}
@@ -503,24 +515,35 @@ export default function StudentsPage() {
                             </Badge>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleEditStudent(student)}
-                            >
-                              <Edit className="h-4 w-4 ml-1" />
-                              ویرایش
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                              onClick={() => handleDeleteStudent(student.id)}
-                            >
-                              <Trash2 className="h-4 w-4 ml-1" />
-                              حذف
-                            </Button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                onClick={() => handleViewStudentDetails(student)}
+                              >
+                                <Eye className="h-4 w-4 ml-1" />
+                                مشاهده
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                onClick={() => handleEditStudent(student)}
+                              >
+                                <Edit className="h-4 w-4 ml-1" />
+                                ویرایش
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                onClick={() => handleDeleteStudent(student.id)}
+                              >
+                                <Trash2 className="h-4 w-4 ml-1" />
+                                حذف
+                              </Button>
+                            </div>
                           </td>
                         </motion.tr>
                       ))
@@ -549,16 +572,19 @@ export default function StudentsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
-                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleViewStudentDetails(student)}
                     >
                       <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedStudents.has(student.id)}
-                              onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
-                              className="border-zinc-300 dark:border-zinc-600"
-                            />
+                            <div className="flex items-center gap-3">
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedStudents.has(student.id)}
+                                  onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
+                                  className="border-zinc-300 dark:border-zinc-600"
+                                />
+                              </div>
                             {student.Aks ? (
                               <Image
                                  src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${student.Aks}`}
@@ -597,25 +623,36 @@ export default function StudentsPage() {
                           <p>کد ملی: {student.Mellicode}</p>
                         </div>
                         <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            onClick={() => handleEditStudent(student)}
-                          >
-                            <Edit className="h-4 w-4 ml-1" />
-                            ویرایش
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                            onClick={() => handleDeleteStudent(student.id)}
-                          >
-                            <Trash2 className="h-4 w-4 ml-1" />
-                            حذف
-                          </Button>
-                        </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                onClick={() => handleViewStudentDetails(student)}
+                              >
+                                <Eye className="h-4 w-4 ml-1" />
+                                مشاهده جزئیات
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                onClick={() => handleEditStudent(student)}
+                              >
+                                <Edit className="h-4 w-4 ml-1" />
+                                ویرایش
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                onClick={() => handleDeleteStudent(student.id)}
+                              >
+                                <Trash2 className="h-4 w-4 ml-1" />
+                                حذف
+                              </Button>
+                            </div>
+                          </div>
                       </div>
                     </motion.div>
                   ))
@@ -791,6 +828,128 @@ export default function StudentsPage() {
                 حذف
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isViewStudentOpen} onOpenChange={(open: boolean) => {
+          if (!open) {
+            setSelectedStudent(null);
+          }
+          setIsViewStudentOpen(open);
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-zinc-900 dark:text-zinc-100 text-right">
+                جزئیات قرآن آموز
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedStudent && (
+              <div className="space-y-6">
+                {/* Student Image and Basic Info */}
+                <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                  <div className="flex-shrink-0">
+                    {selectedStudent.Aks ? (
+                      <Image
+                        src={`${process.env.NEXT_PUBLIC_API_URL}/storage/${selectedStudent.Aks}`}
+                        alt={`${selectedStudent.Fname} ${selectedStudent.Lname}`}
+                        width={80}
+                        height={80}
+                        className="rounded-full object-cover h-20 w-20 border-4 border-white dark:border-zinc-700"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 text-2xl font-bold">
+                        {selectedStudent.Fname?.charAt(0)}{selectedStudent.Lname?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                      {selectedStudent.Fname} {selectedStudent.Lname}
+                    </h3>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      کد ملی: {selectedStudent.Mellicode}
+                    </p>
+                    <Badge className={
+                      selectedStudent.status === "در حال تحصیل"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                        : selectedStudent.status === "فارغ التحصیل"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                        : selectedStudent.status === "ترک تحصیل"
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                        : selectedStudent.status === "انتقالی"
+                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                        : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300"
+                    }>
+                      {selectedStudent.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Student Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.Fname || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام خانوادگی:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.Lname || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">نام پدر:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.FatherName || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">کد ملی:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.Mellicode || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">شماره موبایل:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.Phone || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">تلفن والدین:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.ParentPhone || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">تحصیلات:</label>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                      {selectedStudent.Educating || '-'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewStudentOpen(false)}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    بستن
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
