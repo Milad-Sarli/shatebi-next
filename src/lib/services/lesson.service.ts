@@ -10,7 +10,7 @@ export interface Lesson {
   parent_id?: number;
   created_at?: string;
   updated_at?: string;
-  is_one_grade?: boolean;
+  is_one_grade?: number | null;
   pages?: number | null;
   start_page?: number | null;
   tenant?: {
@@ -133,4 +133,4 @@ export class LessonService {
     });
     return response.data;
   }
-} 
+}

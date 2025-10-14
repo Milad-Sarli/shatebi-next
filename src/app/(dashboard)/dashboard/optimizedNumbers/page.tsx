@@ -97,7 +97,11 @@ export default function OptimizedNumbersPage() {
         console.log(searchQuery);
         const response = await optimizedNumberService.getAll(accessToken);
 
-        setNumbers(response);
+        const transformedData = response.map((item: any) => ({
+            ...item,
+            masterTeacher: item.master_teacher,
+          }));
+          setNumbers(transformedData);
         // Note: Since the service doesn't support pagination yet, we'll handle it client-side
         const total = response.length;
         const lastPage = Math.ceil(total / filters.per_page);

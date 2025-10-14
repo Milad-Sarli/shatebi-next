@@ -89,6 +89,12 @@ const items: NavItem[] = [
     icon: GraduationCap,
     requiredRole: ["admin", "master"],
   },
+    {
+    title: "نمرات",
+    href: "/dashboard/optimizedNumbers",
+    icon: GraduationCap,
+    requiredRole: ["admin", "master"],
+  },
   {
     title: "متقاضیان ثبت نام",
     href: "/dashboard/applicants",

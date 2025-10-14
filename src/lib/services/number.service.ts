@@ -3,6 +3,19 @@ import axios from "axios";
 import { API_URL } from "@/lib/constants";
 import { Dars, OptimizedClass } from "./optimizedClass.service";
 
+export interface MasterTeacher {
+  id: number;
+  user_id: string;
+  mellicode: string;
+  fullname: string;
+  aks: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  phone: string;
+  tenant_id: string;
+}
+
 export interface OptimizedNumber {
   id: number;
   class_id: number;
@@ -20,7 +33,7 @@ export interface OptimizedNumber {
   created_at: string;
   updated_at: string;
   optimizedClass?: OptimizedClass;
-  masterTeacher?: any;
+  masterTeacher?: MasterTeacher;
   student?: any;
   droos?: Dars;
   lessonArea?: any;
@@ -68,7 +81,6 @@ export const optimizedNumberService = {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      console.log("Response received:", response);
       return response.data.data;
     } catch (error) {
       console.error("Error in getAll:", error);

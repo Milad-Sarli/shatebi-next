@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
 import { LessonService, Lesson, LessonFilters, PaginationResponse } from "@/lib/services/lesson.service";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { LessonForm } from "./lesson-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -55,6 +56,8 @@ export default function LessonsPage() {
   const [lessonToDelete, setLessonToDelete] = React.useState<number | null>(null);
   const [lessonToEdit, setLessonToEdit] = React.useState<Lesson | null>(null);
   const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
+  const [isChildrenModalOpen, setIsChildrenModalOpen] = React.useState(false);
+  const [selectedChildren, setSelectedChildren] = React.useState<Lesson[]>([]);
   
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -83,7 +86,21 @@ export default function LessonsPage() {
         },
         accessToken
       );
-      setLessons(response.data || []);
+      const lessonsMap = new Map<number, Lesson>();
+      response.data.forEach((lesson) => lessonsMap.set(lesson.id, { ...lesson, children: [] }));
+
+      const hierarchicalLessons: Lesson[] = [];
+      lessonsMap.forEach((lesson) => {
+        if (lesson.parent_id) {
+          const parent = lessonsMap.get(lesson.parent_id);
+          if (parent) {
+            parent.children?.push(lesson);
+          }
+        } else {
+          hierarchicalLessons.push(lesson);
+        }
+      });
+      setLessons(hierarchicalLessons || []);
       if (response.pagination) {
         setPagination(response.pagination);
       } else {
@@ -185,8 +202,9 @@ export default function LessonsPage() {
   };
 
   const handleViewChildren = React.useCallback((lesson: Lesson) => {
-    handleNavigateToParent(lesson.id);
-  }, [handleNavigateToParent]);
+    setSelectedChildren(lesson.children || []);
+    setIsChildrenModalOpen(true);
+  }, []);
 
   const handleSearch = () => {
     if (filters.page !== 1) {
@@ -196,18 +214,23 @@ export default function LessonsPage() {
     }
   };
 
-  const handleToggleOneGrade = async (lesson: Lesson) => {
+  const handleToggleOneGrade = React.useCallback(async (lesson: Lesson) => {
     if (!accessToken || !lesson.id) return;
 
     try {
+      const newIsOneGrade = lesson.is_one_grade === 1 ? 0 : 1;
       await LessonService.toggleOneGrade(lesson.id, accessToken);
-      toast.success("تک نمره با موفقیت تغییر کرد");
-      fetchLessons();
+      setLessons((prevLessons) =>
+        prevLessons.map((l) =>
+          l.id === lesson.id ? { ...l, is_one_grade: newIsOneGrade } : l
+        )
+      );
+      toast.success("وضعیت تک نمره‌ای با موفقیت تغییر یافت.");
     } catch (error) {
-      toast.error("خطا در تغییر تک نمره");
-      console.error(error);
+      toast.error("خطا در تغییر وضعیت تک نمره‌ای.");
+      console.error("Failed to toggle one grade:", error);
     }
-  };
+  }, [accessToken]);
 
   return (
     <PageTransition>
@@ -343,13 +366,17 @@ export default function LessonsPage() {
                               variant="ghost"
                               size="sm"
                               className={`${
-                                lesson.is_one_grade
+                                lesson.is_one_grade === "1"
                                   ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                                  : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                                  : lesson.is_one_grade === "0"
+                                    ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900/30 dark:text-zinc-300 dark:hover:bg-zinc-900/50"
                               }`}
                               onClick={() => handleToggleOneGrade(lesson)}
                             >
-                              {lesson.is_one_grade ? "بله" : "خیر"}
+                              {lesson.is_one_grade === "1" && "بله"}
+                            {lesson.is_one_grade === "0" && "خیر"}
+                            {lesson.is_one_grade === null && "نامشخص"}
                             </Button>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
@@ -358,6 +385,7 @@ export default function LessonsPage() {
                               size="sm" 
                               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                               onClick={() => handleViewChildren(lesson)}
+                              disabled={!lesson.children || lesson.children.length === 0}
                             >
                               <FolderTree className="h-4 w-4 ml-1" />
                               زیردرس‌ها
@@ -434,13 +462,15 @@ export default function LessonsPage() {
                             variant="ghost"
                             size="sm"
                             className={`${
-                              lesson.is_one_grade
+                              lesson.is_one_grade === 1
                                 ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                                : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                                : lesson.is_one_grade === 0
+                                  ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900/30 dark:text-zinc-300 dark:hover:bg-zinc-900/50"
                             }`}
                             onClick={() => handleToggleOneGrade(lesson)}
                           >
-                            {lesson.is_one_grade ? "بله" : "خیر"}
+                            {lesson.is_one_grade === 1 ? "بله" : (lesson.is_one_grade === 0 ? "خیر" : "نامشخص")}
                           </Button>
                         </div>
                         {lesson.description && (
@@ -495,75 +525,64 @@ export default function LessonsPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(1)}
-                      disabled={pagination.current_page === 1}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      اولین
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.current_page - 1)}
-                      disabled={pagination.current_page === 1}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  {/* Page number buttons */}
-                  <div className="hidden sm:flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, pagination.last_page) }).map((_, i) => {
-                      let pageNum;
-                      if (pagination.last_page <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.current_page <= 3) {
-                        pageNum = i + 1;
-                      } else if (pagination.current_page >= pagination.last_page - 2) {
-                        pageNum = pagination.last_page - 4 + i;
-                      } else {
-                        pageNum = pagination.current_page - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={pagination.current_page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(pageNum)}
-                          className={pagination.current_page === pageNum 
-                            ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200" 
-                            : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.current_page + 1)}
-                      disabled={pagination.current_page === pagination.last_page}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.last_page)}
-                      disabled={pagination.current_page === pagination.last_page}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      آخرین
-                    </Button>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => handlePageChange(pagination.current_page - 1)}
+                            disabled={pagination.current_page === 1}
+                          />
+                        </PaginationItem>
+                        {pagination.current_page > 3 && pagination.last_page > 5 && (
+                          <PaginationItem>
+                            <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
+                          </PaginationItem>
+                        )}
+                        {pagination.current_page > 4 && pagination.last_page > 5 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {Array.from({ length: pagination.last_page }).map((_, i) => {
+                          const pageNum = i + 1;
+                          if (
+                            pageNum === 1 ||
+                            pageNum === pagination.last_page ||
+                            (pageNum >= pagination.current_page - 2 && pageNum <= pagination.current_page + 2)
+                          ) {
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  isActive={pagination.current_page === pageNum}
+                                  onClick={() => handlePageChange(pageNum)}
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        })}
+                        {pagination.current_page < pagination.last_page - 3 && pagination.last_page > 5 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        {pagination.current_page < pagination.last_page - 2 && pagination.last_page > 5 && (
+                          <PaginationItem>
+                            <PaginationLink onClick={() => handlePageChange(pagination.last_page)}>
+                              {pagination.last_page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => handlePageChange(pagination.current_page + 1)}
+                            disabled={pagination.current_page === pagination.last_page}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-2">
@@ -630,6 +649,42 @@ export default function LessonsPage() {
           </DialogContent>
         </Dialog>
       </div>
+      <Dialog open={isChildrenModalOpen} onOpenChange={setIsChildrenModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>زیردرس‌ها</DialogTitle>
+            <DialogDescription>
+              لیست زیردرس‌های مربوط به درس انتخاب شده.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedChildren.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>عنوان</TableHead>
+                    <TableHead>تک نمره‌ای</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedChildren.map((childLesson) => (
+                    <TableRow key={childLesson.id}>
+                      <TableCell>{childLesson.title}</TableCell>
+                      <TableCell>
+                        {childLesson.is_one_grade === 1 && "بله"}
+                        {childLesson.is_one_grade === 0 && "خیر"}
+                        {childLesson.is_one_grade === null && "نامشخص"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p>زیردرسی یافت نشد.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
-} 
+}
