@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Search, ChevronLeft, ChevronRight,Edit, Trash2, FolderTree } from "lucide-react";
+import { Plus, Search,Edit, Trash2, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -58,6 +59,7 @@ export default function LessonsPage() {
   const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
   const [isChildrenModalOpen, setIsChildrenModalOpen] = React.useState(false);
   const [selectedChildren, setSelectedChildren] = React.useState<Lesson[]>([]);
+  const [clickedLesson, setClickedLesson] = React.useState<Lesson | null>(null);
   
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -202,9 +204,23 @@ export default function LessonsPage() {
   };
 
   const handleViewChildren = React.useCallback((lesson: Lesson) => {
-    setSelectedChildren(lesson.children || []);
+    // ذخیره درس کلیک شده
+    setClickedLesson(lesson);
+    
+    // اگر این درس parent دارد، باید درس والد را پیدا کنیم
+    if (lesson.parent) {
+      const parentLesson = lessons.find(l => String(l.id) === String(lesson.parent));
+      setSelectedChildren(parentLesson ? [parentLesson] : []);
+    } else {
+      // اگر parent ندارد، زیردرس‌هایش را پیدا کنیم
+      const children = lessons.filter(l => {
+        return l.parent !== null && l.parent !== undefined && String(l.parent) === String(lesson.id);
+      });
+      setSelectedChildren(children);
+    }
+    
     setIsChildrenModalOpen(true);
-  }, []);
+  }, [lessons]);
 
   const handleSearch = () => {
     if (filters.page !== 1) {
@@ -326,7 +342,6 @@ export default function LessonsPage() {
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">#</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عنوان</th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">مرکز</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium"> تک نمره ای </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
                   </tr>
@@ -360,7 +375,6 @@ export default function LessonsPage() {
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.title}</td>
                       
-                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.tenant?.title}</td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button
                               variant="ghost"
@@ -385,10 +399,10 @@ export default function LessonsPage() {
                               size="sm" 
                               className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                               onClick={() => handleViewChildren(lesson)}
-                              disabled={!lesson.children || lesson.children.length === 0}
+                              // disabled={!lesson.parent}
                             >
                               <FolderTree className="h-4 w-4 ml-1" />
-                              زیردرس‌ها
+                              {lesson.parent ? 'مشاهده والد ها' : 'مشاهده زیر درس ها'}
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -486,7 +500,7 @@ export default function LessonsPage() {
                             onClick={() => handleViewChildren(lesson)}
                           >
                             <FolderTree className="h-4 w-4 ml-1" />
-                            زیردرس‌ها
+                            {lesson.parent ? 'مشاهده والد ها' : 'مشاهده زیر درس ها'}
                           </Button>
                           <Button
                             variant="ghost"
@@ -650,37 +664,45 @@ export default function LessonsPage() {
         </Dialog>
       </div>
       <Dialog open={isChildrenModalOpen} onOpenChange={setIsChildrenModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>زیردرس‌ها</DialogTitle>
-            <DialogDescription>
-              لیست زیردرس‌های مربوط به درس انتخاب شده.
+        <DialogContent className="sm:max-w-[450px] text-right" dir="rtl">
+          <DialogHeader className="text-center">
+            {clickedLesson && (
+              <div className="mb-1 flex justify-center">
+                <Badge variant="secondary" className="text-sm bg-green-600 text-white">
+                  {clickedLesson.title}
+                </Badge>
+              </div>
+            )}
+            <DialogTitle className="text-center">
+              {selectedChildren.length > 0 && selectedChildren[0].parent ? 'زیر درس ها' : 'درس والد'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {selectedChildren.length > 0 && selectedChildren[0].parent 
+                ? 'زیر درس های مربوط به درس انتخاب شده.' 
+                : 'درس والد مربوط به درس انتخاب شده.'
+              }
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-1">
             {selectedChildren.length > 0 ? (
-              <Table>
+              <Table className="text-center" dir="rtl">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>عنوان</TableHead>
-                    <TableHead>تک نمره‌ای</TableHead>
+                    <TableHead className="text-center">عنوان</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selectedChildren.map((childLesson) => (
                     <TableRow key={childLesson.id}>
-                      <TableCell>{childLesson.title}</TableCell>
-                      <TableCell>
-                        {childLesson.is_one_grade === 1 && "بله"}
-                        {childLesson.is_one_grade === 0 && "خیر"}
-                        {childLesson.is_one_grade === null && "نامشخص"}
-                      </TableCell>
+                      <TableCell className="text-center">{childLesson.title}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <p>زیردرسی یافت نشد.</p>
+              <p className="text-center text-gray-500">
+                {selectedChildren.length === 0 ? 'هیچ موردی یافت نشد.' : ' یافت نشد.'}
+              </p>
             )}
           </div>
         </DialogContent>
