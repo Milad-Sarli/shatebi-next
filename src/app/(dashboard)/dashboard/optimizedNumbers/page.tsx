@@ -59,6 +59,34 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+interface Student {
+  id: number;
+  Fname: string;
+  Lname: string;
+  Aks?: string;
+  FatherName?: string;
+}
+
+interface Dars {
+  id: number;
+  title: string;
+  is_one_grade: string;
+  pages?: number;
+  start_page?: number;
+}
+
+interface LessonArea {
+  id: number;
+  start_page?: string;
+  end_page?: string;
+  start_surah?: string;
+  end_surah?: string;
+  start_verse?: number;
+  end_verse?: number;
+  start_joze?: number;
+  end_joze?: number;
+}
+
 interface Filters {
   page: number;
   per_page: number;
@@ -87,6 +115,8 @@ export default function OptimizedNumbersPage() {
     current_page: 1,
     last_page: 1,
     total: 0,
+    from: 0,
+    to: 0,
     links: [] as Array<{ url: string | null; label: string; active: boolean }>,
   });
   const [searchInput, setSearchInput] = React.useState("");
@@ -115,12 +145,12 @@ export default function OptimizedNumbersPage() {
     const students = allNumbers
       .map(item => item.student)
       .filter(Boolean)
-      .reduce((acc, student) => {
-        if (student && !acc.find(s => s.id === student.id)) {
+      .reduce((acc: Student[], student) => {
+        if (student && !acc.find((s: Student) => s.id === student.id)) {
           acc.push(student);
         }
         return acc;
-      }, [] as any[]);
+      }, [] as Student[]);
     return students;
   }, [allNumbers]);
 
@@ -251,20 +281,6 @@ export default function OptimizedNumbersPage() {
               <CardTitle className="text-zinc-900 dark:text-zinc-100">
                 لیست نمرات
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              >
-                <Filter className="h-4 w-4 ml-1" />
-                فیلترها
-                {activeFiltersCount > 0 && (
-                  <Badge variant="secondary" className="mr-1 h-5 w-5 rounded-full p-0 text-xs">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -280,134 +296,6 @@ export default function OptimizedNumbersPage() {
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
-
-              {/* Filters Panel */}
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700"
-                  >
-                    {/* Teacher Filter */}
-                    <div>
-                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                        استاد
-                      </label>
-                      <Select
-                        value={filters.teacher}
-                        onValueChange={(value) => handleFilterChange('teacher', value)}
-                      >
-                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
-                          <SelectValue placeholder="انتخاب استاد" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">همه اساتید</SelectItem>
-                          {uniqueTeachers.map((teacher) => (
-                            <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                              {teacher.fullname}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Student Filter */}
-                    <div>
-                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                        دانش‌آموز
-                      </label>
-                      <Select
-                        value={filters.student}
-                        onValueChange={(value) => handleFilterChange('student', value)}
-                      >
-                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
-                          <SelectValue placeholder="انتخاب دانش‌آموز" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">همه دانش‌آموزان</SelectItem>
-                          {uniqueStudents.map((student) => (
-                            <SelectItem key={student.id} value={student.id.toString()}>
-                              {student.Fname} {student.Lname}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Score Range Filter */}
-                    <div>
-                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                        محدوده نمره
-                      </label>
-                      <Select
-                        value={filters.scoreRange}
-                        onValueChange={(value) => handleFilterChange('scoreRange', value)}
-                      >
-                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
-                          <SelectValue placeholder="انتخاب محدوده" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">همه نمرات</SelectItem>
-                          <SelectItem value="excellent">عالی (80+)</SelectItem>
-                          <SelectItem value="good">خوب (60-79)</SelectItem>
-                          <SelectItem value="average">متوسط (40-59)</SelectItem>
-                          <SelectItem value="poor">ضعیف (کمتر از 40)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Date Range Filter */}
-                    <div>
-                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                        بازه زمانی
-                      </label>
-                      <Select
-                        value={filters.dateRange}
-                        onValueChange={(value) => handleFilterChange('dateRange', value)}
-                      >
-                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
-                          <SelectValue placeholder="انتخاب بازه" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">همه تاریخ‌ها</SelectItem>
-                          <SelectItem value="today">امروز</SelectItem>
-                          <SelectItem value="week">هفته گذشته</SelectItem>
-                          <SelectItem value="month">ماه گذشته</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Clear Filters Button */}
-                    {activeFiltersCount > 0 && (
-                      <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={clearFilters}
-                          className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                        >
-                          <X className="h-4 w-4 ml-1" />
-                          پاک کردن فیلترها
-                        </Button>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Results Summary */}
-              {!loading && (
-                <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {filteredNumbers.length} نمره از {allNumbers.length} نمره یافت شد
-                  {(debouncedSearch || activeFiltersCount > 0) && (
-                    <span className="mr-2">
-                      (فیلتر شده)
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Desktop table view */}
@@ -425,6 +313,12 @@ export default function OptimizedNumbersPage() {
                       استاد
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      درس
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      محدوده درسی
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
                       نمرات
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
@@ -437,7 +331,7 @@ export default function OptimizedNumbersPage() {
                     {loading ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           در حال بارگذاری...
@@ -446,7 +340,7 @@ export default function OptimizedNumbersPage() {
                     ) : filteredNumbers.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           نمره‌ای یافت نشد
@@ -470,7 +364,40 @@ export default function OptimizedNumbersPage() {
                               {numberItem.student?.Lname}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {numberItem.masterTeacher?.fullname}
+                              {numberItem.master_teacher?.fullname || 'نامشخص'}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                              <Badge
+                                variant="outline"
+                                className="border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                              >
+                                {numberItem.dars?.title || 'نامشخص'}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                              {numberItem.lesson_area ? (
+                                <div className="text-sm">
+                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
+                                    </Badge>
+                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
+                              )}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3">
                               <div className="flex flex-wrap gap-2">
@@ -573,7 +500,40 @@ export default function OptimizedNumbersPage() {
                               دانش‌آموز: {numberItem.student?.Fname}{" "}
                               {numberItem.student?.Lname}
                             </p>
-                            <p>استاد: {numberItem.masterTeacher?.fullname}</p>
+                            <p>استاد: {numberItem.master_teacher?.fullname || 'نامشخص'}</p>
+                            <p>درس: 
+                              <Badge
+                                variant="outline"
+                                className="mr-2 border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                              >
+                                {numberItem.dars?.title || 'نامشخص'}
+                              </Badge>
+                            </p>
+                            <p>محدوده درسی: 
+                              {numberItem.lesson_area ? (
+                                <span className="mr-2">
+                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
+                                    </Badge>
+                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="mr-2 text-zinc-500 dark:text-zinc-400">نامشخص</span>
+                              )}
+                            </p>
                             <div className="flex flex-wrap gap-2">
                               <Badge
                                 variant="outline"
