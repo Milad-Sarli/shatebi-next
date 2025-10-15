@@ -15,6 +15,7 @@ import { StudentService } from "@/lib/services/student.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { MultiSelectComboBoxWithInfiniteScroll } from "@/components/ui/MultiSelectComboBoxWithInfiniteScroll";
 import { ArrowLeft } from "lucide-react";
+import axios from 'axios';
 import {
   Select,
   SelectContent,
@@ -101,7 +102,7 @@ export default function AddClassPage() {
         }, accessToken);
         
         // Map students to the required format - studentsResponse.data.data is the array (paginated response)
-        const studentsData = studentsResponse.data.data.map(student => ({
+        const studentsData = studentsResponse.data.map(student => ({
           id: student.id,
           Fname: student.Fname,
           Lname: student.Lname,
@@ -124,6 +125,7 @@ export default function AddClassPage() {
         setLessons(Array.from(uniqueLessons.values()));
 
       } catch (error) {
+      if (!axios.isAxiosError(error)) throw error;
         // بهبود پیام خطا با جزئیات بیشتر
         if (error.response) {
           // خطای پاسخ از سرور
@@ -158,6 +160,7 @@ export default function AddClassPage() {
       setTeachersHasMore(mastersResponse.data.current_page < mastersResponse.data.last_page);
       setTeachersLoading(false);
     } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
       toast.error("خطا در بارگذاری اساتید بیشتر");
       console.error("Error loading more teachers:", error);
       setTeachersLoading(false);
@@ -204,6 +207,7 @@ export default function AddClassPage() {
       toast.success("کلاس با موفقیت ایجاد شد");
       router.push("/dashboard/optimizedClasses");
     } catch (error) {
+      if (!axios.isAxiosError(error)) throw error;
       toast.error("خطا در ایجاد کلاس");
       console.error(error);
     } finally {

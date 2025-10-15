@@ -6,12 +6,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Edit,
   Trash2,
-  Filter,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,16 +25,8 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   optimizedNumberService,
   OptimizedNumber,
-  MasterTeacher,
 } from "@/lib/services/number.service";
 import { useRouter } from "next/navigation";
 
@@ -59,33 +47,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-interface Student {
-  id: number;
-  Fname: string;
-  Lname: string;
-  Aks?: string;
-  FatherName?: string;
-}
-
-interface Dars {
-  id: number;
-  title: string;
-  is_one_grade: string;
-  pages?: number;
-  start_page?: number;
-}
-
-interface LessonArea {
-  id: number;
-  start_page?: string;
-  end_page?: string;
-  start_surah?: string;
-  end_surah?: string;
-  start_verse?: number;
-  end_verse?: number;
-  start_joze?: number;
-  end_joze?: number;
-}
 
 interface Filters {
   page: number;
@@ -99,12 +60,12 @@ interface Filters {
 
 export default function OptimizedNumbersPage() {
   const { accessToken } = useAuth();
-  const [allNumbers, setAllNumbers] = React.useState<OptimizedNumber[]>([]);
+  const [, setAllNumbers] = React.useState<OptimizedNumber[]>([]);
   const [filteredNumbers, setFilteredNumbers] = React.useState<OptimizedNumber[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<Filters>({
     page: 1,
-    per_page: 3, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
+    per_page: 10, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
     search: "",
     teacher: "all",
     student: "all",
@@ -123,36 +84,8 @@ export default function OptimizedNumbersPage() {
   const debouncedSearch = useDebounce(searchInput, 300);
   const [numberToDelete, setNumberToDelete] = React.useState<number | null>(null);
   const [numberToEdit, setNumberToEdit] = React.useState<OptimizedNumber | null>(null);
-  const [showFilters, setShowFilters] = React.useState(false);
 
   const router = useRouter();
-
-  // Get unique teachers and students for filter options
-  const uniqueTeachers = React.useMemo(() => {
-    const teachers = allNumbers
-      .map(item => item.masterTeacher)
-      .filter(Boolean)
-      .reduce((acc, teacher) => {
-        if (teacher && !acc.find(t => t.id === teacher.id)) {
-          acc.push(teacher);
-        }
-        return acc;
-      }, [] as MasterTeacher[]);
-    return teachers;
-  }, [allNumbers]);
-
-  const uniqueStudents = React.useMemo(() => {
-    const students = allNumbers
-      .map(item => item.student)
-      .filter(Boolean)
-      .reduce((acc: Student[], student) => {
-        if (student && !acc.find((s: Student) => s.id === student.id)) {
-          acc.push(student);
-        }
-        return acc;
-      }, [] as Student[]);
-    return students;
-  }, [allNumbers]);
 
   // Fetch all numbers from API
   const fetchNumbers = React.useCallback(async () => {
@@ -170,9 +103,8 @@ export default function OptimizedNumbersPage() {
         filters.scoreRange,
         filters.dateRange
       );
-      console.log('API Response:', response);
       setAllNumbers(response.data);
-      setFilteredNumbers(response.data); // API returns filtered and paginated data
+      setFilteredNumbers(response.data);
       setPagination({
         current_page: response.current_page,
         last_page: response.last_page,
@@ -188,11 +120,6 @@ export default function OptimizedNumbersPage() {
       setLoading(false);
     }
   }, [accessToken, filters, debouncedSearch]);
-
-  // Client-side filtering function (now primarily triggers API fetch)
-  const applyFilters = React.useCallback(() => {
-    fetchNumbers();
-  }, [fetchNumbers]);
 
   // Apply filters whenever dependencies change
   React.useEffect(() => {
@@ -216,22 +143,6 @@ export default function OptimizedNumbersPage() {
     }));
   }, []);
 
-  const handleFilterChange = (key: keyof Filters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
-  };
-
-  const clearFilters = () => {
-    setFilters(prev => ({
-      ...prev,
-      teacher: "all",
-      student: "all",
-      scoreRange: "all",
-      dateRange: "all",
-      page: 1
-    }));
-    setSearchInput("");
-  };
-
   const handleDeleteNumber = async (id: number) => {
     setNumberToDelete(id);
   };
@@ -254,8 +165,6 @@ export default function OptimizedNumbersPage() {
   const handleEditNumber = (numberItem: OptimizedNumber) => {
     setNumberToEdit(numberItem);
   };
-
-  const activeFiltersCount = [filters.teacher, filters.student, filters.scoreRange, filters.dateRange].filter(f => f && f !== 'all').length;
 
   return (
     <PageTransition>
@@ -364,32 +273,32 @@ export default function OptimizedNumbersPage() {
                               {numberItem.student?.Lname}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {numberItem.master_teacher?.fullname || 'نامشخص'}
+                              {numberItem.masterTeacher?.fullname || 'نامشخص'}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
                               <Badge
                                 variant="outline"
                                 className="border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                               >
-                                {numberItem.dars?.title || 'نامشخص'}
+                                {numberItem.droos?.title || 'نامشخص'}
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {numberItem.lesson_area ? (
+                              {numberItem.lessonArea ? (
                                 <div className="text-sm">
-                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
+                                  {numberItem.lessonArea.start_page && numberItem.lessonArea.end_page ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
+                                      صفحه {numberItem.lessonArea.start_page} تا {numberItem.lessonArea.end_page}
                                     </Badge>
-                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
+                                  ) : numberItem.lessonArea.start_surah && numberItem.lessonArea.end_surah ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                      {numberItem.lessonArea.start_surah} تا {numberItem.lessonArea.end_surah}
                                     </Badge>
                                   ) : (
                                     <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
@@ -500,31 +409,31 @@ export default function OptimizedNumbersPage() {
                               دانش‌آموز: {numberItem.student?.Fname}{" "}
                               {numberItem.student?.Lname}
                             </p>
-                            <p>استاد: {numberItem.master_teacher?.fullname || 'نامشخص'}</p>
+                            <p>استاد: {numberItem.masterTeacher?.fullname || 'نامشخص'}</p>
                             <p>درس: 
                               <Badge
                                 variant="outline"
                                 className="mr-2 border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                               >
-                                {numberItem.dars?.title || 'نامشخص'}
+                                {numberItem.droos?.title || 'نامشخص'}
                               </Badge>
                             </p>
                             <p>محدوده درسی: 
-                              {numberItem.lesson_area ? (
+                              {numberItem.lessonArea ? (
                                 <span className="mr-2">
-                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
+                                  {numberItem.lessonArea.start_page && numberItem.lessonArea.end_page ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
+                                      صفحه {numberItem.lessonArea.start_page} تا {numberItem.lessonArea.end_page}
                                     </Badge>
-                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
+                                  ) : numberItem.lessonArea.start_surah && numberItem.lessonArea.end_surah ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                      {numberItem.lessonArea.start_surah} تا {numberItem.lessonArea.end_surah}
                                     </Badge>
                                   ) : (
                                     <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
