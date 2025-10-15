@@ -4,6 +4,11 @@ import GradeDisplay from './GradeDisplay';
 import ActionButtons from './ActionButtons';
 import { Student, Grade, StudentActivity } from '@/lib/services/optimizedClass.service';
 import { motion } from 'framer-motion';
+import DeleteConfirmationModal from '@/components/ui/DeleteConfirmationModal';
+import { useAuth } from '@/lib/context/auth.context';
+import { studentActivityService } from '@/lib/services/studentActivity.service';
+import { toast } from 'sonner';
+import { XCircle } from 'lucide-react';
 
 interface StudentCardProps {
   studentData: Student;
@@ -19,6 +24,7 @@ interface StudentCardProps {
   isProvideConfirmOpen: boolean;
   isGradeWithin24Hours: (grade: Grade) => boolean;
   formatLessonRange: (grade: Grade) => string;
+  onAbsentDeleted: (studentId: number, activityId: number) => void;
 }
 
 const StudentCard: React.FC<StudentCardProps> = ({
@@ -35,7 +41,13 @@ const StudentCard: React.FC<StudentCardProps> = ({
   isProvideConfirmOpen,
   isGradeWithin24Hours,
   formatLessonRange,
+  onAbsentDeleted,
 }) => {
+  const { accessToken } = useAuth();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [isDeletingAbsent, setIsDeletingAbsent] = React.useState(false);
+  const [absentToDelete, setAbsentToDelete] = React.useState<StudentActivity | null>(null);
+
   // Find all absent activities
   const absentActivities = activities.filter(activity => {
     const isExplicitlyAbsent = activity.class_absent === "1" || activity.class_absent === "true";
@@ -51,6 +63,23 @@ const StudentCard: React.FC<StudentCardProps> = ({
   const provideActivity = activities.find(activity => 
     activity.provideless === "1" || activity.provideless === "true"
   );
+
+  const handleDeleteAbsent = async () => {
+    if (!absentToDelete || !accessToken) return;
+    setIsDeletingAbsent(true);
+    try {
+      await studentActivityService.delete(absentToDelete.id, accessToken);
+      onAbsentDeleted(studentData.student.id, absentToDelete.id);
+      toast.success("غیبت با موفقیت حذف شد.");
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting absent activity:", error);
+      toast.error("خطا در حذف غیبت.");
+    } finally {
+      setIsDeletingAbsent(false);
+      setAbsentToDelete(null);
+    }
+  };
 
   // Main student card UI
   return (
@@ -80,13 +109,25 @@ const StudentCard: React.FC<StudentCardProps> = ({
             )}
           </div>
           <div className="flex flex-col">
-            <span className="text-zinc-900 font-medium">{studentData.student.name}</span>
-            <span className="text-xs text-zinc-500">{studentData.student.student_code}</span>
+            <span className="text-zinc-900 dark:text-zinc-50 font-medium">{studentData.student.name}</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{studentData.student.student_code}</span>
             {/* Absent/provideless status badge */}
             {latestAbsentActivity && (
-              <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full mt-1">
-                غایب{latestAbsentActivity.reason ? ` (${latestAbsentActivity.reason})` : ''}
-              </span>
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
+                  غایب{latestAbsentActivity.reason ? ` (${latestAbsentActivity.reason})` : ''}
+                </span>
+                <button
+                  onClick={() => {
+                    setAbsentToDelete(latestAbsentActivity);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  className="flex-shrink-0 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  title="حذف غیبت"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
             )}
             {!latestAbsentActivity && provideActivity && (
               <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full mt-1">
@@ -112,6 +153,14 @@ const StudentCard: React.FC<StudentCardProps> = ({
         isGradeWithin24Hours={isGradeWithin24Hours}
         formatLessonRange={formatLessonRange}
         studentId={studentData.student.id}
+      />
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        onConfirm={handleDeleteAbsent}
+        title="حذف غیبت"
+        description="آیا از حذف این غیبت اطمینان دارید؟ این عمل قابل بازگشت نیست."
+        isLoading={isDeletingAbsent}
       />
     </motion.div>
   );

@@ -1168,6 +1168,7 @@ export default function AddNumberPage() {
                 actionLoading={actionLoading}
                 selectedStudentForAction={selectedStudentForAction as Student | null}
                 isProvideConfirmOpen={isProvideConfirmOpen}
+                setExistingActivities={setExistingActivities}
                 isGradeWithin24Hours={isGradeWithin24Hours}
                 formatLessonRange={formatLessonRange}
               />

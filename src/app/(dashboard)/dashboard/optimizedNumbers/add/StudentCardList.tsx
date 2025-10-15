@@ -17,6 +17,7 @@ interface StudentCardListProps {
   isProvideConfirmOpen: boolean;
   isGradeWithin24Hours: (grade: Grade) => boolean;
   formatLessonRange: (grade: Grade) => string;
+  setExistingActivities: React.Dispatch<React.SetStateAction<Record<number, StudentActivity[]>>>;
 }
 
 const StudentCardList: React.FC<StudentCardListProps> = ({
@@ -33,7 +34,16 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
   isProvideConfirmOpen,
   isGradeWithin24Hours,
   formatLessonRange,
+  setExistingActivities,
 }) => {
+
+  const handleAbsentDeleted = (studentId: number, activityId: number) => {
+    setExistingActivities(prevActivities => ({
+      ...prevActivities,
+      [studentId]: prevActivities[studentId].filter(activity => activity.id !== activityId)
+    }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -61,6 +71,7 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
                 isProvideConfirmOpen={isProvideConfirmOpen}
                 isGradeWithin24Hours={isGradeWithin24Hours}
                 formatLessonRange={formatLessonRange}
+                onAbsentDeleted={handleAbsentDeleted}
               />
             </motion.div>
           ))}
@@ -70,4 +81,4 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
   );
 };
 
-export default StudentCardList; 
+export default StudentCardList;

@@ -29,9 +29,18 @@ const AbsentModal: React.FC<AbsentModalProps> = ({ isOpen, onOpenChange, student
     { value: "مریض", label: "مریض" }
   ];
 
+  const [loadingReason, setLoadingReason] = React.useState<string | null>(null);
+
   const handleReasonSelect = (reason: string) => {
+    setLoadingReason(reason);
     onSubmit(reason);
   };
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setLoadingReason(null);
+    }
+  }, [isLoading]);
 
   return (
     <Dialog open={isOpen} onOpenChange={!isLoading ? onOpenChange : () => {}}>
@@ -53,7 +62,7 @@ const AbsentModal: React.FC<AbsentModalProps> = ({ isOpen, onOpenChange, student
               className="w-full text-right justify-between px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
               variant="outline"
             >
-              {isLoading ? (
+              {isLoading && loadingReason === reason.value ? (
                 <div className="flex items-center gap-2 w-full justify-center">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>در حال ثبت...</span>
@@ -76,4 +85,4 @@ const AbsentModal: React.FC<AbsentModalProps> = ({ isOpen, onOpenChange, student
   );
 };
 
-export default AbsentModal; 
+export default AbsentModal;

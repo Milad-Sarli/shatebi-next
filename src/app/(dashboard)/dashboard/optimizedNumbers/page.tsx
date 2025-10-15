@@ -6,8 +6,12 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Edit,
   Trash2,
+  Filter,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +38,7 @@ import {
 import {
   optimizedNumberService,
   OptimizedNumber,
+  MasterTeacher,
 } from "@/lib/services/number.service";
 import { useRouter } from "next/navigation";
 
@@ -54,94 +59,243 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+interface Filters {
+  page: number;
+  per_page: number;
+  search: string;
+  teacher: string;
+  student: string;
+  scoreRange: string;
+  dateRange: string;
+}
+
 export default function OptimizedNumbersPage() {
   const { accessToken } = useAuth();
-  const [numbers, setNumbers] = React.useState<OptimizedNumber[]>([]);
+  const [allNumbers, setAllNumbers] = React.useState<OptimizedNumber[]>([]);
+  const [filteredNumbers, setFilteredNumbers] = React.useState<OptimizedNumber[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [filters, setFilters] = React.useState({
+  const [filters, setFilters] = React.useState<Filters>({
     page: 1,
-    per_page: 10,
+    per_page: 3, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
+    search: "",
+    teacher: "all",
+    student: "all",
+    scoreRange: "all",
+    dateRange: "all",
   });
   const [pagination, setPagination] = React.useState({
     current_page: 1,
     last_page: 1,
     total: 0,
-    per_page: 10,
-    from: 0,
-    to: 0,
+    links: [] as Array<{ url: string | null; label: string; active: boolean }>,
   });
   const [searchInput, setSearchInput] = React.useState("");
-  const debouncedSearch = useDebounce(searchInput, 500);
-  const [numberToDelete, setNumberToDelete] = React.useState<number | null>(
-    null
-  );
-  const [numberToEdit, setNumberToEdit] =
-    React.useState<OptimizedNumber | null>(null);
-
-  // Reference to track if a search is already in progress
-  const searchInProgress = React.useRef(false);
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const [numberToDelete, setNumberToDelete] = React.useState<number | null>(null);
+  const [numberToEdit, setNumberToEdit] = React.useState<OptimizedNumber | null>(null);
+  const [showFilters, setShowFilters] = React.useState(false);
 
   const router = useRouter();
 
-  const fetchNumbers = React.useCallback(
-    async (searchTerm?: string) => {
-      if (!accessToken) return;
-      if (searchInProgress.current) return;
+  // Get unique teachers and students for filter options
+  const uniqueTeachers = React.useMemo(() => {
+    const teachers = allNumbers
+      .map(item => item.masterTeacher)
+      .filter(Boolean)
+      .reduce((acc, teacher) => {
+        if (teacher && !acc.find(t => t.id === teacher.id)) {
+          acc.push(teacher);
+        }
+        return acc;
+      }, [] as MasterTeacher[]);
+    return teachers;
+  }, [allNumbers]);
 
-      try {
-        searchInProgress.current = true;
-        setLoading(true);
+  const uniqueStudents = React.useMemo(() => {
+    const students = allNumbers
+      .map(item => item.student)
+      .filter(Boolean)
+      .reduce((acc, student) => {
+        if (student && !acc.find(s => s.id === student.id)) {
+          acc.push(student);
+        }
+        return acc;
+      }, [] as any[]);
+    return students;
+  }, [allNumbers]);
 
-        const searchQuery =
-          searchTerm !== undefined ? searchTerm : debouncedSearch;
-        console.log(searchQuery);
-        const response = await optimizedNumberService.getAll(accessToken);
+  // Fetch all numbers from API
+  const fetchNumbers = React.useCallback(async () => {
+    if (!accessToken) return;
 
-        const transformedData = response.map((item: OptimizedNumber) => ({
-            ...item,
-            masterTeacher: item.master_teacher,
-          }));
-          setNumbers(transformedData);
-        // Note: Since the service doesn't support pagination yet, we'll handle it client-side
-        const total = response.length;
-        const lastPage = Math.ceil(total / filters.per_page);
-        setPagination({
-          current_page: filters.page,
-          last_page: lastPage,
-          total,
-          per_page: filters.per_page,
-          from: (filters.page - 1) * filters.per_page + 1,
-          to: Math.min(filters.page * filters.per_page, total),
-        });
-      } catch (error) {
-        toast.error("Error loading numbers");
-        console.error(error);
-      } finally {
-        setLoading(false);
-        searchInProgress.current = false;
-      }
-    },
-    [accessToken, filters.page, filters.per_page, debouncedSearch]
-  );
-
-  // Effect to handle page and per_page changes
-  React.useEffect(() => {
-    if (!searchInProgress.current) {
-      fetchNumbers();
+    try {
+      setLoading(true);
+      const response = await optimizedNumberService.getAll(accessToken);
+      console.log('API Response:', response);
+      console.log('Response length:', response.length);
+      setAllNumbers(response);
+    } catch (error) {
+      toast.error("خطا در بارگذاری نمرات");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-  }, [filters.page, filters.per_page, fetchNumbers]);
+  }, [accessToken]);
 
-  // Effect to handle debounced search changes
-  React.useEffect(() => {
-    if (filters.page !== 1) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    } else {
-      fetchNumbers();
+  // Client-side filtering function
+  const applyFilters = React.useCallback(() => {
+    let filtered = [...allNumbers];
+
+    // Search filter
+    if (debouncedSearch.trim()) {
+      const searchTerm = debouncedSearch.toLowerCase().trim();
+      filtered = filtered.filter(item => {
+        const studentName = `${item.student?.Fname || ''} ${item.student?.Lname || ''}`.toLowerCase();
+        const teacherName = item.masterTeacher?.fullname?.toLowerCase() || '';
+        const description = item.description?.toLowerCase() || '';
+        
+        return studentName.includes(searchTerm) || 
+               teacherName.includes(searchTerm) || 
+               description.includes(searchTerm) ||
+               item.id.toString().includes(searchTerm);
+      });
     }
-  }, [debouncedSearch, fetchNumbers, filters.page]);
+
+    // Teacher filter
+    if (filters.teacher && filters.teacher !== 'all') {
+      filtered = filtered.filter(item => 
+        item.masterTeacher?.id?.toString() === filters.teacher
+      );
+    }
+
+    // Student filter
+    if (filters.student && filters.student !== 'all') {
+      filtered = filtered.filter(item => 
+        item.student?.id?.toString() === filters.student
+      );
+    }
+
+    // Score range filter
+    if (filters.scoreRange && filters.scoreRange !== 'all') {
+      filtered = filtered.filter(item => {
+        const totalScore = item.hefz + item.details + item.tajvid + item.sout;
+        switch (filters.scoreRange) {
+          case 'excellent': return totalScore >= 80;
+          case 'good': return totalScore >= 60 && totalScore < 80;
+          case 'average': return totalScore >= 40 && totalScore < 60;
+          case 'poor': return totalScore < 40;
+          default: return true;
+        }
+      });
+    }
+
+    // Date range filter
+    if (filters.dateRange && filters.dateRange !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.created_at);
+        switch (filters.dateRange) {
+          case 'today':
+            return itemDate.toDateString() === now.toDateString();
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return itemDate >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return itemDate >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredNumbers(filtered);
+
+    // Update pagination
+    const total = filtered.length;
+    const lastPage = Math.ceil(total / filters.per_page);
+    
+    // Generate pagination links similar to users page
+    const links = [];
+    
+    // Add Previous link
+    if (filters.page > 1) {
+      links.push({
+        url: (filters.page - 1).toString(),
+        label: "&laquo; Previous",
+        active: false
+      });
+    }
+    
+    // Add page number links
+    for (let i = 1; i <= lastPage; i++) {
+      links.push({
+        url: i.toString(),
+        label: i.toString(),
+        active: i === filters.page
+      });
+    }
+    
+    // Add Next link
+    if (filters.page < lastPage) {
+      links.push({
+        url: (filters.page + 1).toString(),
+        label: "Next &raquo;",
+        active: false
+      });
+    }
+    
+    console.log('Pagination Debug:', {
+      total,
+      per_page: filters.per_page,
+      lastPage,
+      current_page: filters.page,
+      linksCount: links.length,
+      allNumbersLength: allNumbers.length,
+      filteredNumbersLength: filtered.length
+    });
+    
+    setPagination({
+      current_page: filters.page,
+      last_page: lastPage,
+      total,
+      links,
+    });
+  }, [allNumbers, debouncedSearch, filters]);
+
+  // Apply filters whenever dependencies change
+  React.useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  // Update search filter when debounced search changes
+  React.useEffect(() => {
+    setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
+  // Initial data fetch
+  React.useEffect(() => {
+    fetchNumbers();
+  }, [fetchNumbers]);
 
   const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
+    setFilters(prev => ({ ...prev, page }));
+  };
+
+  const handleFilterChange = (key: keyof Filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+  };
+
+  const clearFilters = () => {
+    setFilters(prev => ({
+      ...prev,
+      teacher: "all",
+      student: "all",
+      scoreRange: "all",
+      dateRange: "all",
+      page: 1
+    }));
+    setSearchInput("");
   };
 
   const handleDeleteNumber = async (id: number) => {
@@ -153,10 +307,10 @@ export default function OptimizedNumbersPage() {
 
     try {
       await optimizedNumberService.delete(numberToDelete, accessToken);
-      toast.success("Number deleted successfully");
+      toast.success("نمره با موفقیت حذف شد");
       fetchNumbers();
     } catch (error) {
-      toast.error("Error deleting number");
+      toast.error("خطا در حذف نمره");
       console.error(error);
     } finally {
       setNumberToDelete(null);
@@ -167,13 +321,7 @@ export default function OptimizedNumbersPage() {
     setNumberToEdit(numberItem);
   };
 
-  const handleSearch = () => {
-    if (filters.page !== 1) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    } else {
-      fetchNumbers(searchInput);
-    }
-  };
+  const activeFiltersCount = [filters.teacher, filters.student, filters.scoreRange, filters.dateRange].filter(f => f && f !== 'all').length;
 
   return (
     <PageTransition>
@@ -199,27 +347,163 @@ export default function OptimizedNumbersPage() {
               <CardTitle className="text-zinc-900 dark:text-zinc-100">
                 لیست نمرات
               </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <Filter className="h-4 w-4 ml-1" />
+                فیلترها
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="mr-1 h-5 w-5 rounded-full p-0 text-xs">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
+            {/* Search and Filters */}
+            <div className="mb-4 space-y-4">
+              {/* Search Input */}
+              <div className="relative">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
                 <Input
-                  placeholder="جستجو..."
+                  placeholder="جستجو بر اساس نام دانش‌آموز، استاد، شماره نمره یا توضیحات..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
-              <Button
-                variant="outline"
-                size="default"
-                onClick={handleSearch}
-                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              >
-                جستجو
-              </Button>
+
+              {/* Filters Panel */}
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700"
+                  >
+                    {/* Teacher Filter */}
+                    <div>
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                        استاد
+                      </label>
+                      <Select
+                        value={filters.teacher}
+                        onValueChange={(value) => handleFilterChange('teacher', value)}
+                      >
+                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
+                          <SelectValue placeholder="انتخاب استاد" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">همه اساتید</SelectItem>
+                          {uniqueTeachers.map((teacher) => (
+                            <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                              {teacher.fullname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Student Filter */}
+                    <div>
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                        دانش‌آموز
+                      </label>
+                      <Select
+                        value={filters.student}
+                        onValueChange={(value) => handleFilterChange('student', value)}
+                      >
+                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
+                          <SelectValue placeholder="انتخاب دانش‌آموز" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">همه دانش‌آموزان</SelectItem>
+                          {uniqueStudents.map((student) => (
+                            <SelectItem key={student.id} value={student.id.toString()}>
+                              {student.Fname} {student.Lname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Score Range Filter */}
+                    <div>
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                        محدوده نمره
+                      </label>
+                      <Select
+                        value={filters.scoreRange}
+                        onValueChange={(value) => handleFilterChange('scoreRange', value)}
+                      >
+                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
+                          <SelectValue placeholder="انتخاب محدوده" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">همه نمرات</SelectItem>
+                          <SelectItem value="excellent">عالی (80+)</SelectItem>
+                          <SelectItem value="good">خوب (60-79)</SelectItem>
+                          <SelectItem value="average">متوسط (40-59)</SelectItem>
+                          <SelectItem value="poor">ضعیف (کمتر از 40)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date Range Filter */}
+                    <div>
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                        بازه زمانی
+                      </label>
+                      <Select
+                        value={filters.dateRange}
+                        onValueChange={(value) => handleFilterChange('dateRange', value)}
+                      >
+                        <SelectTrigger className="border-zinc-200 dark:border-zinc-700">
+                          <SelectValue placeholder="انتخاب بازه" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">همه تاریخ‌ها</SelectItem>
+                          <SelectItem value="today">امروز</SelectItem>
+                          <SelectItem value="week">هفته گذشته</SelectItem>
+                          <SelectItem value="month">ماه گذشته</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Clear Filters Button */}
+                    {activeFiltersCount > 0 && (
+                      <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                        >
+                          <X className="h-4 w-4 ml-1" />
+                          پاک کردن فیلترها
+                        </Button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Results Summary */}
+              {!loading && (
+                <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {filteredNumbers.length} نمره از {allNumbers.length} نمره یافت شد
+                  {(debouncedSearch || activeFiltersCount > 0) && (
+                    <span className="mr-2">
+                      (فیلتر شده)
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Desktop table view */}
@@ -255,7 +539,7 @@ export default function OptimizedNumbersPage() {
                           در حال بارگذاری...
                         </td>
                       </tr>
-                    ) : numbers.length === 0 ? (
+                    ) : filteredNumbers.length === 0 ? (
                       <tr>
                         <td
                           colSpan={5}
@@ -265,12 +549,7 @@ export default function OptimizedNumbersPage() {
                         </td>
                       </tr>
                     ) : (
-                      numbers
-                        .slice(
-                          (filters.page - 1) * filters.per_page,
-                          filters.page * filters.per_page
-                        )
-                        .map((numberItem, index) => (
+                      filteredNumbers.map((numberItem, index) => (
                           <motion.tr
                             key={numberItem.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -360,12 +639,12 @@ export default function OptimizedNumbersPage() {
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...
                   </div>
-                ) : numbers.length === 0 ? (
+                ) : filteredNumbers.length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     نمره‌ای یافت نشد
                   </div>
                 ) : (
-                  numbers
+                  filteredNumbers
                     .slice(
                       (filters.page - 1) * filters.per_page,
                       filters.page * filters.per_page
@@ -451,16 +730,14 @@ export default function OptimizedNumbersPage() {
               </AnimatePresence>
             </div>
 
-            {!loading && numbers.length > 0 && pagination.last_page > 1 && (
+            {/* Enhanced Pagination */}
+            {!loading && filteredNumbers.length > 0 && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    <span className="hidden sm:inline">
-                      صفحه {pagination.current_page} از {pagination.last_page}
-                    </span>
+                    <span className="hidden sm:inline">نمایش {pagination.current_page} از {pagination.last_page} صفحه</span>
                     <span className="hidden sm:inline mx-2">|</span>
-                    نمایش {pagination.from} تا {pagination.to} از{" "}
-                    {pagination.total} نمره
+                    نمایش {(pagination.current_page - 1) * (filters.per_page || 10) + 1} تا {Math.min(pagination.current_page * (filters.per_page || 10), pagination.total)} از {pagination.total} نمره
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
@@ -477,67 +754,78 @@ export default function OptimizedNumbersPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        handlePageChange(pagination.current_page - 1)
-                      }
+                      onClick={() => handlePageChange(pagination.current_page - 1)}
                       disabled={pagination.current_page === 1}
                       className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
-
-                  {/* Page number buttons */}
                   <div className="hidden sm:flex items-center gap-1">
-                    {Array.from({
-                      length: Math.min(5, pagination.last_page),
-                    }).map((_, i) => {
-                      let pageNum;
-                      if (pagination.last_page <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.current_page <= 3) {
-                        pageNum = i + 1;
-                      } else if (
-                        pagination.current_page >=
-                        pagination.last_page - 2
-                      ) {
-                        pageNum = pagination.last_page - 4 + i;
-                      } else {
-                        pageNum = pagination.current_page - 2 + i;
+                    {pagination.links.map((link, index) => {
+                      if (link.label === "...") {
+                        return (
+                          <span key={index} className="px-2 text-zinc-900 dark:text-zinc-400">
+                            ...
+                          </span>
+                        );
                       }
-
+                      if (link.url === null) return null;
+                      
+                      // Handle Previous and Next buttons
+                      if (link.label.includes("Previous") || link.label.includes("Next")) {
+                        const isPrevious = link.label.includes("Previous");
+                        const page = parseInt(link.url);
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
+                            className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          >
+                            {isPrevious ? (
+                              <>
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                                قبلی
+                              </>
+                            ) : (
+                              <>
+                                بعدی
+                                <ChevronLeft className="h-4 w-4 mr-1" />
+                              </>
+                            )}
+                          </Button>
+                        );
+                      }
+                      
+                      // Handle page number buttons
+                      const page = parseInt(link.label);
+                      if (isNaN(page)) return null;
                       return (
                         <Button
-                          key={pageNum}
-                          variant={
-                            pagination.current_page === pageNum
-                              ? "default"
-                              : "outline"
-                          }
+                          key={index}
+                          variant={link.active ? "default" : "outline"}
                           size="sm"
-                          onClick={() => handlePageChange(pageNum)}
-                          className={
-                            pagination.current_page === pageNum
+                          onClick={() => handlePageChange(page)}
+                          className={`${
+                            link.active
                               ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                               : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          }
+                          }`}
                         >
-                          {pageNum}
+                          {link.label}
                         </Button>
                       );
                     })}
                   </div>
-
+                  
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        handlePageChange(pagination.current_page + 1)
-                      }
-                      disabled={
-                        pagination.current_page === pagination.last_page
-                      }
+                      onClick={() => handlePageChange(pagination.current_page + 1)}
+                      disabled={pagination.current_page === pagination.last_page}
                       className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -546,39 +834,12 @@ export default function OptimizedNumbersPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(pagination.last_page)}
-                      disabled={
-                        pagination.current_page === pagination.last_page
-                      }
+                      disabled={pagination.current_page === pagination.last_page}
                       className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
                       آخرین
                     </Button>
                   </div>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                    تعداد در هر صفحه:
-                  </span>
-                  <Select
-                    value={filters.per_page?.toString()}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        page: 1,
-                        per_page: parseInt(value),
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-20 border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                      <SelectValue placeholder="10" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-zinc-900">
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             )}
