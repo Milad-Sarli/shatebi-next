@@ -97,7 +97,7 @@ export default function OptimizedNumbersPage() {
         console.log(searchQuery);
         const response = await optimizedNumberService.getAll(accessToken);
 
-        const transformedData = response.map((item: any) => ({
+        const transformedData = response.map((item: OptimizedNumber) => ({
             ...item,
             masterTeacher: item.master_teacher,
           }));

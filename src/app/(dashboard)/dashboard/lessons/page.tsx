@@ -234,7 +234,7 @@ export default function LessonsPage() {
     if (!accessToken || !lesson.id) return;
 
     try {
-      const newIsOneGrade = lesson.is_one_grade === 1 ? 0 : 1;
+      const newIsOneGrade = lesson.is_one_grade === "1" ? "0" : "1";
       await LessonService.toggleOneGrade(lesson.id, accessToken);
       setLessons((prevLessons) =>
         prevLessons.map((l) =>
@@ -476,15 +476,15 @@ export default function LessonsPage() {
                             variant="ghost"
                             size="sm"
                             className={`${
-                              lesson.is_one_grade === 1
+                              lesson.is_one_grade === "1"
                                 ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                                : lesson.is_one_grade === 0
+                                : lesson.is_one_grade === "0"
                                   ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                                   : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900/30 dark:text-zinc-300 dark:hover:bg-zinc-900/50"
                             }`}
                             onClick={() => handleToggleOneGrade(lesson)}
                           >
-                            {lesson.is_one_grade === 1 ? "بله" : (lesson.is_one_grade === 0 ? "خیر" : "نامشخص")}
+                            {lesson.is_one_grade === "1" ? "بله" : (lesson.is_one_grade === "0" ? "خیر" : "نامشخص")}
                           </Button>
                         </div>
                         {lesson.description && (
@@ -543,8 +543,8 @@ export default function LessonsPage() {
                       <PaginationContent>
                         <PaginationItem>
                           <PaginationPrevious
-                            onClick={() => handlePageChange(pagination.current_page - 1)}
-                            disabled={pagination.current_page === 1}
+                            onClick={pagination.current_page === 1 ? undefined : () => handlePageChange(pagination.current_page - 1)}
+                            className={pagination.current_page === 1 ? "pointer-events-none opacity-50" : ""}
                           />
                         </PaginationItem>
                         {pagination.current_page > 3 && pagination.last_page > 5 && (
@@ -591,8 +591,8 @@ export default function LessonsPage() {
                         )}
                         <PaginationItem>
                           <PaginationNext
-                            onClick={() => handlePageChange(pagination.current_page + 1)}
-                            disabled={pagination.current_page === pagination.last_page}
+                            onClick={pagination.current_page === pagination.last_page ? undefined : () => handlePageChange(pagination.current_page + 1)}
+                            className={pagination.current_page === pagination.last_page ? "pointer-events-none opacity-50" : ""}
                           />
                         </PaginationItem>
                       </PaginationContent>

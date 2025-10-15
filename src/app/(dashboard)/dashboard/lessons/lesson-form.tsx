@@ -18,7 +18,7 @@ const lessonSchema = z.object({
   tenant_id: z.number().optional(),
   pages: z.number().nullable().optional(),
   start_page: z.number().nullable().optional(),
-  is_one_grade: z.boolean().optional(),
+  is_one_grade: z.string().optional(),
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
@@ -46,7 +46,7 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
       tenant_id: lesson?.tenant_id,
       pages: lesson?.pages ?? null,
       start_page: lesson?.start_page ?? null,
-      is_one_grade: lesson?.is_one_grade ?? false,
+      is_one_grade: lesson?.is_one_grade ?? "0",
     },
   });
 
@@ -141,4 +141,4 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
       </Button>
     </form>
   );
-} 
+}
