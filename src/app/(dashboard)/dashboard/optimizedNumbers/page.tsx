@@ -130,143 +130,44 @@ export default function OptimizedNumbersPage() {
 
     try {
       setLoading(true);
-      const response = await optimizedNumberService.getAll(accessToken);
+      const response = await optimizedNumberService.getAll(
+        accessToken,
+        filters.page,
+        filters.per_page,
+        debouncedSearch,
+        filters.teacher,
+        filters.student,
+        filters.scoreRange,
+        filters.dateRange
+      );
       console.log('API Response:', response);
-      console.log('Response length:', response.length);
-      setAllNumbers(response);
+      setAllNumbers(response.data);
+      setFilteredNumbers(response.data); // API returns filtered and paginated data
+      setPagination({
+        current_page: response.current_page,
+        last_page: response.last_page,
+        total: response.total,
+        from: response.from,
+        to: response.to,
+        links: response.links,
+      });
     } catch (error) {
       toast.error("خطا در بارگذاری نمرات");
       console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, filters, debouncedSearch]);
 
-  // Client-side filtering function
+  // Client-side filtering function (now primarily triggers API fetch)
   const applyFilters = React.useCallback(() => {
-    let filtered = [...allNumbers];
-
-    // Search filter
-    if (debouncedSearch.trim()) {
-      const searchTerm = debouncedSearch.toLowerCase().trim();
-      filtered = filtered.filter(item => {
-        const studentName = `${item.student?.Fname || ''} ${item.student?.Lname || ''}`.toLowerCase();
-        const teacherName = item.masterTeacher?.fullname?.toLowerCase() || '';
-        const description = item.description?.toLowerCase() || '';
-        
-        return studentName.includes(searchTerm) || 
-               teacherName.includes(searchTerm) || 
-               description.includes(searchTerm) ||
-               item.id.toString().includes(searchTerm);
-      });
-    }
-
-    // Teacher filter
-    if (filters.teacher && filters.teacher !== 'all') {
-      filtered = filtered.filter(item => 
-        item.masterTeacher?.id?.toString() === filters.teacher
-      );
-    }
-
-    // Student filter
-    if (filters.student && filters.student !== 'all') {
-      filtered = filtered.filter(item => 
-        item.student?.id?.toString() === filters.student
-      );
-    }
-
-    // Score range filter
-    if (filters.scoreRange && filters.scoreRange !== 'all') {
-      filtered = filtered.filter(item => {
-        const totalScore = item.hefz + item.details + item.tajvid + item.sout;
-        switch (filters.scoreRange) {
-          case 'excellent': return totalScore >= 80;
-          case 'good': return totalScore >= 60 && totalScore < 80;
-          case 'average': return totalScore >= 40 && totalScore < 60;
-          case 'poor': return totalScore < 40;
-          default: return true;
-        }
-      });
-    }
-
-    // Date range filter
-    if (filters.dateRange && filters.dateRange !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.created_at);
-        switch (filters.dateRange) {
-          case 'today':
-            return itemDate.toDateString() === now.toDateString();
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return itemDate >= weekAgo;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return itemDate >= monthAgo;
-          default:
-            return true;
-        }
-      });
-    }
-
-    setFilteredNumbers(filtered);
-
-    // Update pagination
-    const total = filtered.length;
-    const lastPage = Math.ceil(total / filters.per_page);
-    
-    // Generate pagination links similar to users page
-    const links = [];
-    
-    // Add Previous link
-    if (filters.page > 1) {
-      links.push({
-        url: (filters.page - 1).toString(),
-        label: "&laquo; Previous",
-        active: false
-      });
-    }
-    
-    // Add page number links
-    for (let i = 1; i <= lastPage; i++) {
-      links.push({
-        url: i.toString(),
-        label: i.toString(),
-        active: i === filters.page
-      });
-    }
-    
-    // Add Next link
-    if (filters.page < lastPage) {
-      links.push({
-        url: (filters.page + 1).toString(),
-        label: "Next &raquo;",
-        active: false
-      });
-    }
-    
-    console.log('Pagination Debug:', {
-      total,
-      per_page: filters.per_page,
-      lastPage,
-      current_page: filters.page,
-      linksCount: links.length,
-      allNumbersLength: allNumbers.length,
-      filteredNumbersLength: filtered.length
-    });
-    
-    setPagination({
-      current_page: filters.page,
-      last_page: lastPage,
-      total,
-      links,
-    });
-  }, [allNumbers, debouncedSearch, filters]);
+    fetchNumbers();
+  }, [fetchNumbers]);
 
   // Apply filters whenever dependencies change
   React.useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
+    fetchNumbers();
+  }, [fetchNumbers]);
 
   // Update search filter when debounced search changes
   React.useEffect(() => {
@@ -278,9 +179,12 @@ export default function OptimizedNumbersPage() {
     fetchNumbers();
   }, [fetchNumbers]);
 
-  const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
-  };
+  const handlePageChange = React.useCallback((page: number) => {
+    setFilters(prev => ({
+      ...prev,
+      page,
+    }));
+  }, []);
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -740,104 +644,154 @@ export default function OptimizedNumbersPage() {
                     نمایش {(pagination.current_page - 1) * (filters.per_page || 10) + 1} تا {Math.min(pagination.current_page * (filters.per_page || 10), pagination.total)} از {pagination.total} نمره
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(1)}
-                      disabled={pagination.current_page === 1}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      اولین
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.current_page - 1)}
-                      disabled={pagination.current_page === 1}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="flex items-center justify-center gap-1 overflow-x-auto">
+                  {/* Desktop pagination - show all buttons */}
                   <div className="hidden sm:flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(pagination.last_page)}
+                      disabled={pagination.current_page === pagination.last_page}
+                      className="border-zinc-200 px-3 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      آخرین
+                    </Button>
                     {pagination.links.map((link, index) => {
-                      if (link.label === "...") {
-                        return (
-                          <span key={index} className="px-2 text-zinc-900 dark:text-zinc-400">
-                            ...
-                          </span>
-                        );
-                      }
-                      if (link.url === null) return null;
-                      
-                      // Handle Previous and Next buttons
-                      if (link.label.includes("Previous") || link.label.includes("Next")) {
-                        const isPrevious = link.label.includes("Previous");
-                        const page = parseInt(link.url);
+                      const pageNumber = link.url ? parseInt(new URL(link.url).searchParams.get('page') || '1') : null;
+                      const isPrevious = link.label.includes("Previous") || link.label.includes("&laquo;");
+                      const isNext = link.label.includes("Next") || link.label.includes("&raquo;");
+                      const isEllipsis = link.label === '...';
+
+                      if (isPrevious) {
                         return (
                           <Button
-                            key={index}
+                            key={link.label + index}
                             variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(page)}
-                            className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            onClick={() => pageNumber && handlePageChange(pageNumber)}
+                            disabled={!link.url}
+                            className="border-zinc-200 px-3 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                           >
-                            {isPrevious ? (
-                              <>
-                                <ChevronRight className="h-4 w-4 ml-1" />
-                                قبلی
-                              </>
-                            ) : (
-                              <>
-                                بعدی
-                                <ChevronLeft className="h-4 w-4 mr-1" />
-                              </>
-                            )}
+                            <ChevronRight className="h-4 w-4" />
                           </Button>
                         );
                       }
-                      
-                      // Handle page number buttons
-                      const page = parseInt(link.label);
-                      if (isNaN(page)) return null;
+
+                      if (isNext) {
+                        return (
+                          <Button
+                            key={link.label + index}
+                            variant="outline"
+                            onClick={() => pageNumber && handlePageChange(pageNumber)}
+                            disabled={!link.url}
+                            className="border-zinc-200 px-3 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                        );
+                      }
+
+                      if (isEllipsis) {
+                        return (
+                          <Button
+                            key={link.label + index}
+                            variant="outline"
+                            className="cursor-not-allowed opacity-50 px-3"
+                            disabled
+                          >
+                            ...
+                          </Button>
+                        );
+                      }
+
                       return (
                         <Button
-                          key={index}
+                          key={link.label + index}
                           variant={link.active ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(page)}
-                          className={`${
-                            link.active
-                              ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          }`}
+                          className={`px-3 ${link.active ? "bg-black text-white dark:bg-white dark:text-black" : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"}`}
+                          onClick={() => pageNumber && handlePageChange(pageNumber)}
                         >
                           {link.label}
                         </Button>
                       );
                     })}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.current_page + 1)}
-                      disabled={pagination.current_page === pagination.last_page}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      onClick={() => handlePageChange(1)}
+                      disabled={pagination.current_page === 1}
+                      className="border-zinc-200 px-3 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      اولین
                     </Button>
+                  </div>
+
+                  {/* Mobile pagination - simplified layout */}
+                  <div className="flex sm:hidden items-center gap-1">
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={() => handlePageChange(pagination.last_page)}
                       disabled={pagination.current_page === pagination.last_page}
-                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      className="border-zinc-200 px-2 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
                       آخرین
+                    </Button>
+                    
+                    {/* Previous button */}
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(Math.max(1, pagination.current_page - 1))}
+                      disabled={pagination.current_page === 1}
+                      className="border-zinc-200 px-2 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+
+                    {/* Current page */}
+                    <Button
+                      variant="default"
+                      className="bg-black text-white dark:bg-white dark:text-black px-2 text-xs"
+                      disabled
+                    >
+                      {pagination.current_page}
+                    </Button>
+
+                    {/* Show page 2 if current page is 1 */}
+                    {pagination.current_page === 1 && pagination.last_page > 1 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePageChange(2)}
+                        className="border-zinc-200 px-2 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      >
+                        2
+                      </Button>
+                    )}
+
+                    {/* Show last page if it's not current page and not page 2 */}
+                    {pagination.last_page > 2 && pagination.current_page !== pagination.last_page && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handlePageChange(pagination.last_page)}
+                        className="border-zinc-200 px-2 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                      >
+                        {pagination.last_page}
+                      </Button>
+                    )}
+
+                    {/* Next button */}
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(Math.min(pagination.last_page, pagination.current_page + 1))}
+                      disabled={pagination.current_page === pagination.last_page}
+                      className="border-zinc-200 px-2 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(1)}
+                      disabled={pagination.current_page === 1}
+                      className="border-zinc-200 px-2 text-xs text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      اولین
                     </Button>
                   </div>
                 </div>

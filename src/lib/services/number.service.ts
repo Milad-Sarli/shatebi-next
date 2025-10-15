@@ -68,20 +68,60 @@ export interface CreateOptimizedNumberDto {
 
 export interface UpdateOptimizedNumberDto extends Partial<CreateOptimizedNumberDto> { }
 
+export interface PaginationLink {
+  url: string | null;
+  label: string;
+  active: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  current_page: number;
+  data: T[];
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  links: PaginationLink[];
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
+}
+
 export const optimizedNumberService = {
-  async getAll(accessToken: string): Promise<OptimizedNumber[]> {
+  async getAll(
+    accessToken: string,
+    page: number = 1,
+    per_page: number = 10,
+    search: string = "",
+    teacherId: string = "all",
+    studentId: string = "all",
+    scoreRange: string = "all",
+    dateRange: string = "all"
+  ): Promise<PaginatedResponse<OptimizedNumber>> {
     console.log("Making request to:", `${API_URL}/api/optimized-numbers`);
     console.log("Request headers:", {
       Authorization: `Bearer ${accessToken}`,
     });
 
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("per_page", per_page.toString());
+    if (search && search !== "") params.append("search", search);
+    if (teacherId && teacherId !== "all") params.append("master_id", teacherId);
+    if (studentId && studentId !== "all") params.append("student_id", studentId);
+    if (scoreRange && scoreRange !== "all") params.append("score_range", scoreRange);
+    if (dateRange && dateRange !== "all") params.append("date_range", dateRange);
+
     try {
-      const response = await axios.get(`${API_URL}/api/optimized-numbers`, {
+      const response = await axios.get(`${API_URL}/api/optimized-numbers?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      return response.data.data;
+      return response.data; // Return the entire pagination object
     } catch (error) {
       console.error("Error in getAll:", error);
       throw error;
