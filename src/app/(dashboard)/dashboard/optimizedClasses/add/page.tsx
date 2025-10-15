@@ -11,6 +11,7 @@ import {
   optimizedClassService,
 } from "@/lib/services/optimizedClass.service";
 import { MasterService } from "@/lib/services/master.service";
+import { StudentService } from "@/lib/services/student.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { MultiSelectComboBoxWithInfiniteScroll } from "@/components/ui/MultiSelectComboBoxWithInfiniteScroll";
 import { ArrowLeft } from "lucide-react";
@@ -94,26 +95,24 @@ export default function AddClassPage() {
         setTeachersHasMore(mastersResponse.data.current_page < mastersResponse.data.last_page);
         setTeachersLoading(false);
 
-        // Load existing classes to extract students and lessons
+        // Load students with status filter
+        const studentsResponse = await StudentService.getStudents({
+          status: 'در حال تحصیل'
+        }, accessToken);
+        
+        // Map students to the required format - studentsResponse.data.data is the array (paginated response)
+        const studentsData = studentsResponse.data.data.map(student => ({
+          id: student.id,
+          Fname: student.Fname,
+          Lname: student.Lname,
+        }));
+        setStudents(studentsData);
+
+        // Load existing classes to extract lessons
         const classesResponse = await optimizedClassService.getAll(accessToken);
         
         // Get the data array from the paginated response
         const classesArray = classesResponse.data.data;
-        
-        // Extract unique students
-        const uniqueStudents = new Map<number, Student>();
-        classesArray.forEach((cls: OptimizedClassData) => {
-          cls.optimized_class_items?.forEach((item: OptimizedClassItem) => {
-            if (item.student) {
-              uniqueStudents.set(item.student.id, {
-                id: item.student.id,
-                Fname: item.student.Fname || (item.student.name || '').split(' ')[0],
-                Lname: item.student.Lname || (item.student.name || '').split(' ')[1] || '',
-              });
-            }
-          });
-        });
-        setStudents(Array.from(uniqueStudents.values()));
 
         // Extract unique lessons
         const uniqueLessons = new Map<number, Lesson>();
@@ -125,7 +124,17 @@ export default function AddClassPage() {
         setLessons(Array.from(uniqueLessons.values()));
 
       } catch (error) {
-        toast.error("خطا در بارگذاری اطلاعات اولیه");
+        // بهبود پیام خطا با جزئیات بیشتر
+        if (error.response) {
+          // خطای پاسخ از سرور
+          toast.error(`خطا در بارگذاری اطلاعات: ${error.response.status} - ${error.response.statusText || 'خطای سرور'}`);
+        } else if (error.request) {
+          // خطای عدم دریافت پاسخ
+          toast.error("خطا در ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید.");
+        } else {
+          // سایر خطاها
+          toast.error("خطا در بارگذاری اطلاعات اولیه");
+        }
         console.error("Error fetching data for form:", error);
         setTeachersLoading(false);
       }
@@ -160,7 +169,7 @@ export default function AddClassPage() {
     if (!accessToken) return;
 
     if (formData.user_ids.length === 0) {
-      toast.error("لطفاً حداقل یک دانش‌آموز انتخاب کنید.");
+      toast.error("لطفاً حداقل یک قرآن انتخاب کنید.");
       return;
     }
     if (formData.droos_ids.length === 0) {
@@ -230,7 +239,7 @@ export default function AddClassPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <MultiSelectComboBox
-                  label="دانش‌آموزان"
+                  label="قرآن آموزان"
                   options={students.map((s) => ({
                     label: s.Fname + " " + s.Lname,
                     value: s.id,
@@ -242,7 +251,7 @@ export default function AddClassPage() {
                       user_ids: vals as number[],
                     }))
                   }
-                  placeholder="انتخاب دانش‌آموزان"
+                  placeholder="انتخاب قرآن آموزان"
                 />
                 <MultiSelectComboBox
                   label="درس‌ها"
