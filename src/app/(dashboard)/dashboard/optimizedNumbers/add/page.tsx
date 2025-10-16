@@ -317,35 +317,48 @@ export default function AddNumberPage() {
       const activitiesMap: Record<number, StudentActivity[]> = {};
       const selectedDateGregorianStr = jsDate ? format(jsDate, "yyyy-MM-dd") : "";
       
-      response.data.forEach((student) => {
-        if (student.grades && student.grades.length > 0) {
-          gradesMap[student.student.id] = student.grades;
-        }
-        if (student.activities && student.activities.length > 0) {
-          // Filter activities by the selected date
-          const todayActivities = student.activities.filter((activity) => {
-            const activityDate = activity.created_at;
-            if (!activityDate) return false;
-            
-            try {
-              const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
-              return activityDateGregorian === selectedDateGregorianStr;
-            } catch {
-              return false;
-            }
-          });
-          
-          if (todayActivities.length > 0) {
-            activitiesMap[student.student.id] = todayActivities;
+      // بررسی ساختار پاسخ API و استفاده از داده‌های صحیح
+      console.log('ساختار پاسخ API:', response);
+      
+      // بررسی هر دو حالت ممکن برای ساختار پاسخ
+      type ApiResponse = unknown[] | { data?: unknown[] } | unknown;
+      const responseData = response.data as ApiResponse;
+      const studentsArray = Array.isArray(responseData) 
+        ? responseData 
+        : (responseData && typeof responseData === 'object' && 'data' in responseData && responseData.data && Array.isArray(responseData.data) ? responseData.data : []);
+      
+      if (studentsArray.length > 0) {
+        studentsArray.forEach((student) => {
+          if (student.grades && student.grades.length > 0) {
+            gradesMap[student.student.id] = student.grades;
           }
-        }
-      });
-      const uniqueStudents = Array.from(
-        new Map(response.data.map(item => [item.student.id, item])).values()
-      );
-      setStudents(uniqueStudents);
-      setExistingGrades(gradesMap);
-      setExistingActivities(activitiesMap);
+          if (student.activities && student.activities.length > 0) {
+            // Filter activities by the selected date
+            const todayActivities = student.activities.filter((activity: { created_at?: string }) => {
+              const activityDate = activity.created_at;
+              if (!activityDate) return false;
+              
+              try {
+                const activityDateGregorian = format(new Date(activityDate), "yyyy-MM-dd");
+                return activityDateGregorian === selectedDateGregorianStr;
+              } catch {
+                return false;
+              }
+            });
+            
+            if (todayActivities.length > 0) {
+              activitiesMap[student.student.id] = todayActivities;
+            }
+          }
+        });
+        
+        const uniqueStudents = Array.from(
+          new Map(studentsArray.map(item => [item.student.id, item])).values()
+        );
+        setStudents(uniqueStudents);
+        setExistingGrades(gradesMap);
+        setExistingActivities(activitiesMap);
+      }
     } catch (error) {
       console.error("Error refetching students and grades:", error);
       toast.error("خطا در به‌روزرسانی لیست نمرات");
@@ -380,7 +393,22 @@ export default function AddNumberPage() {
         console.log("Selected date string (Gregorian):", selectedDateGregorianStr);
         console.log("JS date string (Jalali):", format(jsDate, "yyyy/MM/dd"));
 
-        response.data.forEach((student) => {
+        // بررسی ساختار پاسخ API
+        console.log('ساختار پاسخ API در useEffect دوم:', response);
+        
+        // استخراج آرایه دانش‌آموزان از پاسخ API
+        type ApiResponse = unknown[] | { data?: unknown[] } | unknown;
+        const responseData = response.data as ApiResponse;
+        const studentsArray = Array.isArray(responseData) 
+          ? responseData 
+          : (responseData && typeof responseData === 'object' && 'data' in responseData && responseData.data && Array.isArray(responseData.data) ? responseData.data : []);
+
+        if (!Array.isArray(studentsArray)) {
+          console.error("studentsArray is not an array:", studentsArray);
+          return;
+        }
+
+        studentsArray.forEach((student) => {
           // Show all grades for each student, without filtering by date
           if (student.grades && student.grades.length > 0) {
             gradesMap[student.student.id] = student.grades;
@@ -391,7 +419,7 @@ export default function AddNumberPage() {
             console.log(`📋 Activities for student ${student.student.name}:`, student.activities);
             
             // Filter activities by the selected date
-            const todayActivities = student.activities.filter((activity) => {
+            const todayActivities = student.activities.filter((activity: { created_at?: string }) => {
               const activityDate = activity.created_at;
               if (!activityDate) return false;
               
@@ -417,7 +445,7 @@ export default function AddNumberPage() {
         });
 
         const uniqueStudents = Array.from(
-          new Map(response.data.map(item => [item.student.id, item])).values()
+          new Map(studentsArray.map(item => [item.student.id, item])).values()
         );
 
         setStudents(uniqueStudents);
@@ -946,8 +974,11 @@ export default function AddNumberPage() {
             }
           });
           
+          // تعریف آرایه دانش‌آموزان از پاسخ API
+          const studentsArray = response.data;
+          
           const uniqueStudents = Array.from(
-            new Map(response.data.map(item => [item.student.id, item])).values()
+            new Map(studentsArray.map(item => [item.student.id, item])).values()
           );
           setStudents(uniqueStudents);
           setExistingGrades(gradesMap);
@@ -1106,8 +1137,11 @@ export default function AddNumberPage() {
             }
           });
           
+          // تعریف آرایه دانش‌آموزان از پاسخ API
+          const studentsArray = response.data;
+          
           const uniqueStudents = Array.from(
-            new Map(response.data.map(item => [item.student.id, item])).values()
+            new Map(studentsArray.map(item => [item.student.id, item])).values()
           );
           setStudents(uniqueStudents);
           setExistingGrades(gradesMap);

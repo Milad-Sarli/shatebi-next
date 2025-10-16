@@ -1,6 +1,6 @@
 import { Master, MasterService } from '@/lib/services/master.service';
 import { optimizedNumberService } from '@/lib/services/number.service';
-import { optimizedClassService, OptimizedClass, Student, Grade } from '@/lib/services/optimizedClass.service';
+import { optimizedClassService, OptimizedClass, Student, Grade, StudentsResponse } from '@/lib/services/optimizedClass.service';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { isReadingClass } from '@/lib/utils';
@@ -94,7 +94,7 @@ export async function fetchStudents({ accessToken, selectedClass, selectedDate, 
     const jsDate = selectedDate.toDate();
     const jsDateStr = jsDate ? format(jsDate, 'yyyy/MM/dd') : null;
     if (!jsDate || !jsDateStr) return;
-    const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
+    const response: StudentsResponse = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
     const gradesMap: Record<number, Grade[]> = {};
     const selectedDateGregorianStr = jsDate ? format(jsDate, 'yyyy-MM-dd') : '';
     response.data.forEach((student: Student) => {
@@ -545,7 +545,7 @@ export async function handleConfirmProvideless({ selectedStudentForAction, acces
     const jsDateStr = format(jsDate, 'yyyy/MM/dd');
     try {
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
-      const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
+      const uniqueStudents = Array.from(new Map((Array.isArray(response.data) ? response.data : []).map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
     } catch { }
     toast.success('عدم تحویل با موفقیت ثبت شد');
@@ -656,7 +656,7 @@ export async function handleAbsentSubmit({ reason, accessToken, selectedClass, a
     const jsDateStr = format(jsDate, 'yyyy/MM/dd');
     try {
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
-      const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
+      const uniqueStudents = Array.from(new Map((Array.isArray(response.data) ? response.data : []).map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
     } catch { }
     toast.success(`غیبت با دلیل "${reason}" ثبت شد`);
@@ -690,7 +690,7 @@ export async function handleRemoveAbsent({ activityId, accessToken, selectedClas
     const jsDateStr = format(jsDate, 'yyyy/MM/dd');
     try {
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
-      const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
+      const uniqueStudents = Array.from(new Map((Array.isArray(response.data) ? response.data : []).map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
     } catch { }
     toast.success('غیبت با موفقیت حذف شد');
@@ -734,7 +734,7 @@ export async function handleRemoveProvideless({ studentId, activityId, accessTok
     const jsDateStr = format(jsDate, 'yyyy/MM/dd');
     try {
       const response = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
-      const uniqueStudents = Array.from(new Map(response.data.map((item: Student) => [item.student.id, item])).values()) as Student[];
+      const uniqueStudents = Array.from(new Map((Array.isArray(response.data) ? response.data : []).map((item: Student) => [item.student.id, item])).values()) as Student[];
       setStudents(uniqueStudents);
       const selectedDateStr = jsDate ? format(jsDate, 'yyyy-MM-dd') : '';
       const gradesMap: Record<number, Grade[]> = {};

@@ -47,15 +47,15 @@ const StudentCardList: React.FC<StudentCardListProps> = ({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {students.map((studentData, idx) => (
             <motion.div
-              key={studentData.student.id}
-              initial={{ opacity: 0, y: 24 }}
+              key={`student-${studentData.student.id}`}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 24 }}
-              transition={{ duration: 0.35, delay: idx * 0.05 }}
-              layout
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, delay: idx * 0.05 }}
+              layout="position"
             >
               <StudentCard
                 studentData={studentData}

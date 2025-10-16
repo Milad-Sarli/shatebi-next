@@ -84,15 +84,15 @@ const StudentCard: React.FC<StudentCardProps> = ({
   // Main student card UI
   return (
     <motion.div
-      className="flex flex-col p-3 rounded-lg border transition-all duration-300"
-      whileHover={{ scale: 1.025, boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}
-      whileTap={{ scale: 0.98 }}
-      layout
+      className="flex flex-col p-3 rounded-lg border transition-all duration-200 dark:border-zinc-800 dark:bg-zinc-900/30"
+      whileHover={{ scale: 1.01, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+      whileTap={{ scale: 0.99 }}
+      layout="position"
     >
       {/* Student info */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center overflow-hidden">
             {/* Avatar logic: show image if available, else initial */}
             {studentData.student.aks ? (
               <Image
@@ -105,7 +105,7 @@ const StudentCard: React.FC<StudentCardProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-emerald-600 font-medium">{studentData.student.name.charAt(0)}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{studentData.student.name.charAt(0)}</span>
             )}
           </div>
           <div className="flex flex-col">
