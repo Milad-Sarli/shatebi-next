@@ -47,6 +47,13 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+// interface Student {
+//   id: number;
+//   Fname: string;
+//   Lname: string;
+//   Aks?: string;
+//   FatherName?: string;
+// }
 
 interface Filters {
   page: number;
@@ -65,7 +72,7 @@ export default function OptimizedNumbersPage() {
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<Filters>({
     page: 1,
-    per_page: 10, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
+    per_page: 3, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
     search: "",
     teacher: "all",
     student: "all",
@@ -87,6 +94,8 @@ export default function OptimizedNumbersPage() {
 
   const router = useRouter();
 
+  // Removed unused memoized variables
+
   // Fetch all numbers from API
   const fetchNumbers = React.useCallback(async () => {
     if (!accessToken) return;
@@ -103,8 +112,9 @@ export default function OptimizedNumbersPage() {
         filters.scoreRange,
         filters.dateRange
       );
+      console.log('API Response:', response);
       setAllNumbers(response.data);
-      setFilteredNumbers(response.data);
+      setFilteredNumbers(response.data); // API returns filtered and paginated data
       setPagination({
         current_page: response.current_page,
         last_page: response.last_page,
@@ -273,32 +283,32 @@ export default function OptimizedNumbersPage() {
                               {numberItem.student?.Lname}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {numberItem.masterTeacher?.fullname || 'نامشخص'}
+                              {numberItem.master_teacher?.fullname || 'نامشخص'}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
                               <Badge
                                 variant="outline"
                                 className="border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                               >
-                                {numberItem.droos?.title || 'نامشخص'}
+                                {numberItem.dars?.title || 'نامشخص'}
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100">
-                              {numberItem.lessonArea ? (
+                              {numberItem.lesson_area ? (
                                 <div className="text-sm">
-                                  {numberItem.lessonArea.start_page && numberItem.lessonArea.end_page ? (
+                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      صفحه {numberItem.lessonArea.start_page} تا {numberItem.lessonArea.end_page}
+                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
                                     </Badge>
-                                  ) : numberItem.lessonArea.start_surah && numberItem.lessonArea.end_surah ? (
+                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lessonArea.start_surah} تا {numberItem.lessonArea.end_surah}
+                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
                                     </Badge>
                                   ) : (
                                     <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
@@ -409,31 +419,31 @@ export default function OptimizedNumbersPage() {
                               دانش‌آموز: {numberItem.student?.Fname}{" "}
                               {numberItem.student?.Lname}
                             </p>
-                            <p>استاد: {numberItem.masterTeacher?.fullname || 'نامشخص'}</p>
+                            <p>استاد: {numberItem.master_teacher?.fullname || 'نامشخص'}</p>
                             <p>درس: 
                               <Badge
                                 variant="outline"
                                 className="mr-2 border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
                               >
-                                {numberItem.droos?.title || 'نامشخص'}
+                                {numberItem.dars?.title || 'نامشخص'}
                               </Badge>
                             </p>
                             <p>محدوده درسی: 
-                              {numberItem.lessonArea ? (
+                              {numberItem.lesson_area ? (
                                 <span className="mr-2">
-                                  {numberItem.lessonArea.start_page && numberItem.lessonArea.end_page ? (
+                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      صفحه {numberItem.lessonArea.start_page} تا {numberItem.lessonArea.end_page}
+                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
                                     </Badge>
-                                  ) : numberItem.lessonArea.start_surah && numberItem.lessonArea.end_surah ? (
+                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lessonArea.start_surah} تا {numberItem.lessonArea.end_surah}
+                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
                                     </Badge>
                                   ) : (
                                     <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>

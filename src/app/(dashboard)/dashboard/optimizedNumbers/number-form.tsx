@@ -61,7 +61,7 @@ export function NumberForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       student_id: initialData?.student_id?.toString() || "",
-      master_id: initialData?.masterTeacher?.id?.toString() || "",
+      master_id: initialData?.master_teacher?.id?.toString() || "",
       hefz: initialData?.hefz?.toString() || "",
       details: initialData?.details?.toString() || "",
       tajvid: initialData?.tajvid?.toString() || "",

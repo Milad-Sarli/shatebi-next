@@ -32,10 +32,14 @@ export interface OptimizedNumber {
   date?: string; // تاریخ انتخاب شده برای نمره (ISO timestamp with time)
   created_at: string;
   updated_at: string;
+  optimized_class?: OptimizedClass;
   optimizedClass?: OptimizedClass;
+  master_teacher?: MasterTeacher;
   masterTeacher?: MasterTeacher;
   student?: any;
+  dars?: Dars;
   droos?: Dars;
+  lesson_area?: any;
   lessonArea?: any;
   user?: any;
 }
