@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LessonService, Lesson } from "@/lib/services/lesson.service";
 import { useAuth } from "@/lib/context/auth.context";
+import { isAxiosError } from "axios";
 
 const lessonSchema = z.object({
   title: z.string().min(1, "عنوان درس الزامی است"),
   description: z.string().optional(),
   parent_id: z.number().nullable().optional(),
-  tenant_id: z.number().optional(),
+  tenant_id: z.coerce.number().optional(),
   pages: z.number().nullable().optional(),
   start_page: z.number().nullable().optional(),
   is_one_grade: z.string().optional(),
@@ -30,6 +31,7 @@ interface LessonFormProps {
 }
 
 export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
+  console.log("LessonForm rendered");
   const { accessToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,6 +39,9 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    reset,
+    watch
   } = useForm<LessonFormData>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
@@ -50,8 +55,28 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
     },
   });
 
+  // Reset form when lesson changes
+  useEffect(() => {
+    console.log("useEffect for lesson change triggered");
+    if (lesson) {
+      reset({
+        title: lesson.title || "",
+        description: lesson.description || "",
+        parent_id: lesson.parent_id ?? parentId ?? null,
+        tenant_id: lesson.tenant_id,
+        pages: lesson.pages ?? null,
+        start_page: lesson.start_page ?? null,
+        is_one_grade: lesson.is_one_grade ?? "0",
+      });
+    }
+  }, [lesson, reset, parentId]);
+
   const onSubmit = async (data: LessonFormData) => {
-    if (!accessToken) return;
+    console.log("onSubmit triggered with data:", data);
+    if (!accessToken) {
+      toast.error("شما احراز هویت نشده اید. لطفا وارد شوید.");
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -59,14 +84,18 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
         await LessonService.updateLesson(lesson.id, data, accessToken);
         toast.success("درس با موفقیت بروزرسانی شد");
       } else {
-        const createData = { ...data, tenant_id: 1 };
+        const createData = { ...data, tenant_id: 1 }; // Assuming tenant_id 1 for creation
         await LessonService.createLesson(createData, accessToken);
         toast.success("درس با موفقیت ایجاد شد");
       }
       onSuccess?.();
-    } catch (error) {
-      toast.error("خطا در ذخیره درس");
-      console.error(error);
+    } catch (error: unknown) {
+      console.error("خطا در ذخیره درس:", error);
+      if (isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "خطا در ذخیره درس");
+      } else {
+        toast.error("خطای ناشناخته در ذخیره درس");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -87,7 +116,18 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
         )}
       </div>
 
-     
+      <div>
+        <Label htmlFor="description" className="mb-1">توضیحات</Label>
+        <Input
+          id="description"
+          {...register("description")}
+          placeholder="توضیحات درس را وارد کنید"
+          className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+        />
+        {errors.description && (
+          <p className="text-sm text-red-500">{errors.description.message}</p>
+        )}
+      </div>
 
       <div>
         <Label htmlFor="pages" className="mb-1">تعداد صفحات </Label>
@@ -121,7 +161,8 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
         <Input
           type="checkbox"
           id="is_one_grade"
-          {...register("is_one_grade")}
+          checked={watch("is_one_grade") === "1"}
+          onChange={(e) => setValue("is_one_grade", e.target.checked ? "1" : "0")}
           className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
         />
         <Label htmlFor="is_one_grade" className="text-sm font-medium mx-2 text-gray-700 dark:text-gray-300">

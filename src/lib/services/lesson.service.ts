@@ -52,6 +52,7 @@ export interface LessonCreateData {
   is_one_grade?: string;
   pages?: number | null;
   start_page?: number | null;
+  lesson_area_id?: number | null;
 }
 
 export interface LessonUpdateData extends Partial<LessonCreateData> { }
