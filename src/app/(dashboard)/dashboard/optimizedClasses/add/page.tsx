@@ -11,11 +11,10 @@ import {
   optimizedClassService,
 } from "@/lib/services/optimizedClass.service";
 import { MasterService } from "@/lib/services/master.service";
-import { StudentService } from "@/lib/services/student.service";
+import { StudentService, PaginatedResponse, Student as StudentType } from "@/lib/services/student.service";
 import { MultiSelectComboBox } from "@/components/ui/MultiSelectComboBox";
 import { MultiSelectComboBoxWithInfiniteScroll } from "@/components/ui/MultiSelectComboBoxWithInfiniteScroll";
 import { ArrowLeft } from "lucide-react";
-import axios from 'axios';
 import {
   Select,
   SelectContent,
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// استفاده از اینترفیس StudentType که از سرویس وارد شده است
 interface Student {
   id: number;
   Fname: string;
@@ -70,6 +70,8 @@ export default function AddClassPage() {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [students, setStudents] = React.useState<Student[]>([]);
+  
+
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
   const [teachersLoading, setTeachersLoading] = React.useState(false);
@@ -99,10 +101,10 @@ export default function AddClassPage() {
         // Load students with status filter
         const studentsResponse = await StudentService.getStudents({
           status: 'در حال تحصیل'
-        }, accessToken);
+        }, accessToken) as unknown as { data: PaginatedResponse<StudentType> };
         
-        // Map students to the required format - studentsResponse.data.data is the array (paginated response)
-        const studentsData = studentsResponse.data.map(student => ({
+        // با توجه به ساختار واقعی API که در تصویر مشاهده شد
+        const studentsData = studentsResponse.data.data.map(student => ({
           id: student.id,
           Fname: student.Fname,
           Lname: student.Lname,
@@ -124,13 +126,20 @@ export default function AddClassPage() {
         });
         setLessons(Array.from(uniqueLessons.values()));
 
-      } catch (error) {
-      if (!axios.isAxiosError(error)) throw error;
+      } catch (error: unknown) {
         // بهبود پیام خطا با جزئیات بیشتر
-        if (error.response) {
+        const err = error as { 
+          response?: { 
+            status: number; 
+            statusText?: string 
+          }; 
+          request?: unknown;
+        };
+        
+        if (err.response) {
           // خطای پاسخ از سرور
-          toast.error(`خطا در بارگذاری اطلاعات: ${error.response.status} - ${error.response.statusText || 'خطای سرور'}`);
-        } else if (error.request) {
+          toast.error(`خطا در بارگذاری اطلاعات: ${err.response.status} - ${err.response.statusText || 'خطای سرور'}`);
+        } else if (err.request) {
           // خطای عدم دریافت پاسخ
           toast.error("خطا در ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید.");
         } else {
@@ -159,8 +168,7 @@ export default function AddClassPage() {
       setTeachers(prev => [...prev, ...newTeachers]);
       setTeachersHasMore(mastersResponse.data.current_page < mastersResponse.data.last_page);
       setTeachersLoading(false);
-    } catch (error) {
-    if (!axios.isAxiosError(error)) throw error;
+    } catch (error: unknown) {
       toast.error("خطا در بارگذاری اساتید بیشتر");
       console.error("Error loading more teachers:", error);
       setTeachersLoading(false);
@@ -206,8 +214,7 @@ export default function AddClassPage() {
       await optimizedClassService.create(payload, accessToken);
       toast.success("کلاس با موفقیت ایجاد شد");
       router.push("/dashboard/optimizedClasses");
-    } catch (error) {
-      if (!axios.isAxiosError(error)) throw error;
+    } catch (error: unknown) {
       toast.error("خطا در ایجاد کلاس");
       console.error(error);
     } finally {
