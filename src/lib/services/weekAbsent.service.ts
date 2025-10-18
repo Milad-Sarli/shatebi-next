@@ -3,11 +3,11 @@ import { API_URL } from '@/lib/constants';
 export interface WeekAbsentStudent {
     id?: number;
     student_id: number;
-    absent: boolean;
-    delay: boolean;
+    absent: string;
+    delay: string;
     delay_time?: string | null;
     absent_reason?: string | null;
-    status: number;
+    status: string | number;
     student?: {
         id: number;
         Fname: string;

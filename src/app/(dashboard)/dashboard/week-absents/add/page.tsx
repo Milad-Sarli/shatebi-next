@@ -118,14 +118,14 @@ export default function AddWeekAbsentPage() {
       const current = prev[student.id];
       if (current?.absent) {
         // Remove absent
-        return { ...prev, [student.id]: { ...current, absent: false, absent_reason: undefined } };
+        return { ...prev, [student.id]: { ...current, absent: "0", absent_reason: undefined, delay: "0" } };
       } else {
         return {
           ...prev,
           [student.id]: {
             student_id: student.id,
-            absent: true,
-            delay: false,
+            absent: "1",
+            delay: "0",
             delay_time: null,
             absent_reason: '',
             status: 0,
@@ -147,14 +147,14 @@ export default function AddWeekAbsentPage() {
       const current = prev[student.id];
       if (current?.delay) {
         // Remove delay
-        return { ...prev, [student.id]: { ...current, delay: false, delay_time: undefined } };
+        return { ...prev, [student.id]: { ...current, delay: "0", delay_time: undefined } };
       } else {
         return {
           ...prev,
           [student.id]: {
             student_id: student.id,
-            absent: false,
-            delay: true,
+            absent: "0",
+            delay: "1",
             delay_time: '',
             absent_reason: null,
             status: 0,
@@ -200,8 +200,8 @@ export default function AddWeekAbsentPage() {
         // Create default present record
         return {
           student_id: student.id,
-          absent: false,
-          delay: false,
+          absent: "0",
+          delay: "0",
           delay_time: null,
           absent_reason: null,
           status: 0,
@@ -411,4 +411,4 @@ export default function AddWeekAbsentPage() {
       )}
     </div>
   );
-} 
+}
