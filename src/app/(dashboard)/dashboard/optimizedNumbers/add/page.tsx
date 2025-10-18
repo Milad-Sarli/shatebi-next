@@ -321,11 +321,15 @@ export default function AddNumberPage() {
       console.log('ساختار پاسخ API:', response);
       
       // بررسی هر دو حالت ممکن برای ساختار پاسخ
-      type ApiResponse = unknown[] | { data?: unknown[] } | unknown;
+      type ApiResponse = Record<string, Student> | Student[];
       const responseData = response.data as ApiResponse;
-      const studentsArray = Array.isArray(responseData) 
-        ? responseData 
-        : (responseData && typeof responseData === 'object' && 'data' in responseData && responseData.data && Array.isArray(responseData.data) ? responseData.data : []);
+
+      let studentsArray: Student[] = [];
+      if (Array.isArray(responseData)) {
+        studentsArray = responseData;
+      } else if (typeof responseData === 'object' && responseData !== null) {
+        studentsArray = Object.values(responseData);
+      }
       
       if (studentsArray.length > 0) {
         studentsArray.forEach((student) => {
@@ -397,11 +401,15 @@ export default function AddNumberPage() {
         console.log('ساختار پاسخ API در useEffect دوم:', response);
         
         // استخراج آرایه دانش‌آموزان از پاسخ API
-        type ApiResponse = unknown[] | { data?: unknown[] } | unknown;
-        const responseData = response.data as ApiResponse;
-        const studentsArray = Array.isArray(responseData) 
-          ? responseData 
-          : (responseData && typeof responseData === 'object' && 'data' in responseData && responseData.data && Array.isArray(responseData.data) ? responseData.data : []);
+        type ApiResponse = Record<string, Student> | Student[];
+      const responseData = response.data as ApiResponse;
+
+      let studentsArray: Student[] = [];
+      if (Array.isArray(responseData)) {
+        studentsArray = responseData;
+      } else if (typeof responseData === 'object' && responseData !== null) {
+        studentsArray = Object.values(responseData);
+      }
 
         if (!Array.isArray(studentsArray)) {
           console.error("studentsArray is not an array:", studentsArray);

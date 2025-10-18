@@ -18,6 +18,7 @@ export interface OptimizedClass {
   dars?: Dars;
   optimized_class_masters?: any[];
   optimized_class_items?: any[];
+  lesson_area?: LessonArea;
 }
 
 export interface PaginatedResponse<T> {
@@ -281,4 +282,4 @@ export const optimizedClassService = {
     });
     return response.data;
   },
-}; 
+};

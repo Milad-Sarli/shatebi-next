@@ -95,6 +95,7 @@ export async function fetchStudents({ accessToken, selectedClass, selectedDate, 
     const jsDateStr = jsDate ? format(jsDate, 'yyyy/MM/dd') : null;
     if (!jsDate || !jsDateStr) return;
     const response: StudentsResponse = await optimizedClassService.getStudents(selectedClass.id, jsDateStr, accessToken);
+
     const gradesMap: Record<number, Grade[]> = {};
     const selectedDateGregorianStr = jsDate ? format(jsDate, 'yyyy-MM-dd') : '';
     response.data.forEach((student: Student) => {
@@ -103,7 +104,7 @@ export async function fetchStudents({ accessToken, selectedClass, selectedDate, 
         if (!dateToUse) return false;
         try {
           const gradeDateGregorian = format(new Date(dateToUse), 'yyyy-MM-dd');
-          return gradeDateGregorian === selectedDateGregorianStr;
+          return gradeDateGregorian === selectedDateGregorianStr && grade.lesson_area?.id === selectedClass.lesson_area?.id;
         } catch {
           return false;
         }
@@ -744,7 +745,7 @@ export async function handleRemoveProvideless({ studentId, activityId, accessTok
           if (!dateToUse) return false;
           try {
             const gradeDate = format(new Date(dateToUse), 'yyyy-MM-dd');
-            return gradeDate === selectedDateStr;
+            return gradeDate === selectedDateStr && grade.lesson_area?.id === selectedClass.lesson_area?.id;
           } catch {
             return false;
           }
