@@ -77,6 +77,15 @@ export class LessonService {
     return response.data;
   }
 
+  static async getRelatedLessons(darsId: number, token: string) {
+    const response = await axios.get(`${API_URL}/api/droos/${darsId}/related`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
   static async createLesson(data: LessonCreateData, token: string) {
     const response = await axios.post(`${API_URL}/api/droos`, data, {
       headers: {
@@ -128,6 +137,52 @@ export class LessonService {
 
   static async toggleOneGrade(id: number, token: string) {
     const response = await axios.post(`${API_URL}/api/droos/${id}/toggle-one-grade`, null, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  // متدهای جدید برای مدیریت زیرشاخه‌ها
+
+  /**
+   * حذف والد از یک درس (جدا کردن زیرشاخه)
+   * @param id شناسه درسی که می‌خواهیم از والد آن جدا شود
+   * @param token توکن دسترسی
+   */
+  static async removeParent(id: number, token: string) {
+    const response = await axios.put(`${API_URL}/api/droos/${id}/remove-parent`, null, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * اضافه کردن زیرشاخه به یک درس
+   * @param parentId شناسه درس والد
+   * @param childId شناسه درسی که می‌خواهیم به عنوان زیرشاخه اضافه کنیم
+   * @param token توکن دسترسی
+   */
+  static async addChild(parentId: number, childId: number, token: string) {
+    const response = await axios.put(`${API_URL}/api/droos/${parentId}/add-child`, { child_id: childId }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * دریافت لیست دروس قابل انتساب به عنوان والد
+   * @param excludeId شناسه درسی که می‌خواهیم از لیست خارج شود (اختیاری)
+   * @param token توکن دسترسی
+   */
+  static async getAvailableForParent(excludeId?: number, token: string) {
+    const response = await axios.get(`${API_URL}/api/droos/available-for-parent`, {
+      params: excludeId ? { exclude_id: excludeId } : undefined,
       headers: {
         Authorization: `Bearer ${token}`,
       },

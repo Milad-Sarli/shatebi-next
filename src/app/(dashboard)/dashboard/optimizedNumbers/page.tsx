@@ -131,17 +131,12 @@ export default function OptimizedNumbersPage() {
     }
   }, [accessToken, filters, debouncedSearch]);
 
-  // Apply filters whenever dependencies change
-  React.useEffect(() => {
-    fetchNumbers();
-  }, [fetchNumbers]);
-
   // Update search filter when debounced search changes
   React.useEffect(() => {
     setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
-  // Initial data fetch
+  // Apply filters whenever dependencies change
   React.useEffect(() => {
     fetchNumbers();
   }, [fetchNumbers]);
@@ -353,15 +348,7 @@ export default function OptimizedNumbersPage() {
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                                onClick={() => handleEditNumber(numberItem)}
-                              >
-                                <Edit className="h-4 w-4 ml-1" />
-                                ویرایش
-                              </Button>
+
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -487,15 +474,7 @@ export default function OptimizedNumbersPage() {
                             </div>
                           </div>
                           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                              onClick={() => handleEditNumber(numberItem)}
-                            >
-                              <Edit className="h-4 w-4 ml-1" />
-                              ویرایش
-                            </Button>
+
                             <Button
                               variant="ghost"
                               size="sm"

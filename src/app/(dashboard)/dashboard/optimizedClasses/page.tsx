@@ -132,6 +132,7 @@ export default function OptimizedClassesPage() {
   const [selectedClassMasterName, setSelectedClassMasterName] = React.useState<string | null>(null);
   const [selectedClassStudents, setSelectedClassStudents] = React.useState<Student[]>([]);
   const [fetchingStudents, setFetchingStudents] = React.useState(false);
+  const [allStudentsData, setAllStudentsData] = React.useState<Map<number, Student[]>>(new Map());
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -310,37 +311,57 @@ export default function OptimizedClassesPage() {
     }
   };
 
-  const fetchStudentsForClass = React.useCallback(async (classId: number) => {
+  const getStudentsData = React.useCallback(async (classId: number): Promise<Student[]> => {
     if (!accessToken) {
-      console.log('No access token available');
-      return;
+      console.log('No access token available for getStudentsData');
+      return [];
     }
-    setFetchingStudents(true);
+    const today = new Date().toISOString().split('T')[0];
     try {
-      // Need a date for the getStudents API, using today's date for now.
-      // You might need to adjust this based on your application's logic.
-      const today = new Date().toISOString().split('T')[0];
       const response = await optimizedClassService.getStudents(classId, today, accessToken);
-      if (response && response.data && Array.isArray(response.data)) {
-        setSelectedClassStudents(response.data);
-        setShowStudentsModal(true);
+      if (response && response.data && typeof response.data === 'object' && response.data !== null) {
+        return Object.values(response.data) as Student[];
       } else {
-        console.error('Invalid students API response structure:', response);
-        setSelectedClassStudents([]);
+        console.error('Invalid students API response structure for getStudentsData:', response);
+        return [];
       }
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error('Error fetching students for getStudentsData:', error);
       toast.error("خطا در بارگذاری قرآن آموزان");
-      setSelectedClassStudents([]);
-    } finally {
-      setFetchingStudents(false);
+      return [];
     }
   }, [accessToken]);
 
-  const handleOpenStudentsModal = React.useCallback((classItem: OptimizedClass) => {
+  React.useEffect(() => {
+    if (classes.length > 0 && accessToken) {
+      const loadAllStudents = async () => {
+        const newAllStudentsData = new Map<number, Student[]>();
+        const fetchPromises = classes.map(async (classItem) => {
+          const students = await getStudentsData(classItem.id);
+          newAllStudentsData.set(classItem.id, students);
+        });
+        await Promise.all(fetchPromises);
+        setAllStudentsData(newAllStudentsData);
+        console.log('All students pre-loaded:', newAllStudentsData);
+      };
+      loadAllStudents();
+    }
+  }, [classes, accessToken, getStudentsData]);
+
+  const handleOpenStudentsModal = React.useCallback(async (classItem: OptimizedClass) => {
     setSelectedClassMasterName(classItem.optimized_class_masters?.[0]?.master?.fullname || null);
-    fetchStudentsForClass(classItem.id);
-  }, [fetchStudentsForClass]);
+    setShowStudentsModal(true);
+    const preLoadedStudents = allStudentsData.get(classItem.id);
+    if (preLoadedStudents) {
+      setSelectedClassStudents(preLoadedStudents);
+    } else {
+      // Fallback: if not pre-loaded, fetch it
+      setFetchingStudents(true);
+      const students = await getStudentsData(classItem.id);
+      setSelectedClassStudents(students);
+      setFetchingStudents(false);
+    }
+  }, [allStudentsData, getStudentsData]);
 
   return (
     <PageTransition>

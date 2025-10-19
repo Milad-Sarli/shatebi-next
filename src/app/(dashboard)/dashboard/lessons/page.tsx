@@ -57,9 +57,9 @@ export default function LessonsPage() {
   const [lessonToDelete, setLessonToDelete] = React.useState<number | null>(null);
   const [lessonToEdit, setLessonToEdit] = React.useState<Lesson | null>(null);
   const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
-  const [isChildrenModalOpen, setIsChildrenModalOpen] = React.useState(false);
-  const [selectedChildren, setSelectedChildren] = React.useState<Lesson[]>([]);
-  const [clickedLesson, setClickedLesson] = React.useState<Lesson | null>(null);
+  // const [isChildrenModalOpen, setIsChildrenModalOpen] = React.useState(false); // Removed
+  // const [selectedChildren, setSelectedChildren] = React.useState<Lesson[]>([]); // Removed
+  // const [clickedLesson, setClickedLesson] = React.useState<Lesson | null>(null); // Removed
   
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -88,21 +88,29 @@ export default function LessonsPage() {
         },
         accessToken
       );
-      const lessonsMap = new Map<number, Lesson>();
-      response.data.forEach((lesson) => lessonsMap.set(lesson.id, { ...lesson, children: [] }));
 
-      const hierarchicalLessons: Lesson[] = [];
-      lessonsMap.forEach((lesson) => {
-        if (lesson.parent_id) {
-          const parent = lessonsMap.get(lesson.parent_id);
-          if (parent) {
-            parent.children?.push(lesson);
+      if (filters.parent_id !== null) {
+        // If parent_id is set, display lessons directly from the API response
+        setLessons(response.data || []);
+      } else {
+        // Otherwise, build hierarchical lessons for top-level view
+        const lessonsMap = new Map<number, Lesson>();
+        response.data.forEach((lesson) => lessonsMap.set(lesson.id, { ...lesson, children: [] }));
+
+        const hierarchicalLessons: Lesson[] = [];
+        lessonsMap.forEach((lesson) => {
+          if (lesson.parent_id) {
+            const parent = lessonsMap.get(lesson.parent_id);
+            if (parent) {
+              parent.children?.push(lesson);
+            }
+          } else {
+            hierarchicalLessons.push(lesson);
           }
-        } else {
-          hierarchicalLessons.push(lesson);
-        }
-      });
-      setLessons(hierarchicalLessons || []);
+        });
+        setLessons(hierarchicalLessons || []);
+      }
+      
       if (response.pagination) {
         setPagination(response.pagination);
       } else {
@@ -203,24 +211,53 @@ export default function LessonsPage() {
     setLessonToEdit(lesson);
   };
 
-  const handleViewChildren = React.useCallback((lesson: Lesson) => {
-    // ذخیره درس کلیک شده
-    setClickedLesson(lesson);
+  const handleViewChildren = React.useCallback(async (lesson: Lesson) => {
+    if (!accessToken) return;
     
-    // اگر این درس parent دارد، باید درس والد را پیدا کنیم
-    if (lesson.parent) {
-      const parentLesson = lessons.find(l => String(l.id) === String(lesson.parent));
-      setSelectedChildren(parentLesson ? [parentLesson] : []);
-    } else {
-      // اگر parent ندارد، زیردرس‌هایش را پیدا کنیم
-      const children = lessons.filter(l => {
-        return l.parent !== null && l.parent !== undefined && String(l.parent) === String(lesson.id);
-      });
-      setSelectedChildren(children);
+    // بررسی اینکه آیا درس دارای والد است یا خیر
+    if (lesson.parent_id) {
+      toast.error("این درس والد نمی باشد و خود زیرشاخه است.");
+      return;
     }
     
-    setIsChildrenModalOpen(true);
-  }, [lessons]);
+    try {
+      setLoading(true);
+      const response = await LessonService.getRelatedLessons(lesson.id, accessToken);
+      
+      if (response.status && response.data) {
+        setLessons(response.data);
+        
+        // Update navigation path
+        let newPath = [...navigationPath];
+        if (!newPath.some(item => item.id === lesson.id)) {
+          newPath.push(lesson);
+        }
+        setNavigationPath(newPath);
+        
+        // Update pagination if needed
+        setPagination({
+          current_page: 1,
+          last_page: 1,
+          total: response.data.length,
+          per_page: filters.per_page || 10,
+          from: 1,
+          to: response.data.length,
+        });
+      } else {
+        toast.error("خطا در دریافت دروس مرتبط");
+      }
+    } catch (error) {
+      // بررسی خطای API برای درس‌هایی که والد دارند
+      if (error.response && error.response.data && error.response.data.message === "این درس والد نمی باشد و خود زیرشاخه است.") {
+        toast.error("این درس والد نمی باشد و خود زیرشاخه است.");
+      } else {
+        toast.error("خطا در دریافت دروس مرتبط");
+        console.error(error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, navigationPath, filters.per_page]);
 
   const handleSearch = () => {
     if (filters.page !== 1) {
@@ -283,35 +320,43 @@ export default function LessonsPage() {
               <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست دروس</CardTitle>
               
               {/* Navigation path / breadcrumb */}
-              {navigationPath.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleNavigateToParent(null)}
-                    className="p-0 h-auto text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                  >
-                    دروس اصلی
-                  </Button>
-                  {navigationPath.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <span>/</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleNavigateToParent(item.id)}
-                        className={`p-0 h-auto ${
-                          index === navigationPath.length - 1 
-                            ? "font-medium text-zinc-900 dark:text-zinc-100" 
-                            : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                        }`}
-                      >
-                        {item.title}
-                      </Button>
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
+                {navigationPath.length > 0 ? (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setNavigationPath([]);
+                        setFilters(prev => ({ ...prev, parent_id: null, page: 1 }));
+                        fetchLessons();
+                      }}
+                      className="h-8 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                    >
+                      بازگشت به همه دروس
+                    </Button>
+                    {navigationPath.map((item, index) => (
+                      <React.Fragment key={item.id}>
+                        <span>/</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleNavigateToParent(item.id)}
+                          className={`p-0 h-auto ${
+                            index === navigationPath.length - 1 
+                              ? "font-medium text-zinc-900 dark:text-zinc-100" 
+                              : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                          }`}
+                        >
+                          {item.title}
+                        </Button>
+                      </React.Fragment>
+                    ))}
+                  </>
+                ) : (
+                  <span className="font-medium text-zinc-900 dark:text-zinc-100">دروس اصلی</span>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -397,12 +442,15 @@ export default function LessonsPage() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                              className={`text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 ${
+                                lesson.parent_id ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
                               onClick={() => handleViewChildren(lesson)}
-                              // disabled={!lesson.parent}
+                              disabled={lesson.parent_id ? true : false}
+                              title={lesson.parent_id ? "این درس والد نمی باشد و خود زیرشاخه است" : "مشاهده دروس مرتبط"}
                             >
                               <FolderTree className="h-4 w-4 ml-1" />
-                              {lesson.parent ? 'مشاهده والد ها' : 'مشاهده زیر درس ها'}
+                              مشاهده دروس مرتبط
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -496,8 +544,12 @@ export default function LessonsPage() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            className={`text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 ${
+                              lesson.parent_id ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                             onClick={() => handleViewChildren(lesson)}
+                            disabled={lesson.parent_id ? true : false}
+                            title={lesson.parent_id ? "این درس والد نمی باشد و خود زیرشاخه است" : "مشاهده دروس مرتبط"}
                           >
                             <FolderTree className="h-4 w-4 ml-1" />
                             {lesson.parent ? 'مشاهده والد ها' : 'مشاهده زیر درس ها'}
@@ -663,7 +715,7 @@ export default function LessonsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <Dialog open={isChildrenModalOpen} onOpenChange={setIsChildrenModalOpen}>
+      {/* <Dialog open={isChildrenModalOpen} onOpenChange={setIsChildrenModalOpen}>
         <DialogContent className="sm:max-w-[450px] text-right" dir="rtl">
           <DialogHeader className="text-center">
             {clickedLesson && (
@@ -706,7 +758,7 @@ export default function LessonsPage() {
             )}
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </PageTransition>
   );
 }
