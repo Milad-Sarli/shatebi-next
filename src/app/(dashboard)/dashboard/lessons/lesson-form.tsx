@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { LessonService, Lesson } from "@/lib/services/lesson.service";
 import { useAuth } from "@/lib/context/auth.context";
 import { isAxiosError } from "axios";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const lessonSchema = z.object({
   title: z.string().min(1, "عنوان درس الزامی است"),
@@ -28,9 +29,10 @@ interface LessonFormProps {
   lesson?: Lesson;
   parentId?: number | null;
   onSuccess?: () => void;
+  availableParents?: Lesson[];
 }
 
-export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
+export function LessonForm({ lesson, parentId, onSuccess, availableParents = [] }: LessonFormProps) {
   console.log("LessonForm rendered");
   const { accessToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +61,7 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
   useEffect(() => {
     console.log("useEffect for lesson change triggered");
     if (lesson) {
+      console.log("Lesson parent_id:", lesson.parent_id);
       reset({
         title: lesson.title || "",
         description: lesson.description || "",
@@ -80,11 +83,26 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
     
     try {
       setIsLoading(true);
+      
+      // اطمینان از اینکه parent_id به درستی ارسال می‌شود
+      const formattedData = {
+        ...data
+      };
+      
+      // تبدیل صریح parent_id به عدد یا null
+      if (data.parent_id !== null && data.parent_id !== undefined) {
+        formattedData.parent_id = Number(data.parent_id);
+      } else {
+        formattedData.parent_id = null;
+      }
+      
+      console.log("Formatted data for API:", formattedData);
+      
       if (lesson) {
-        await LessonService.updateLesson(lesson.id, data, accessToken);
+        await LessonService.updateLesson(lesson.id, formattedData, accessToken);
         toast.success("درس با موفقیت بروزرسانی شد");
       } else {
-        const createData = { ...data, tenant_id: 1 }; // Assuming tenant_id 1 for creation
+        const createData = { ...formattedData, tenant_id: 1 }; // Assuming tenant_id 1 for creation
         await LessonService.createLesson(createData, accessToken);
         toast.success("درس با موفقیت ایجاد شد");
       }
@@ -126,6 +144,30 @@ export function LessonForm({ lesson, parentId, onSuccess }: LessonFormProps) {
         />
         {errors.description && (
           <p className="text-sm text-red-500">{errors.description.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="parent_id" className="mb-1">درس والد</Label>
+        <Select
+          onValueChange={(value) => setValue("parent_id", value === "null" ? null : parseInt(value))}
+          value={watch("parent_id")?.toString() || "null"}
+          defaultValue={watch("parent_id")?.toString() || "null"}
+        >
+          <SelectTrigger className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700">
+            <SelectValue placeholder="انتخاب درس والد" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+            <SelectItem value="null">بدون والد</SelectItem>
+            {availableParents.map((parent) => (
+              <SelectItem key={parent.id} value={parent.id.toString()}>
+                {parent.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.parent_id && (
+          <p className="text-sm text-red-500">{errors.parent_id.message}</p>
         )}
       </div>
 

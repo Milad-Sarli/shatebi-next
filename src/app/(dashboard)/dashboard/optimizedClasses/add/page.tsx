@@ -192,17 +192,19 @@ export default function AddClassPage() {
       return;
     }
 
-    // Get the first student as the main user_id
+    // روش جدید: ارسال تمام قرآن‌آموزان به صورت کامل
+    // قرآن‌آموز اول به عنوان کاربر اصلی
     const mainStudentId = formData.user_ids[0];
-    // Get the remaining students for the students array
-    const additionalStudents = formData.user_ids.slice(1);
+    // ارسال تمام قرآن‌آموزان (شامل قرآن‌آموز اول) به عنوان قرآن‌آموزان کلاس
+    // این تغییر باعث می‌شود که هیچ قرآن‌آموزی از لیست حذف نشود
+    const allStudents = [...formData.user_ids];
 
     const payload = {
       tenant_id: formData.tenant_id,
       user_id: mainStudentId,
-      droos_id: formData.droos_ids[0],
+      droos_id: formData.droos_ids[0], 
       status: formData.status,
-      students: additionalStudents,
+      students: allStudents,
       masters: formData.teacher_ids.map(teacherId => ({
         master_id: teacherId,
         status: 1,

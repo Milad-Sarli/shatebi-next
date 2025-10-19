@@ -96,7 +96,23 @@ export class LessonService {
   }
 
   static async updateLesson(id: number, data: LessonUpdateData, token: string) {
-    const response = await axios.put(`${API_URL}/api/droos/${id}`, data, {
+    // اطمینان از اینکه parent_id به درستی ارسال می‌شود
+    // تبدیل مستقیم به عدد برای اطمینان از ارسال صحیح به سرور
+    const formattedData = {
+      ...data,
+    };
+
+    // اگر parent_id وجود دارد، آن را به عدد تبدیل می‌کنیم
+    if (data.parent_id !== null && data.parent_id !== undefined) {
+      formattedData.parent_id = Number(data.parent_id);
+    } else {
+      // در غیر این صورت، مقدار null را به صورت صریح ارسال می‌کنیم
+      formattedData.parent_id = null;
+    }
+
+    console.log("Final data sent to API:", JSON.stringify(formattedData));
+
+    const response = await axios.put(`${API_URL}/api/droos/${id}`, formattedData, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -177,16 +193,26 @@ export class LessonService {
 
   /**
    * دریافت لیست دروس قابل انتساب به عنوان والد
+   * توجه: این متد از API موجود استفاده می‌کند و فیلترینگ در سمت کلاینت انجام می‌شود
    * @param excludeId شناسه درسی که می‌خواهیم از لیست خارج شود (اختیاری)
    * @param token توکن دسترسی
    */
-  static async getAvailableForParent(excludeId?: number, token: string) {
-    const response = await axios.get(`${API_URL}/api/droos/available-for-parent`, {
-      params: excludeId ? { exclude_id: excludeId } : undefined,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
+  static async getAvailableForParent(token: string, excludeId?: number | string) {
+    // استفاده از API موجود به جای API ناموجود
+    const response = await this.getLessons({ parent_id: null }, token);
+
+    if (response && response.data) {
+      // فیلتر کردن دروس برای حذف درس فعلی از لیست
+      const filteredData = excludeId
+        ? response.data.filter(lesson => lesson.id !== Number(excludeId))
+        : response.data;
+
+      return {
+        status: true,
+        data: filteredData
+      };
+    }
+
+    return { status: false, data: [] };
   }
 }

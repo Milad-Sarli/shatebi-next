@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
 import { LessonService, Lesson, LessonFilters, PaginationResponse } from "@/lib/services/lesson.service";
 import { toast } from "sonner";
+import { isAxiosError } from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { LessonForm } from "./lesson-form";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -15,7 +16,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -57,9 +57,10 @@ export default function LessonsPage() {
   const [lessonToDelete, setLessonToDelete] = React.useState<number | null>(null);
   const [lessonToEdit, setLessonToEdit] = React.useState<Lesson | null>(null);
   const [navigationPath, setNavigationPath] = React.useState<Lesson[]>([]);
-  // const [isChildrenModalOpen, setIsChildrenModalOpen] = React.useState(false); // Removed
-  // const [selectedChildren, setSelectedChildren] = React.useState<Lesson[]>([]); // Removed
-  // const [clickedLesson, setClickedLesson] = React.useState<Lesson | null>(null); // Removed
+  const [isAddChildOpen, setIsAddChildOpen] = React.useState(false);
+  const [availableParents, setAvailableParents] = React.useState<Lesson[]>([]);
+  const [selectedParentId, setSelectedParentId] = React.useState<number | null>(null);
+  const [lessonToRemoveParent, setLessonToRemoveParent] = React.useState<number | null>(null);
   
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
@@ -112,8 +113,17 @@ export default function LessonsPage() {
       }
       
       if (response.pagination) {
+        console.log("API Pagination Response:", response.pagination);
         setPagination(response.pagination);
       } else {
+        console.log("No API Pagination, setting default:", {
+          current_page: 1,
+          last_page: 1,
+          total: response.data?.length || 0,
+          per_page: filters.per_page || 10,
+          from: 1,
+          to: response.data?.length || 0,
+        });
         setPagination({
           current_page: 1,
           last_page: 1,
@@ -166,10 +176,11 @@ export default function LessonsPage() {
         const parentLesson = await fetchLessonById(parentId);
         if (parentLesson) {
           setFilters(prev => ({ ...prev, parent_id: parentId, page: 1 }));
-          let newPath = [...navigationPath];
+          const newPath = [...navigationPath];
           const existingIndex = newPath.findIndex(item => item.id === parentLesson.id);
           if (existingIndex >= 0) {
-            newPath = newPath.slice(0, existingIndex + 1);
+            const trimmedPath = newPath.slice(0, existingIndex + 1);
+            setNavigationPath(trimmedPath);
           } else {
             newPath.push(parentLesson);
           }
@@ -207,8 +218,33 @@ export default function LessonsPage() {
     }
   };
 
-  const handleEditLesson = (lesson: Lesson) => {
-    setLessonToEdit(lesson);
+  const handleEditLesson = async (lesson: Lesson) => {
+    if (!accessToken) return;
+    
+    try {
+      // دریافت لیست دروس قابل انتساب به عنوان والد
+      await fetchAvailableParents(lesson.id);
+      
+      // اطمینان از اینکه اطلاعات کامل درس را داریم
+      const detailedLesson = await LessonService.getLessonById(lesson.id, accessToken);
+      if (detailedLesson && detailedLesson.data) {
+        console.log("درس با جزئیات کامل:", detailedLesson.data);
+        // اطمینان از اینکه parent_id به درستی تنظیم شده است
+        const lessonWithParent = {
+          ...detailedLesson.data,
+          // تبدیل parent از string به number یا null
+          parent_id: detailedLesson.data.parent ? parseInt(detailedLesson.data.parent) : null
+        };
+        console.log("درس با parent_id اصلاح شده:", lessonWithParent.parent_id);
+        setLessonToEdit(lessonWithParent);
+      } else {
+        setLessonToEdit(lesson);
+      }
+    } catch (error) {
+      console.error("خطا در دریافت اطلاعات درس:", error);
+      // حتی در صورت خطا، فرم ویرایش را نمایش می‌دهیم
+      setLessonToEdit(lesson);
+    }
   };
 
   const handleViewChildren = React.useCallback(async (lesson: Lesson) => {
@@ -225,10 +261,10 @@ export default function LessonsPage() {
       const response = await LessonService.getRelatedLessons(lesson.id, accessToken);
       
       if (response.status && response.data) {
-        setLessons(response.data);
+        setLessons(response.data); 
         
         // Update navigation path
-        let newPath = [...navigationPath];
+        const newPath = [...navigationPath];
         if (!newPath.some(item => item.id === lesson.id)) {
           newPath.push(lesson);
         }
@@ -246,9 +282,8 @@ export default function LessonsPage() {
       } else {
         toast.error("خطا در دریافت دروس مرتبط");
       }
-    } catch (error) {
-      // بررسی خطای API برای درس‌هایی که والد دارند
-      if (error.response && error.response.data && error.response.data.message === "این درس والد نمی باشد و خود زیرشاخه است.") {
+    } catch (error: unknown) {
+      if (isAxiosError(error) && error.response && error.response.data && error.response.data.message === "این درس والد نمی باشد و خود زیرشاخه است.") {
         toast.error("این درس والد نمی باشد و خود زیرشاخه است.");
       } else {
         toast.error("خطا در دریافت دروس مرتبط");
@@ -285,6 +320,75 @@ export default function LessonsPage() {
     }
   }, [accessToken]);
 
+  // دریافت لیست دروس قابل انتساب به عنوان والد
+  const fetchAvailableParents = React.useCallback(async (excludeId?: number) => {
+    if (!accessToken) return;
+
+    try {
+      setLoading(true);
+      // استفاده از API موجود به جای API ناموجود
+      // دریافت همه دروس و فیلتر کردن آنها در سمت کلاینت
+      const response = await LessonService.getLessons({ parent_id: null }, accessToken);
+      
+      if (response.data) {
+        // فیلتر کردن دروس برای حذف درس فعلی از لیست
+        const filteredLessons = response.data.filter(lesson => 
+          !excludeId || lesson.id !== excludeId
+        );
+        setAvailableParents(filteredLessons);
+      } else {
+        toast.error("خطا در دریافت لیست دروس قابل انتساب");
+      }
+    } catch (error) {
+      toast.error("خطا در دریافت لیست دروس قابل انتساب");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  // حذف والد از یک درس (جدا کردن زیرشاخه)
+  const handleRemoveParent = React.useCallback(async (id: number) => {
+    setLessonToRemoveParent(id);
+  }, []);
+
+  // تایید حذف والد
+  const confirmRemoveParent = React.useCallback(async () => {
+    if (!accessToken || !lessonToRemoveParent) return;
+
+    try {
+      setLoading(true);
+      await LessonService.removeParent(lessonToRemoveParent, accessToken);
+      toast.success("درس با موفقیت از زیرشاخه‌ها حذف شد");
+      fetchLessons(); // بروزرسانی لیست دروس
+    } catch (error) {
+      toast.error("خطا در حذف درس از زیرشاخه‌ها");
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setLessonToRemoveParent(null);
+    }
+  }, [accessToken, lessonToRemoveParent, fetchLessons]);
+
+  // اضافه کردن زیرشاخه به یک درس
+  const handleAddChild = React.useCallback(async () => {
+    if (!accessToken || !selectedParentId || !filters.parent_id) return;
+
+    try {
+      setLoading(true);
+      await LessonService.addChild(filters.parent_id, selectedParentId, accessToken);
+      toast.success("درس با موفقیت به عنوان زیرشاخه اضافه شد");
+      fetchLessons(); // بروزرسانی لیست دروس
+      setIsAddChildOpen(false);
+      setSelectedParentId(null);
+    } catch (error) {
+      toast.error("خطا در اضافه کردن زیرشاخه");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, selectedParentId, filters.parent_id, fetchLessons]);
+
   return (
     <PageTransition>
       <div className="space-y-4">
@@ -309,6 +413,89 @@ export default function LessonsPage() {
                     fetchLessons();
                   }}
                 />
+              </DialogContent>
+            </Dialog>
+
+            {/* دیالوگ افزودن زیرشاخه */}
+            <Dialog open={isAddChildOpen} onOpenChange={(open) => {
+              setIsAddChildOpen(open);
+              if (open && filters.parent_id) {
+                fetchAvailableParents(filters.parent_id);
+              }
+            }}>
+              <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-zinc-900 text-right mx-4 dark:text-zinc-100">افزودن زیرشاخه جدید</DialogTitle>
+                  <DialogDescription className="text-zinc-500 text-right mx-4 dark:text-zinc-400">
+                    درس مورد نظر را برای افزودن به عنوان زیرشاخه انتخاب کنید
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label htmlFor="child_id" className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">انتخاب درس</label>
+                    <Select
+                      onValueChange={(value) => setSelectedParentId(value ? parseInt(value) : null)}
+                      value={selectedParentId?.toString() || ""}
+                    >
+                      <SelectTrigger className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700">
+                        <SelectValue placeholder="انتخاب درس" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                        {availableParents.map((parent) => (
+                          <SelectItem key={parent.id} value={parent.id.toString()}>
+                            {parent.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddChildOpen(false);
+                        setSelectedParentId(null);
+                      }}
+                      className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    >
+                      انصراف
+                    </Button>
+                    <Button
+                      onClick={handleAddChild}
+                      disabled={!selectedParentId || loading}
+                      className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    >
+                      {loading ? "در حال افزودن..." : "افزودن زیرشاخه"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* دیالوگ تایید حذف زیرشاخه */}
+            <Dialog open={lessonToRemoveParent !== null} onOpenChange={(open) => !open && setLessonToRemoveParent(null)}>
+              <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-zinc-900 text-right mx-4 dark:text-zinc-100">حذف از زیرشاخه‌ها</DialogTitle>
+                  <DialogDescription className="text-zinc-500 text-right mx-4 dark:text-zinc-400">
+                    آیا از حذف این درس از زیرشاخه‌ها اطمینان دارید؟ این درس به صورت مستقل در لیست دروس اصلی نمایش داده خواهد شد.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="p-4 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLessonToRemoveParent(null)}
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    انصراف
+                  </Button>
+                  <Button
+                    onClick={confirmRemoveParent}
+                    className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                  >
+                    {loading ? "در حال حذف..." : "تایید حذف"}
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -452,6 +639,32 @@ export default function LessonsPage() {
                               <FolderTree className="h-4 w-4 ml-1" />
                               مشاهده دروس مرتبط
                             </Button>
+                            {/* دکمه حذف زیرشاخه (فقط برای زیرشاخه‌ها نمایش داده می‌شود) */}
+                            {filters.parent_id !== null && lesson.parent_id && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-amber-500 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                                onClick={() => handleRemoveParent(lesson.id)}
+                                title="حذف از زیرشاخه‌ها"
+                              >
+                                <FolderTree className="h-4 w-4 ml-1" />
+                                حذف از زیرشاخه‌ها
+                              </Button>
+                            )}
+                            {/* دکمه افزودن زیرشاخه (فقط در صفحه اصلی نمایش داده می‌شود) */}
+                            {filters.parent_id !== null && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-green-500 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                                onClick={() => setIsAddChildOpen(true)}
+                                title="افزودن زیرشاخه جدید"
+                              >
+                                <Plus className="h-4 w-4 ml-1" />
+                                افزودن زیرشاخه
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -599,47 +812,65 @@ export default function LessonsPage() {
                             className={pagination.current_page === 1 ? "pointer-events-none opacity-50" : ""}
                           />
                         </PaginationItem>
-                        {pagination.current_page > 3 && pagination.last_page > 5 && (
-                          <PaginationItem>
-                            <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
-                          </PaginationItem>
-                        )}
-                        {pagination.current_page > 4 && pagination.last_page > 5 && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                        {Array.from({ length: pagination.last_page }).map((_, i) => {
-                          const pageNum = i + 1;
-                          if (
-                            pageNum === 1 ||
-                            pageNum === pagination.last_page ||
-                            (pageNum >= pagination.current_page - 2 && pageNum <= pagination.current_page + 2)
-                          ) {
-                            return (
-                              <PaginationItem key={pageNum}>
+                        {pagination.last_page > 1 && (
+                          <>
+                            {/* Always show first page */}
+                            <PaginationItem>
+                              <PaginationLink
+                                isActive={pagination.current_page === 1}
+                                onClick={() => handlePageChange(1)}
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+
+                            {/* Ellipsis after first page */}
+                            {pagination.current_page > 3 && pagination.last_page > 5 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+
+                            {/* Page numbers around current page */}
+                            {Array.from({ length: pagination.last_page })
+                              .map((_, i) => i + 1)
+                              .filter(
+                                (pageNum) =>
+                                  pageNum !== 1 &&
+                                  pageNum !== pagination.last_page &&
+                                  pageNum >= pagination.current_page - 1 &&
+                                  pageNum <= pagination.current_page + 1
+                              )
+                              .map((pageNum) => (
+                                <PaginationItem key={pageNum}>
+                                  <PaginationLink
+                                    isActive={pagination.current_page === pageNum}
+                                    onClick={() => handlePageChange(pageNum)}
+                                  >
+                                    {pageNum}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              ))}
+
+                            {/* Ellipsis before last page */}
+                            {pagination.current_page < pagination.last_page - 2 && pagination.last_page > 5 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+
+                            {/* Always show last page */}
+                            {pagination.last_page > 1 && (
+                              <PaginationItem>
                                 <PaginationLink
-                                  isActive={pagination.current_page === pageNum}
-                                  onClick={() => handlePageChange(pageNum)}
+                                  isActive={pagination.current_page === pagination.last_page}
+                                  onClick={() => handlePageChange(pagination.last_page)}
                                 >
-                                  {pageNum}
+                                  {pagination.last_page}
                                 </PaginationLink>
                               </PaginationItem>
-                            );
-                          }
-                          return null;
-                        })}
-                        {pagination.current_page < pagination.last_page - 3 && pagination.last_page > 5 && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                        {pagination.current_page < pagination.last_page - 2 && pagination.last_page > 5 && (
-                          <PaginationItem>
-                            <PaginationLink onClick={() => handlePageChange(pagination.last_page)}>
-                              {pagination.last_page}
-                            </PaginationLink>
-                          </PaginationItem>
+                            )}
+                          </>
                         )}
                         <PaginationItem>
                           <PaginationNext
@@ -679,12 +910,15 @@ export default function LessonsPage() {
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">ویرایش درس</DialogTitle>
             </DialogHeader>
             <LessonForm
-              lesson={lessonToEdit || undefined}
-              onSuccess={() => {
-                setLessonToEdit(null);
-                fetchLessons();
-              }}
-            />
+                  lesson={lessonToEdit || undefined}
+                  availableParents={availableParents}
+                  onSuccess={() => {
+                    setLessonToEdit(null);
+                    fetchLessons();
+                    // بعد از به‌روزرسانی موفق، صفحه را رفرش می‌کنیم تا تغییرات اعمال شوند
+                    window.location.reload();
+                  }}
+                />
           </DialogContent>
         </Dialog>
 

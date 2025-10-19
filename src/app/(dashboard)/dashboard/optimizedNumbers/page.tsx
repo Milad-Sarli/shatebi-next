@@ -6,7 +6,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Edit,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -167,9 +166,9 @@ export default function OptimizedNumbersPage() {
     }
   };
 
-  const handleEditNumber = (numberItem: OptimizedNumber) => {
-    setNumberToEdit(numberItem);
-  };
+  // const handleEditNumber = (numberItem: OptimizedNumber) => {
+  //   setNumberToEdit(numberItem);
+  // };
 
   return (
     <PageTransition>
