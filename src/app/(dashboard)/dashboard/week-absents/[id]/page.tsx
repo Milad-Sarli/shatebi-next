@@ -191,12 +191,12 @@ export default function WeekAbsentDetailPage() {
           </div>
           {/* Desktop view: Table */}
           <div className="hidden md:block">
-            <h3 className="font-bold mb-2">دانش آموزان ({totalStudents} نفر)</h3>
+            <h3 className="font-bold mb-2">قرآن آموزان ({totalStudents} نفر)</h3>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">نام</TableHead>
-                  <TableHead className="text-right">نام پدر دانش آموز</TableHead>
+                  <TableHead className="text-right">نام پدر</TableHead>
                   <TableHead className="text-right">وضعیت</TableHead>
                   <TableHead className="text-right">تاخیر</TableHead>
                   <TableHead className="text-right">مدت زمان تاخیر</TableHead>
@@ -208,12 +208,12 @@ export default function WeekAbsentDetailPage() {
                 {currentStudents.map((student) => (
                   <TableRow key={student.student_id}>
                     <TableCell className="text-right">{student.student?.Fname} {student.student?.Lname}</TableCell>
-
+                    <TableCell className="text-right">{student.student?.FatherName || '-'}</TableCell>
                     <TableCell className="text-right">
                       {student.absent === "1" ? <Badge variant="destructive">غایب</Badge> : student.delay === "1" ? <Badge variant="secondary">تاخیر</Badge> : <Badge variant="default">حاضر</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {student.delay === "1" && "تاخیر"}
+                      {student.delay === "1" ? "دارد" : "ندارد"}
                     </TableCell>
                     <TableCell className="text-right">
                       {student.delay === "1" && student.delay_time}
@@ -237,7 +237,6 @@ export default function WeekAbsentDetailPage() {
                         </Badge>
                       )}
                     </TableCell>
-
                     <TableCell className="text-right">
                       {Number(student.delay) === 1 && student.delay_time && (
                         <span className="inline-block bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-2 py-0.5 rounded">تاخیر: {student.delay_time}</span>

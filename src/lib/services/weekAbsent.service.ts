@@ -14,6 +14,7 @@ export interface WeekAbsentStudent {
         Lname: string;
         Mellicode: string;
         StudentCode: string;
+        FatherName?: string;
     };
 }
 
