@@ -26,11 +26,7 @@ import * as z from "zod";
 import StudentCardList from './StudentCardList';
 import { PageTransition } from "@/components/ui/page-transition";
 
-interface Course {
-  id: number;
-  title: string;
-  is_one_grade: boolean | null;
-}
+import { Course } from "@/lib/types/course";
 
 // Define the form schema for each tab
 const pageBasedSchema = z.object({
@@ -484,8 +480,10 @@ export default function AddNumberPage() {
   };
 
   const handleCourseSelect = (course: Course) => {
-    setSelectedCourse(course);
-    setIsOneGrade(course.is_one_grade || false);
+    if (course) {
+      setSelectedCourse(course);
+      setIsOneGrade(course.is_one_grade === "1");
+    }
     setIsModalOpen(true);
   };
 

@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
+import { CustomToggle } from "@/components/ui/custom-toggle";
 
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -248,13 +249,7 @@ export default function LessonsPage() {
   };
 
   const handleViewChildren = React.useCallback(async (lesson: Lesson) => {
-    if (!accessToken) return;
-    
-    // بررسی اینکه آیا درس دارای والد است یا خیر
-    if (lesson.parent_id) {
-      toast.error("این درس والد نمی باشد و خود زیرشاخه است.");
-      return;
-    }
+    if (!accessToken || lesson.parent_id) return;
     
     try {
       setLoading(true);
@@ -284,7 +279,7 @@ export default function LessonsPage() {
       }
     } catch (error: unknown) {
       if (isAxiosError(error) && error.response && error.response.data && error.response.data.message === "این درس والد نمی باشد و خود زیرشاخه است.") {
-        toast.error("این درس والد نمی باشد و خود زیرشاخه است.");
+        // Do nothing, as per user request to disable button instead of showing toast
       } else {
         toast.error("خطا در دریافت دروس مرتبط");
         console.error(error);
@@ -608,37 +603,29 @@ export default function LessonsPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{lesson.title}</td>
                       
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`${
-                                lesson.is_one_grade === "1"
-                                  ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                                  : lesson.is_one_grade === "0"
-                                    ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
-                                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900/30 dark:text-zinc-300 dark:hover:bg-zinc-900/50"
-                              }`}
-                              onClick={() => handleToggleOneGrade(lesson)}
-                            >
-                              {lesson.is_one_grade === "1" && "بله"}
-                            {lesson.is_one_grade === "0" && "خیر"}
-                            {lesson.is_one_grade === null && "نامشخص"}
-                            </Button>
+                            <div className="flex items-center justify-center">
+                              <CustomToggle
+                                checked={lesson.is_one_grade === "1"}
+                                onCheckedChange={() => handleToggleOneGrade(lesson)}
+                              />
+                            </div>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className={`text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 ${
-                                lesson.parent_id ? "opacity-50 cursor-not-allowed" : ""
-                              }`}
-                              onClick={() => handleViewChildren(lesson)}
-                              disabled={lesson.parent_id ? true : false}
-                              title={lesson.parent_id ? "این درس والد نمی باشد و خود زیرشاخه است" : "مشاهده دروس مرتبط"}
-                            >
-                              <FolderTree className="h-4 w-4 ml-1" />
-                              مشاهده دروس مرتبط
-                            </Button>
+                            {!lesson.parent_id && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className={`text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 ${lesson.parent_id ? "cursor-not-allowed" : ""}`}
+                                style={{ opacity: lesson.parent_id ? 0.5 : 1, pointerEvents: lesson.parent_id ? 'none' : 'auto' }}
+                                onClick={() => handleViewChildren(lesson)}
+                                disabled={!!lesson.parent_id}
+                                aria-disabled={!!lesson.parent_id}
+                                title={lesson.parent_id ? "این درس والد نمی باشد و خود زیرشاخه است" : "مشاهده دروس مرتبط"}
+                              >
+                                <FolderTree className="h-4 w-4 ml-1" />
+                                مشاهده دروس مرتبط 
+                              </Button>
+                            )}
                             {/* دکمه حذف زیرشاخه (فقط برای زیرشاخه‌ها نمایش داده می‌شود) */}
                             {filters.parent_id !== null && lesson.parent_id && (
                               <Button 
@@ -733,20 +720,10 @@ export default function LessonsPage() {
                         )}
                         <div className="flex items-center gap-2 mb-4">
                           <span className="text-sm text-zinc-500 dark:text-zinc-400">تک نمره:</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`${
-                              lesson.is_one_grade === "1"
-                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                                : lesson.is_one_grade === "0"
-                                  ? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
-                                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900/30 dark:text-zinc-300 dark:hover:bg-zinc-900/50"
-                            }`}
-                            onClick={() => handleToggleOneGrade(lesson)}
-                          >
-                            {lesson.is_one_grade === "1" ? "بله" : (lesson.is_one_grade === "0" ? "خیر" : "نامشخص")}
-                          </Button>
+                          <CustomToggle
+                            checked={lesson.is_one_grade === "1"}
+                            onCheckedChange={() => handleToggleOneGrade(lesson)}
+                          />
                         </div>
                         {lesson.description && (
                           <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">

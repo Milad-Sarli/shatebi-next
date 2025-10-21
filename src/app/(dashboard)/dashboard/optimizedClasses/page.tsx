@@ -68,7 +68,7 @@ interface Grade {
 interface Dars {
   id: number;
   title: string;
-  is_one_grade?: boolean;
+  is_one_grade?: boolean | number | string;
 }
 
 interface LessonArea {

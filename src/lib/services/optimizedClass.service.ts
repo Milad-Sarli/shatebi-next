@@ -77,7 +77,8 @@ export interface LessonArea {
 export interface Dars {
   id: number;
   title: string;
-  is_one_grade?: boolean;
+  is_one_grade?: boolean | number | string;
+  children?: Array<Dars>;
 }
 
 export interface Grade {

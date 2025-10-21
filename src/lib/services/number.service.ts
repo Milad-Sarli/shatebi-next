@@ -103,7 +103,9 @@ export const optimizedNumberService = {
     teacherId: string = "all",
     studentId: string = "all",
     scoreRange: string = "all",
-    dateRange: string = "all"
+    startDate: string | null = null,
+    endDate: string | null = null,
+    negative_scores: boolean = false
   ): Promise<PaginatedResponse<OptimizedNumber>> {
     console.log("Making request to:", `${API_URL}/api/optimized-numbers`);
     console.log("Request headers:", {
@@ -117,7 +119,9 @@ export const optimizedNumberService = {
     if (teacherId && teacherId !== "all") params.append("master_id", teacherId);
     if (studentId && studentId !== "all") params.append("student_id", studentId);
     if (scoreRange && scoreRange !== "all") params.append("score_range", scoreRange);
-    if (dateRange && dateRange !== "all") params.append("date_range", dateRange);
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+    if (negative_scores) params.append("negative_scores", "true");
 
     try {
       const response = await axios.get(`${API_URL}/api/optimized-numbers?${params.toString()}`, {

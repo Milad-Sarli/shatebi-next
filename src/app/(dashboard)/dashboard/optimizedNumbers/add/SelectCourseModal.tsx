@@ -3,18 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
-interface Course {
-  id: number;
-  title: string;
-  is_one_grade: boolean | null;
-}
+import { Course } from "@/lib/types/course";
 
-interface Dars {
-  id: number;
-  title: string;
-  is_one_grade?: boolean | null;
-  children?: Array<Dars>;
-}
+import { Dars } from "@/lib/services/optimizedClass.service";
 
 interface SelectCourseModalProps {
   isOpen: boolean;
@@ -39,7 +30,7 @@ const SelectCourseModal: React.FC<SelectCourseModalProps> = ({ isOpen, onOpenCha
           courses.push({
             id: child.id,
             title: child.title,
-            is_one_grade: child.is_one_grade || null
+            is_one_grade: child.is_one_grade || "0",
           });
         }
       });
@@ -48,7 +39,7 @@ const SelectCourseModal: React.FC<SelectCourseModalProps> = ({ isOpen, onOpenCha
       courses.push({
         id: dars.id,
         title: dars.title,
-        is_one_grade: dars.is_one_grade || null
+        is_one_grade: dars.is_one_grade || "0",
       });
     }
     return courses;
@@ -106,4 +97,4 @@ const SelectCourseModal: React.FC<SelectCourseModalProps> = ({ isOpen, onOpenCha
   );
 };
 
-export default SelectCourseModal; 
+export default SelectCourseModal;

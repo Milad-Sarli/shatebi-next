@@ -144,13 +144,13 @@ export async function handleModalSubmit({
   accessToken: string;
   selectedClass: OptimizedClass;
   selectedStudent: Student;
-  selectedCourse: { id: number; title: string; is_one_grade?: boolean };
+  selectedCourse: { id: number; title: string; is_one_grade?: string };
   selectedDate: DateObject;
   masterData: Master | null;
   isOneGrade: boolean;
   setLoading: (loading: boolean) => void;
   setIsModalOpen: (open: boolean) => void;
-  setSelectedCourse: (course: { id: number; title: string; is_one_grade?: boolean } | null) => void;
+  setSelectedCourse: (course: { id: number; title: string; is_one_grade?: string } | null) => void;
   setExistingGrades: (updater: (prev: Record<number, Grade[]>) => Record<number, Grade[]>) => void;
   formRefs: { activeTab: string; multiGradeForm: { setError: (field: string, error: { message: string }) => void }; surahForm: { setError: (field: string, error: { message: string }) => void }; partForm: { setError: (field: string, error: { message: string }) => void } } | null;
   pageBasedSchema: { shape: Record<string, unknown> };

@@ -111,7 +111,7 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
     Number(grade.details) === 0;
   
   // Check if this is a single-grade lesson
-  const isSingleGradeLesson = grade.dars?.is_one_grade || grade.droos_id?.is_one_grade || 
+  const isSingleGradeLesson = grade.dars?.is_one_grade === "1" || grade.droos_id?.is_one_grade === "1" || 
                             (Number(grade.number) > 0 && Number(grade.hefz) === 0 && Number(grade.tajvid) === 0 && Number(grade.sout) === 0 && Number(grade.details) === 0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,4 +437,4 @@ const EditGradeModal: React.FC<EditGradeModalProps> = ({
   );
 };
 
-export default EditGradeModal; 
+export default EditGradeModal;

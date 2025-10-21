@@ -152,11 +152,7 @@ interface AddGradeModalProps {
   selectedCourse?: Course | null; // اضافه کردن prop جدید
 }
 
-interface Course {
-  id: number;
-  title: string;
-  is_one_grade: boolean | null;
-}
+import { Course } from "@/lib/types/course";
 
 function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChange, isLoading = false, isOneGrade = false, selectedCourse }: AddGradeModalProps) {
   const [activeTab, setActiveTab] = React.useState("page");
@@ -356,6 +352,8 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
   }, [multiGradeForm, surahForm, partForm, activeTab, onFormRefsChange]);
 
   // Removed unused readingGradeSchema and readingGradeForm
+
+  const hasTestInTitle = selectedCourse?.title?.includes("تست");
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -602,10 +600,12 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                 </TabsList>
               ) : (
                 // برای سایر دروس همه تب‌ها نمایش داده می‌شود
-                <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsList className={`grid w-full mb-6 ${hasTestInTitle ? "grid-cols-3" : "grid-cols-2"}`}>
                   <TabsTrigger value="page" className="text-sm">صفحه</TabsTrigger>
                   <TabsTrigger value="surah" className="text-sm">سوره</TabsTrigger>
-                  <TabsTrigger value="part" className="text-sm">جز</TabsTrigger>
+                  {hasTestInTitle && (
+                    <TabsTrigger value="part" className="text-sm">جز</TabsTrigger>
+                  )}
                 </TabsList>
               )}
 

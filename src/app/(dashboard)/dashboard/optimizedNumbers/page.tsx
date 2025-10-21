@@ -12,7 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth.context";
+import DatePicker, { DateObject } from 'react-multi-date-picker';
+import persian from 'react-date-object/calendars/persian';
+import persian_fa from 'react-date-object/locales/persian_fa';
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +27,24 @@ import { NumberForm } from "./number-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import {
-  optimizedNumberService,
-  OptimizedNumber,
-} from "@/lib/services/number.service";
+import { optimizedNumberService, OptimizedNumber } from "@/lib/services/number.service";
 import { useRouter } from "next/navigation";
-
+import { parseISO } from "date-fns";
+import { format as formatJalali } from "date-fns-jalali";
+const surahNames = [
+  "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس",
+  "هود", "يوسف", "الرعد", "ابراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه",
+  "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم",
+  "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر",
+  "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق",
+  "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة",
+  "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج",
+  "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس",
+  "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد",
+  "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات",
+  "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر",
+  "المسد", "الإخلاص", "الفلق", "الناس"
+];
 // Custom debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
@@ -37,7 +53,6 @@ function useDebounce<T>(value: T, delay: number): T {
     const timer = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
-
     return () => {
       clearTimeout(timer);
     };
@@ -45,15 +60,6 @@ function useDebounce<T>(value: T, delay: number): T {
 
   return debouncedValue;
 }
-
-// interface Student {
-//   id: number;
-//   Fname: string;
-//   Lname: string;
-//   Aks?: string;
-//   FatherName?: string;
-// }
-
 interface Filters {
   page: number;
   per_page: number;
@@ -62,6 +68,9 @@ interface Filters {
   student: string;
   scoreRange: string;
   dateRange: string;
+  startDate: DateObject | null;
+  endDate: DateObject | null;
+  negative_scores: boolean;
 }
 
 export default function OptimizedNumbersPage() {
@@ -71,12 +80,15 @@ export default function OptimizedNumbersPage() {
   const [loading, setLoading] = React.useState(true);
   const [filters, setFilters] = React.useState<Filters>({
     page: 1,
-    per_page: 3, // کاهش تعداد آیتم‌ها در هر صفحه برای آزمایش pagination
+    per_page: 5,
     search: "",
     teacher: "all",
     student: "all",
     scoreRange: "all",
     dateRange: "all",
+    startDate: null,
+    endDate: null,
+    negative_scores: false,
   });
   const [pagination, setPagination] = React.useState({
     current_page: 1,
@@ -90,41 +102,68 @@ export default function OptimizedNumbersPage() {
   const debouncedSearch = useDebounce(searchInput, 300);
   const [numberToDelete, setNumberToDelete] = React.useState<number | null>(null);
   const [numberToEdit, setNumberToEdit] = React.useState<OptimizedNumber | null>(null);
-
   const router = useRouter();
-
-  // Removed unused memoized variables
-
   // Fetch all numbers from API
   const fetchNumbers = React.useCallback(async () => {
     if (!accessToken) return;
-
     try {
-      setLoading(true);
-      const response = await optimizedNumberService.getAll(
-        accessToken,
-        filters.page,
-        filters.per_page,
-        debouncedSearch,
-        filters.teacher,
-        filters.student,
-        filters.scoreRange,
-        filters.dateRange
-      );
-      console.log('API Response:', response);
-      setAllNumbers(response.data);
-      setFilteredNumbers(response.data); // API returns filtered and paginated data
-      setPagination({
-        current_page: response.current_page,
-        last_page: response.last_page,
-        total: response.total,
-        from: response.from,
-        to: response.to,
-        links: response.links,
-      });
+        setLoading(true);
+        const startJalali = filters.startDate
+          ? filters.startDate.format("YYYY/MM/DD")
+          : null;
+        const endJalali = filters.endDate
+          ? filters.endDate.format("YYYY/MM/DD")
+          : null;
+        const response = await optimizedNumberService.getAll(
+          accessToken,
+          filters.page,
+          filters.per_page,
+          debouncedSearch,
+          filters.teacher,
+          filters.student,
+          filters.scoreRange,
+          startJalali,
+          endJalali,
+          filters.negative_scores
+        );
+        console.log('API Response:', response);
+
+        if (response && response.data) {
+            setAllNumbers(response.data || []);
+            setFilteredNumbers(response.data || []);
+            setPagination({
+                current_page: response.current_page,
+                last_page: response.last_page,
+                total: response.total,
+                from: response.from,
+                to: response.to,
+                links: response.links || [],
+            });
+        } else {
+            setAllNumbers([]);
+            setFilteredNumbers([]);
+            setPagination({
+                current_page: 1,
+                last_page: 1,
+                total: 0,
+                from: 0,
+                to: 0,
+                links: [],
+            });
+        }
     } catch (error) {
-      toast.error("خطا در بارگذاری نمرات");
-      console.error(error);
+      console.error("Failed to fetch numbers:", error);
+      toast.error("Failed to fetch numbers.");
+      setAllNumbers([]);
+      setFilteredNumbers([]);
+      setPagination({
+          current_page: 1,
+          last_page: 1,
+          total: 0,
+          from: 0,
+          to: 0,
+          links: [],
+      });
     } finally {
       setLoading(false);
     }
@@ -135,10 +174,9 @@ export default function OptimizedNumbersPage() {
     setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
-  // Apply filters whenever dependencies change
   React.useEffect(() => {
     fetchNumbers();
-  }, [fetchNumbers]);
+  }, [filters, fetchNumbers]);
 
   const handlePageChange = React.useCallback((page: number) => {
     setFilters(prev => ({
@@ -151,8 +189,10 @@ export default function OptimizedNumbersPage() {
     setNumberToDelete(id);
   };
 
-  const confirmDelete = async () => {
-    if (!accessToken || !numberToDelete) return;
+  const confirmDelete = async (): Promise<void> => {
+    if (!accessToken || !numberToDelete) {
+      return;
+    }
 
     try {
       await optimizedNumberService.delete(numberToDelete, accessToken);
@@ -209,6 +249,44 @@ export default function OptimizedNumbersPage() {
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
+              <div className="flex flex-row gap-2">
+            <DatePicker
+              inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
+              style={{ width: '100%' }}
+              calendar={persian}
+              locale={persian_fa}
+              value={filters.startDate}
+              onChange={(date: DateObject) =>
+                setFilters((prev) => ({ ...prev, startDate: date }))
+              }
+              placeholder="تاریخ شروع"
+            />
+            <DatePicker
+              inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
+              style={{ width: '100%' }}
+              calendar={persian}
+              locale={persian_fa}
+              value={filters.endDate}
+              onChange={(date: DateObject) =>
+                setFilters((prev) => ({ ...prev, endDate: date }))
+              }
+              placeholder="تاریخ پایان"
+            />
+            <div className="w-fit flex items-center">
+              <Button
+                variant={filters.negative_scores ? "default" : "outline"}
+                onClick={() => setFilters(prev => ({ ...prev, negative_scores: !prev.negative_scores }))}
+                className={cn(
+                  "rounded-xl h-10 px-4",
+                  filters.negative_scores 
+                    ? "bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-800" 
+                    : "border-zinc-200 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                )}
+              >
+                {filters.negative_scores ? "نمرات منفی: فعال" : "نمرات منفی: غیرفعال"}
+              </Button>
+            </div>
+              </div>
             </div>
 
             {/* Desktop table view */}
@@ -233,6 +311,9 @@ export default function OptimizedNumbersPage() {
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       نمرات
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      ثبت شده در
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       عملیات
@@ -260,14 +341,14 @@ export default function OptimizedNumbersPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredNumbers.map((numberItem, index) => (
+                      (filteredNumbers || []).map((numberItem, index) => (
                           <motion.tr
                             key={numberItem.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.2 }}
-                            className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
+                            className={`${numberItem.number >= 70 && numberItem.number <= 79 || (numberItem.hefz >= 55 && numberItem.hefz <= 59) ? 'bg-red-100 dark:bg-red-900' : ''}`}
                           >
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                               {pagination.from + index}
@@ -297,15 +378,27 @@ export default function OptimizedNumbersPage() {
                                     >
                                       صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
                                     </Badge>
+                                  ) : numberItem.lesson_area.start_joze && numberItem.lesson_area.end_joze ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      جزء {numberItem.lesson_area.start_joze} تا {numberItem.lesson_area.end_joze}
+                                    </Badge>
                                   ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
                                     <Badge
                                       variant="outline"
                                       className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                      سوره: {surahNames[numberItem.lesson_area.start_surah - 1]}
+                                      {numberItem.lesson_area.start_verse ? ` آیه ${numberItem.lesson_area.start_verse}` : null}
+                                      {numberItem.lesson_area.end_surah && numberItem.lesson_area.end_surah !== numberItem.lesson_area.start_surah && (
+                                          <span> تا سوره: {surahNames[numberItem.lesson_area.end_surah - 1]}</span>
+                                      )}
+                                      {numberItem.lesson_area.end_verse ? ` آیه ${numberItem.lesson_area.end_verse}` : null}
                                     </Badge>
                                   ) : (
-                                    <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
+                                    <span className="text-zinc-500 dark:text-zinc-400"> ثبت نشده یا عدم تحویل </span>
                                   )}
                                 </div>
                               ) : (
@@ -346,6 +439,9 @@ export default function OptimizedNumbersPage() {
                                 </Badge>
                               </div>
                             </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                              {numberItem.created_at ? formatJalali(parseISO(numberItem.created_at), 'yyyy/MM/dd') : 'نامشخص'}
+                            </td>
                             <td className="whitespace-nowrap px-4 py-3">
 
                               <Button
@@ -380,20 +476,24 @@ export default function OptimizedNumbersPage() {
                     نمره‌ای یافت نشد
                   </div>
                 ) : (
-                  filteredNumbers
-                    .slice(
-                      (filters.page - 1) * filters.per_page,
-                      filters.page * filters.per_page
-                    )
-                    .map((numberItem, index) => (
+                      (filteredNumbers || [])
+                        .slice(
+                          (filters.page - 1) * filters.per_page,
+                          filters.page * filters.per_page
+                        )
+                        .map((numberItem, index) => (
                       <motion.div
-                        key={numberItem.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2, delay: index * 0.05 }}
-                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
-                      >
+                          key={numberItem.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                          className={cn(
+                            "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden",
+                            (numberItem.number <= 79 || (numberItem.hefz >= 55 && numberItem.hefz <= 59))
+                              && "bg-red-100 dark:bg-red-900"
+                          )}
+                        >
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -414,30 +514,51 @@ export default function OptimizedNumbersPage() {
                                 {numberItem.dars?.title || 'نامشخص'}
                               </Badge>
                             </p>
-                            <p>محدوده درسی: 
+                            <p>
+                              محدوده درسی:
                               {numberItem.lesson_area ? (
                                 <span className="mr-2">
-                                  {numberItem.lesson_area.start_page && numberItem.lesson_area.end_page ? (
+                                  {numberItem.lesson_area.start_joze && (
                                     <Badge
                                       variant="outline"
-                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                      className="mr-2 border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      صفحه {numberItem.lesson_area.start_page} تا {numberItem.lesson_area.end_page}
+                                      جزء: {numberItem.lesson_area.start_joze}
+                                      {numberItem.lesson_area.end_joze && ` تا ${numberItem.lesson_area.end_joze}`}
                                     </Badge>
-                                  ) : numberItem.lesson_area.start_surah && numberItem.lesson_area.end_surah ? (
+                                  )}
+                                  {numberItem.lesson_area.start_surah && (
                                     <Badge
                                       variant="outline"
-                                      className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                      className="mr-2 border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
                                     >
-                                      {numberItem.lesson_area.start_surah} تا {numberItem.lesson_area.end_surah}
+                                      سوره: {surahNames[numberItem.lesson_area.start_surah - 1]}
+                                      {numberItem.lesson_area.start_verse && ` آیه: ${numberItem.lesson_area.start_verse}`}
+                                      {numberItem.lesson_area.end_surah && numberItem.lesson_area.end_surah !== numberItem.lesson_area.start_surah && (
+                                          ` تا سوره: ${surahNames[numberItem.lesson_area.end_surah - 1]}`
+                                      )}
+                                      {numberItem.lesson_area.end_verse && ` آیه: ${numberItem.lesson_area.end_verse}`}
                                     </Badge>
-                                  ) : (
+                                  )}
+                                  {numberItem.lesson_area.start_page && (
+                                    <Badge
+                                      variant="outline"
+                                      className="mr-2 border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-300"
+                                    >
+                                      صفحه: {numberItem.lesson_area.start_page}
+                                      {numberItem.lesson_area.end_page && ` تا ${numberItem.lesson_area.end_page}`}
+                                    </Badge>
+                                  )}
+                                  {!numberItem.lesson_area.start_joze && !numberItem.lesson_area.start_surah && !numberItem.lesson_area.start_page && (
                                     <span className="text-zinc-500 dark:text-zinc-400">نامشخص</span>
                                   )}
                                 </span>
                               ) : (
                                 <span className="mr-2 text-zinc-500 dark:text-zinc-400">نامشخص</span>
                               )}
+                            </p>
+                            <p>
+                              ثبت شده در: {numberItem.created_at ? formatJalali(parseISO(numberItem.created_at), 'yyyy/MM/dd') : 'نامشخص'}
                             </p>
                             <div className="flex flex-wrap gap-2">
                               <Badge
@@ -492,7 +613,7 @@ export default function OptimizedNumbersPage() {
             </div>
 
             {/* Enhanced Pagination */}
-            {!loading && filteredNumbers.length > 0 && (
+            {!loading && filteredNumbers.length > 0 && pagination && pagination.links && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -703,7 +824,9 @@ export default function OptimizedNumbersPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={confirmDelete}
+                onClick={() => {
+                  confirmDelete();
+                }}
                 className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               >
                 حذف
