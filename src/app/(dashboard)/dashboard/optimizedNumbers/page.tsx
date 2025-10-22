@@ -27,7 +27,11 @@ import { NumberForm } from "./number-form";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { optimizedNumberService, OptimizedNumber } from "@/lib/services/number.service";
+import { MasterService, Master } from "@/lib/services/master.service";
 import { useRouter } from "next/navigation";
 import { parseISO } from "date-fns";
 import { format as formatJalali } from "date-fns-jalali";
@@ -75,6 +79,7 @@ interface Filters {
 
 export default function OptimizedNumbersPage() {
   const { accessToken } = useAuth();
+  const [masters, setMasters] = React.useState<Master[]>([]);
   const [, setAllNumbers] = React.useState<OptimizedNumber[]>([]);
   const [filteredNumbers, setFilteredNumbers] = React.useState<OptimizedNumber[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -114,11 +119,12 @@ export default function OptimizedNumbersPage() {
         const endJalali = filters.endDate
           ? filters.endDate.format("YYYY/MM/DD")
           : null;
+
         const response = await optimizedNumberService.getAll(
           accessToken,
           filters.page,
           filters.per_page,
-          debouncedSearch,
+          filters.search,
           filters.teacher,
           filters.student,
           filters.scoreRange,
@@ -126,7 +132,6 @@ export default function OptimizedNumbersPage() {
           endJalali,
           filters.negative_scores
         );
-        console.log('API Response:', response);
 
         if (response && response.data) {
             setAllNumbers(response.data || []);
@@ -177,6 +182,20 @@ export default function OptimizedNumbersPage() {
   React.useEffect(() => {
     fetchNumbers();
   }, [filters, fetchNumbers]);
+
+  React.useEffect(() => {
+    const fetchMasters = async () => {
+      if (!accessToken) return;
+      try {
+        const response = await MasterService.getAllMasters(accessToken);
+        setMasters(response || []);
+      } catch (error) {
+        console.error("Failed to fetch masters:", error);
+        toast.error("Failed to fetch masters.");
+      }
+    };
+    fetchMasters();
+  }, [accessToken]);
 
   const handlePageChange = React.useCallback((page: number) => {
     setFilters(prev => ({
@@ -272,19 +291,41 @@ export default function OptimizedNumbersPage() {
               }
               placeholder="تاریخ پایان"
             />
+            <Select
+              value={filters.teacher}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, teacher: value, page: 1 }))
+              }
+            >
+              <SelectTrigger dir="rtl" className="w-[180px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2">
+                <SelectValue placeholder="همه استادان" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem dir="rtl" value="all">همه استادان</SelectItem>
+                {masters.map((master) => (
+                  <SelectItem dir="rtl" key={master.id} value={master.id.toString()}>
+                    {master.fullname}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="w-fit flex items-center">
-              <Button
-                variant={filters.negative_scores ? "default" : "outline"}
-                onClick={() => setFilters(prev => ({ ...prev, negative_scores: !prev.negative_scores }))}
-                className={cn(
-                  "rounded-xl h-10 px-4",
-                  filters.negative_scores 
-                    ? "bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-800" 
-                    : "border-zinc-200 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                )}
-              >
-                {filters.negative_scores ? "نمرات منفی: فعال" : "نمرات منفی: غیرفعال"}
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="negative_scores"
+                  checked={filters.negative_scores}
+                  onCheckedChange={(checked) =>
+                    setFilters((prev) => ({ ...prev, negative_scores: Boolean(checked) }))
+                  }
+                  className="h-4 w-4"
+                />
+                <Label
+                  htmlFor="negative_scores"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  نمرات منفی
+                </Label>
+              </div>
             </div>
               </div>
             </div>
