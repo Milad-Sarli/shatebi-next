@@ -268,7 +268,7 @@ export default function OptimizedNumbersPage() {
                   className="pr-9 border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
                 />
               </div>
-              <div className="flex flex-row gap-2">
+               <div className="flex flex-wrap gap-2">
             <DatePicker
               inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
               style={{ width: '100%' }}
@@ -292,7 +292,7 @@ export default function OptimizedNumbersPage() {
               placeholder="تاریخ پایان"
             />
             <Select
-              value={filters.teacher}
+              value={filters.teacher ?? "all"}
               onValueChange={(value) =>
                 setFilters((prev) => ({ ...prev, teacher: value, page: 1 }))
               }
@@ -327,6 +327,35 @@ export default function OptimizedNumbersPage() {
                 </Label>
               </div>
             </div>
+          {
+              (filters.search !== "" ||
+                filters.teacher !== "all" ||
+                filters.startDate !== null ||
+                filters.endDate !== null ||
+                filters.negative_scores !== false) && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilters({
+                      page: 1,
+                      per_page: 5,
+                      search: "",
+                      teacher: "all",
+                      student: "all",
+                      scoreRange: "all",
+                      dateRange: "all",
+                      startDate: null,
+                      endDate: null,
+                      negative_scores: false,
+                    });
+                  }}
+                  className="whitespace-nowrap"
+                >
+                  <Trash2 className="ml-2 h-4 w-4 cursor-pointer text-red-500" />
+                  پاک کردن فیلترها
+                </Button>
+              )
+            }
               </div>
             </div>
 
