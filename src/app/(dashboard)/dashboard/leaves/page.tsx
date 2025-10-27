@@ -446,21 +446,21 @@ export default function LeavesListPage() {
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Select value={selectedType} onValueChange={setSelectedType}>
+              <Select dir="rtl" value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
                   <SelectValue placeholder="نوع مرخصی" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   {leaveTypes.map(type => (
                     <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select dir="rtl" value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-full sm:w-[180px] border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
                   <SelectValue placeholder="وضعیت مرخصی" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent dir="rtl">
                   {statusOptions.map(status => (
                     <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
                   ))}
@@ -647,8 +647,22 @@ export default function LeavesListPage() {
             <div className="mt-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Button onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>اولین</Button>
-                  <Button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}><ChevronRight className="h-4 w-4" /></Button>
+                  <Button 
+                    onClick={() => table.setPageIndex(0)} 
+                    disabled={!table.getCanPreviousPage()}
+                    variant="outline"
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    اولین
+                  </Button>
+                  <Button 
+                    onClick={() => table.previousPage()} 
+                    disabled={!table.getCanPreviousPage()}
+                    variant="outline"
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="hidden sm:flex items-center gap-1">
                   {Array.from({ length: Math.min(5, pagination.last_page) }).map((_, i) => {
@@ -671,8 +685,22 @@ export default function LeavesListPage() {
                   })}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}><ChevronLeft className="h-4 w-4" /></Button>
-                  <Button onClick={() => table.setPageIndex(pagination.last_page - 1)} disabled={!table.getCanNextPage()}>آخرین</Button>
+                  <Button 
+                    onClick={() => table.nextPage()} 
+                    disabled={!table.getCanNextPage()}
+                    variant="outline"
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    onClick={() => table.setPageIndex(pagination.last_page - 1)} 
+                    disabled={!table.getCanNextPage()}
+                    variant="outline"
+                    className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  >
+                    آخرین
+                  </Button>
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2">
