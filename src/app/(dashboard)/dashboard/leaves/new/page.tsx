@@ -23,7 +23,7 @@ const leaveTypes = [
 ];
 
 export default function NewLeavePage() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [leaveType, setLeaveType] = useState("hourly");
@@ -53,7 +53,10 @@ export default function NewLeavePage() {
       });
       return;
     }
-    let data: Partial<Morakhasi> = { dalil: reason, tenant_id: 1 };
+    let data: Partial<Morakhasi> = { 
+      dalil: reason, 
+      tenant_id: user?.tenant_id || undefined 
+    };
     if (leaveType === "hourly") {
       const dateVal = jalaliDateObjectToDate(hourlyDate);
       if (!dateVal || !fromTime || !toTime) {
@@ -272,4 +275,4 @@ export default function NewLeavePage() {
       </div>
     </PageTransition>
   );
-} 
+}
