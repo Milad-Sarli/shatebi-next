@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, CheckCircle, XCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search as SearchIcon, CheckCircle, XCircle, AlertTriangle, Info, Loader2, Filter } from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
@@ -19,6 +20,7 @@ interface User {
   fullname?: string;
   personnel_code?: string;
   aks?: string;
+  FatherName?: string;
   // Add other user properties if known and used
 }
 
@@ -40,7 +42,7 @@ interface MorakhasiFiltersState {
   page: number;
   per_page: number;
   search: string;
-  type?: string; // Optional: if you need to filter by type for pending
+  type?: number; // Changed to number to match API expectation (integer)
 }
 
 // Define state for modals
@@ -61,7 +63,7 @@ const WaitingMorakhasiPage: React.FC = () => {
     page: 1,
     per_page: 9, // e.g., 3x3 grid
     search: '',
-    type: undefined, // example if you need to set a default type
+    type: undefined, // No default type filter
   });
   const debouncedSearch = useDebounce(filters.search, 500);
 
@@ -85,12 +87,19 @@ const WaitingMorakhasiPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const apiFilters = {
+      // Clean the filters object - remove undefined values
+      const apiFilters: any = {
         page: filters.page,
         per_page: filters.per_page,
-        search: debouncedSearch,
-        type: filters.type, // Added type filter
       };
+      
+      if (debouncedSearch) {
+        apiFilters.search = debouncedSearch;
+      }
+      
+      if (filters.type) {
+        apiFilters.type = filters.type;
+      }
       // serviceCallResponse is { status: string, data: PaginatedResponse<Morakhasi> }
       // The type PaginatedResponse<Morakhasi> from the service expects a .meta object for pagination.
       // However, the runtime error indicates .meta is undefined.
@@ -130,6 +139,15 @@ const WaitingMorakhasiPage: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setFilters(prev => ({ ...prev, search: value, page: 1 }));
+  };
+
+  const handleTypeFilterChange = (value: string) => {
+    const typeValue = value === 'all' ? undefined : parseInt(value); // Convert to integer as API expects
+    setFilters(prev => ({ ...prev, type: typeValue, page: 1 }));
   };
 
   const openModal = (type: 'approve' | 'reject', morakhasiId: number) => {
@@ -208,7 +226,8 @@ const WaitingMorakhasiPage: React.FC = () => {
     }
   }
 
-  function getLeaveTypeLabel(type: string | number) {
+  function getLeaveTypeLabel(type: string | number | undefined) {
+    if (type === undefined) return 'نامشخص';
     const typeNum = typeof type === 'string' ? parseInt(type) : type;
     switch (typeNum) {
       case 1:
@@ -222,7 +241,8 @@ const WaitingMorakhasiPage: React.FC = () => {
     }
   }
 
-  function getLeaveTypeBadgeClasses(type: string | number) {
+  function getLeaveTypeBadgeClasses(type: string | number | undefined) {
+    if (type === undefined) return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
     const typeNum = typeof type === 'string' ? parseInt(type) : type;
     switch (typeNum) {
       case 1: // Hourly - Orange
@@ -290,20 +310,40 @@ const WaitingMorakhasiPage: React.FC = () => {
 
   return (
     <PageTransition>
-      <div className="container mx-auto max-w-6xl p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">مرخصی‌های در انتظار تایید</h1>
-          <div className="relative w-full sm:w-auto sm:max-w-xs">
-            <Input
-              type="text"
-              placeholder="جستجو (نام، دلیل...)"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
-              className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-transparent focus:border-blue-400 dark:focus:border-blue-500 rounded-full shadow-sm transition placeholder:text-gray-400 text-gray-900 dark:text-white"
-            />
-            <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <div className="container mx-auto max-w-6xl p-6">
+          {/* Header and Search/Filter Section */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-6 text-center mx-auto">مرخصی‌های در انتظار تایید</h1>
+            
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-center">
+              {/* Search Bar */}
+              <div className="relative flex-1 lg:max-w-lg">
+                <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="جستجو نام قرآن آموز ، دلیل..."
+                  value={filters.search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pr-10 text-right bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors rounded-lg shadow-sm"
+                />
+              </div>
+              
+              {/* Type Filter */}
+              <div className="flex items-center gap-2 lg:min-w-[200px]">
+                <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Select value={filters.type?.toString() || 'all'} onValueChange={handleTypeFilterChange}>
+                  <SelectTrigger dir='rtl' className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 rounded-lg shadow-sm">
+                    <SelectValue placeholder="نوع مرخصی" />
+                  </SelectTrigger>
+                  <SelectContent dir='rtl'>
+                    <SelectItem value="all">همه انواع</SelectItem>
+                    <SelectItem value="1">ساعتی</SelectItem>
+                    <SelectItem value="3">چند روزه</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
-        </div>
 
         {isLoading && morakhasiList.length === 0 && (
           <div className="flex flex-col justify-center items-center h-[calc(100vh-250px)]">
@@ -337,7 +377,7 @@ const WaitingMorakhasiPage: React.FC = () => {
 
         {!error && morakhasiList.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
               {morakhasiList.map((morakhasi, index) => (
                 <motion.div
                   key={morakhasi.id}
@@ -371,6 +411,11 @@ const WaitingMorakhasiPage: React.FC = () => {
                     <div className="flex-1">
                       <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                         {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
+                        {morakhasi.student?.FatherName && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal mr-2">
+                            {morakhasi.student.FatherName}
+                          </span>
+                        )}
                       </h2>
                     </div>
                   </div>
@@ -409,26 +454,29 @@ const WaitingMorakhasiPage: React.FC = () => {
             </div>
 
             {pagination && pagination.lastPage > 1 && (
-              <div className="mt-10 flex justify-center items-center gap-4">
+              <div className="mt-8 sm:mt-10 flex justify-center items-center gap-2 sm:gap-4 px-4">
                 <button
                   onClick={() => handlePageChange(pagination.currentPage - 1)}
                   disabled={pagination.currentPage === 1 || isLoading}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
-                  aria-label="قبلی"
+                  className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                  aria-label="صفحه قبلی"
                 >
-                  <span className="text-lg">&#8594;</span>
-
+                  <span className="text-lg sm:text-xl font-medium">&#8594;</span>
                 </button>
-                <span className="text-gray-700 dark:text-gray-200 text-sm font-medium">
-                  صفحه {pagination.currentPage} از {pagination.lastPage}
-                </span>
+                
+                <div className="flex items-center justify-center min-w-0 px-2 sm:px-4">
+                  <span className="text-gray-700 dark:text-gray-200 text-sm sm:text-base font-medium whitespace-nowrap">
+                    صفحه {pagination.currentPage} از {pagination.lastPage}
+                  </span>
+                </div>
+                
                 <button
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={pagination.currentPage === pagination.lastPage || isLoading}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
-                  aria-label="بعدی"
+                  className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                  aria-label="صفحه بعدی"
                 >
-                  <span className="text-lg">&#8592;</span>
+                  <span className="text-lg sm:text-xl font-medium">&#8592;</span>
                 </button>
               </div>
             )}

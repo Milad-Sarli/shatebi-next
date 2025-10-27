@@ -27,6 +27,13 @@ export interface Morakhasi {
   user?: unknown;
   accepted_by_user?: unknown;
   tenant?: unknown;
+  student?: {
+    FatherName?: string;
+    Fname?: string;
+    Lname?: string;
+    Aks?: string;
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
@@ -67,7 +74,7 @@ export interface MorakhasiFilters {
 
 export interface PendingMorakhasiFilters {
   search?: string;
-  type?: string;
+  type?: number; // Changed to number to match API expectation (integer)
   per_page?: number;
   page?: number;
 }
@@ -88,7 +95,7 @@ export class MorakhasiService {
     if (filters.with) queryParams.append('with', filters.with);
     if (filters.tenant_id) queryParams.append('tenant_id', filters.tenant_id.toString());
     if (filters.status !== undefined) queryParams.append('status', filters.status.toString());
-    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.type) queryParams.append('type', filters.type.toString());
     if (filters.user_id) queryParams.append('user_id', filters.user_id.toString());
 
     const response = await fetch(`${API_URL}/api/morakhasi?${queryParams.toString()}`, {
@@ -193,7 +200,7 @@ export class MorakhasiService {
     if (filters.page) queryParams.append('page', filters.page.toString());
     if (filters.per_page) queryParams.append('per_page', filters.per_page.toString());
     if (filters.search) queryParams.append('search', filters.search);
-    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.type) queryParams.append('type', filters.type.toString());
 
     const response = await fetch(`${API_URL}/api/morakhasi/pending-acceptance?${queryParams.toString()}`, {
       headers: {
