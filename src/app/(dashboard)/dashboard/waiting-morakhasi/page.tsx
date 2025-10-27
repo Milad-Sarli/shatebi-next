@@ -12,9 +12,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { Textarea } from '@/components/ui/textarea';
-import dayjs from 'dayjs';
-import jalaliday from 'jalaliday';
-dayjs.extend(jalaliday);
+import { format, parseISO } from 'date-fns-jalali';
 
 // Define a basic User interface based on expected properties
 interface User {
@@ -201,29 +199,90 @@ const WaitingMorakhasiPage: React.FC = () => {
 
   function toJalali(date: string | undefined) {
     if (!date) return '-';
-    return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
+    try {
+      const parsedDate = parseISO(date);
+      return format(parsedDate, 'yyyy/MM/dd - HH:mm');
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return '-';
+    }
+  }
+
+  function getLeaveTypeLabel(type: string | number) {
+    const typeNum = typeof type === 'string' ? parseInt(type) : type;
+    switch (typeNum) {
+      case 1:
+        return 'ساعتی';
+      case 2:
+        return 'یک روزه';
+      case 3:
+        return 'چند روزه';
+      default:
+        return 'نامشخص';
+    }
+  }
+
+  function getLeaveTypeBadgeClasses(type: string | number) {
+    const typeNum = typeof type === 'string' ? parseInt(type) : type;
+    switch (typeNum) {
+      case 1: // Hourly - Orange
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-700';
+      case 2: // Single day - Green
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700';
+      case 3: // Multi-day - Purple
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-700';
+      default: // Unknown - Gray
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
+    }
   }
 
   function formatTimeRange(morakhasi: Morakhasi) {
     // Helper to convert to Persian numerals
     const toPersian = (str: string) => str.replace(/\d/g, d => String.fromCharCode(d.charCodeAt(0) + 1728));
 
-    // Hourly leave (type 1): show from hour to hour, with date
-    if (morakhasi.type === 1 && morakhasi.fromtime_1 && morakhasi.totime_1 && morakhasi.dayli_date) {
-      const from = toPersian(dayjs(morakhasi.fromtime_1).format('HH:mm'));
-      const to = toPersian(dayjs(morakhasi.totime_1).format('HH:mm'));
-      const date = toPersian(dayjs(morakhasi.dayli_date).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
-      return `${from} تا ${to} — ${date}`;
-    }
-    // Daily leave (type 2): show from date to date
-    if (morakhasi.type === 2 && morakhasi.fromdate && morakhasi.todate) {
-      const from = toPersian(dayjs(morakhasi.fromdate).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
-      const to = toPersian(dayjs(morakhasi.todate).calendar('jalali').locale('fa').format('YYYY/MM/DD'));
-      return `${from} تا ${to}`;
-    }
-    // Fallback: show raw times if available
-    if (morakhasi.fromtime_1 && morakhasi.totime_1) {
-      return `${toPersian(toJalali(morakhasi.fromtime_1))} تا ${toPersian(toJalali(morakhasi.totime_1))}`;
+    try {
+      const typeNum = typeof morakhasi.type === 'string' ? parseInt(morakhasi.type) : morakhasi.type;
+      
+      // Hourly leave (type 1): show from hour to hour, with date
+      if (typeNum === 1 && morakhasi.fromtime_1 && morakhasi.totime_1) {
+        const fromTime = parseISO(morakhasi.fromtime_1);
+        const toTime = parseISO(morakhasi.totime_1);
+        
+        const from = toPersian(format(fromTime, 'HH:mm'));
+        const to = toPersian(format(toTime, 'HH:mm'));
+        const dateStr = toPersian(format(fromTime, 'yyyy/MM/dd'));
+        return `${from} تا ${to} — ${dateStr}`;
+      }
+      
+      // Single day leave (type 2): show date from dayli_date
+      if (typeNum === 2 && morakhasi.dayli_date) {
+        const date = parseISO(morakhasi.dayli_date);
+        const dateStr = toPersian(format(date, 'yyyy/MM/dd'));
+        return dateStr;
+      }
+      
+      // Multi-day leave (type 3): show from date to date
+      if (typeNum === 3 && morakhasi.fromdate && morakhasi.todate) {
+        const fromDate = parseISO(morakhasi.fromdate);
+        const toDate = parseISO(morakhasi.todate);
+        
+        const from = toPersian(format(fromDate, 'yyyy/MM/dd'));
+        const to = toPersian(format(toDate, 'yyyy/MM/dd'));
+        return `${from} تا ${to}`;
+      }
+      
+      // Fallback: show raw times if available
+      if (morakhasi.fromtime_1 && morakhasi.totime_1) {
+        return `${toPersian(toJalali(morakhasi.fromtime_1))} تا ${toPersian(toJalali(morakhasi.totime_1))}`;
+      }
+      
+      // Another fallback for dates
+      if (morakhasi.fromdate && morakhasi.todate) {
+        return `${toPersian(toJalali(morakhasi.fromdate))} تا ${toPersian(toJalali(morakhasi.todate))}`;
+      }
+      
+    } catch (error) {
+      console.error('Error formatting date range:', error);
     }
     return '-';
   }
@@ -315,6 +374,14 @@ const WaitingMorakhasiPage: React.FC = () => {
                       </h2>
                     </div>
                   </div>
+                  
+                  {/* Leave Type Badge */}
+                  <div className="flex justify-start mb-2">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getLeaveTypeBadgeClasses(morakhasi.type)}`}>
+                      {getLeaveTypeLabel(morakhasi.type)}
+                    </span>
+                  </div>
+                  
                   {morakhasi.dalil && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">دلیل :  {morakhasi.dalil}</div>
                   )}
