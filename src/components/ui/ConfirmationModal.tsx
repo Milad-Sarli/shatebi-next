@@ -8,7 +8,7 @@ interface ConfirmationModalProps {
   onOpenChange?: (open: boolean) => void;
   onClose?: () => void;
   title: string;
-  description?: string;
+  description?: string | React.ReactNode;
   confirmText: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -72,9 +72,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {title}
           </DialogTitle>
           {description && (
-            <DialogDescription className="text-center">
+            <div className="text-muted-foreground text-sm text-center">
               {description}
-            </DialogDescription>
+            </div>
           )}
         </DialogHeader>
         {children && <div className="py-2">{children}</div>}
@@ -107,4 +107,4 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   );
 };
 
-export default ConfirmationModal; 
+export default ConfirmationModal;

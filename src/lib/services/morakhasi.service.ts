@@ -40,6 +40,8 @@ export interface Morakhasi {
 export interface GuardUpdatePayload {
   exit_ok?: 0 | 1;
   checked?: 0 | 1;
+  late?: 0 | 1;
+  late_time?: string;
 }
 
 export interface PaginatedResponse<T> {

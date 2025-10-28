@@ -7,21 +7,28 @@ import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn } from 'lucide-react';
+import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn, Clock, Calendar, CalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 // Textarea might not be needed if guard actions don't include messages
 // import { Textarea } from '@/components/ui/textarea'; 
-import dayjs from 'dayjs';
-import jalaliday from 'jalaliday';
-dayjs.extend(jalaliday);
+import { format, parseISO } from 'date-fns-jalali';
 
 // Define a basic User interface based on expected properties
 interface User {
   fullname?: string;
   personnel_code?: string;
   aks?: string;
+ dayli_date?: string; // اضافه شدن فیلد dayli_date برای مرخصی‌های یک‌روزه
+}
+
+// Enhanced Morakhasi interface for guard page
+interface GuardMorakhasi extends Morakhasi {
+  user?: User;
+  acceptedBy?: AcceptedBy;
+  tenant?: Tenant;
+  dayli_date?: string; // اضافه شدن فیلد dayli_date برای مرخصی‌های یک‌روزه
 }
 
 // This interface describes the actual flat structure of the API response for pagination
@@ -48,8 +55,13 @@ interface GuardMorakhasiFiltersState {
 interface ModalState {
   isOpen: boolean;
   morakhasiId: number | null;
-  // message: string; // Guard actions might not need a message
-  type: 'markExit' | 'markChecked' | null;
+  type: 'allowExit' | 'markEntry' | 'confirmLate' | null;
+}
+
+// State for late confirmation modal
+interface LateModalState {
+  isOpen: boolean;
+  morakhasiId: number | null;
 }
 
 const GuardPage: React.FC = () => {
@@ -66,13 +78,17 @@ const GuardPage: React.FC = () => {
   });
   const debouncedSearch = useDebounce(filters.search, 500);
 
-  const [pagination, setPagination] = useState<{ currentPage: number; lastPage: number; total: number } | null>(null);
+  const [pagination, setPagination] = useState<{ currentPage: number; lastPage: number; total: number; perPage: number } | null>(null);
 
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     morakhasiId: null,
-    // message: '',
     type: null,
+  });
+
+  const [lateModalState, setLateModalState] = useState<LateModalState>({
+    isOpen: false,
+    morakhasiId: null,
   });
 
   const fetchGuardMorakhasiList = useCallback(async () => {
@@ -100,6 +116,7 @@ const GuardPage: React.FC = () => {
           currentPage: apiData.current_page ?? 1,
           lastPage: apiData.last_page ?? 1,
           total: apiData.total ?? 0,
+          perPage: apiData.per_page ?? 10,
         });
       } else {
         setMorakhasiList([]);
@@ -125,7 +142,7 @@ const GuardPage: React.FC = () => {
     setFilters(prev => ({ ...prev, page: newPage }));
   };
 
-  const openModal = (type: 'markExit' | 'markChecked', morakhasiId: number) => {
+  const openModal = (type: 'allowExit' | 'markEntry' | 'confirmLate', morakhasiId: number) => {
     setModalState({ isOpen: true, morakhasiId, type });
   };
 
@@ -133,8 +150,22 @@ const GuardPage: React.FC = () => {
     setModalState({ isOpen: false, morakhasiId: null, type: null });
   };
 
-  const handleMarkExit = async () => {
-    if (!accessToken || !modalState.morakhasiId || modalState.type !== 'markExit') {
+  const closeLateModal = () => {
+    setLateModalState({ 
+      isOpen: false, 
+      morakhasiId: null
+    });
+  };
+
+  // تابع برای یافتن اطلاعات مرخصی بر اساس ID
+  const getCurrentMorakhasi = () => {
+    if (!modalState.morakhasiId && !lateModalState.morakhasiId) return null;
+    const targetId = modalState.morakhasiId || lateModalState.morakhasiId;
+    return morakhasiList.find(m => m.id === targetId);
+  };
+
+  const handleAllowExit = async () => {
+    if (!accessToken || !modalState.morakhasiId || modalState.type !== 'allowExit') {
         toast.error("خطای احراز هویت یا اطلاعات نامعتبر.");
         closeModal();
         return;
@@ -147,19 +178,19 @@ const GuardPage: React.FC = () => {
         { exit_ok: 1 }, 
         accessToken
       );
-      toast.success('خروج کاربر با موفقیت ثبت شد.');
+      toast.success('اجازه خروج با موفقیت ثبت شد.');
       fetchGuardMorakhasiList(); 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      toast.error(`خطا در ثبت خروج: ${errorMessage}`);
+      toast.error(`خطا در ثبت اجازه خروج: ${errorMessage}`);
     } finally {
       setIsLoading(false);
       closeModal();
     }
   };
 
-  const handleMarkChecked = async () => { // Assuming 'checked' means entry or confirmation
-    if (!accessToken || !modalState.morakhasiId || modalState.type !== 'markChecked') {
+  const handleMarkEntry = async () => {
+    if (!accessToken || !modalState.morakhasiId || modalState.type !== 'markEntry') {
       toast.error("خطای احراز هویت یا اطلاعات نامعتبر.");
       closeModal();
       return;
@@ -172,16 +203,68 @@ const GuardPage: React.FC = () => {
         { checked: 1 },
         accessToken
       );
-      toast.info('ورود/بررسی کاربر با موفقیت ثبت شد.');
+      toast.success('ورود با موفقیت ثبت شد.');
+      
+      // بلافاصله مودال تاخیر را باز کن
+      setLateModalState({
+        isOpen: true,
+        morakhasiId: modalState.morakhasiId
+      });
+      
       fetchGuardMorakhasiList();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      toast.error(`خطا در ثبت ورود/بررسی: ${errorMessage}`);
+      toast.error(`خطا در ثبت ورود: ${errorMessage}`);
     } finally {
       setIsLoading(false);
       closeModal();
     }
   };
+
+  const handleLateConfirmation = async (isLate: boolean) => {
+    if (!accessToken || !lateModalState.morakhasiId) {
+      toast.error("خطای احراز هویت یا اطلاعات نامعتبر.");
+      closeLateModal();
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      if (!isLate) {
+        // اگر دیر نکرده، late = 0 و مودال را ببند
+        await MorakhasiService.updateMorakhasiByGuard(
+          lateModalState.morakhasiId,
+          { late: 0 },
+          accessToken
+        );
+        toast.success('عدم تاخیر ثبت شد.');
+      } else {
+        // اگر دیر کرده، late = 1 و مودال را ببند
+        await MorakhasiService.updateMorakhasiByGuard(
+          lateModalState.morakhasiId,
+          { late: 1 },
+          accessToken
+        );
+        toast.success('تاخیر ثبت شد.');
+      }
+      
+      closeLateModal();
+      fetchGuardMorakhasiList();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      toast.error(`خطا در ثبت وضعیت تاخیر: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // تابع handleLateTimeSubmit حذف شده چون دیگر نیازی نیست
+
+  // Remove the formatTimeRange function as we're now handling time display inline
+  // function formatTimeRange(morakhasi: GuardMorakhasi) {
+  //   // Implementation removed - now handled inline in the component
+  // }
 
   function getStatusBadge(morakhasi: Morakhasi) {
     if (morakhasi.exit_ok === 1 && morakhasi.checked === 1) {
@@ -206,25 +289,34 @@ const GuardPage: React.FC = () => {
   }
 
 
-  function toJalali(date: string | undefined) {
+  function formatDateTime(date: string | undefined) {
     if (!date) return '-';
-    return dayjs(date).calendar('jalali').locale('fa').format('YYYY/MM/DD - HH:mm');
+    try {
+      return format(parseISO(date), 'yyyy/MM/dd - HH:mm');
+    } catch {
+      return '-';
+    }
   }
 
   return (
     <PageTransition>
-      <div className="container mx-auto max-w-7xl p-6"> {/* Max width increased slightly */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">کنترل تردد و مرخصی‌ها (نگهبانی)</h1>
-          <div className="relative w-full sm:w-auto sm:max-w-xs">
-            <Input
-              type="text"
-              placeholder="جستجو (نام، کد پرسنلی...)"
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
-              className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-transparent focus:border-blue-400 dark:focus:border-blue-500 rounded-full shadow-sm transition placeholder:text-gray-400 text-gray-900 dark:text-white"
-            />
-            <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      <div className="container mx-auto max-w-6xl p-6">
+        {/* Header and Search Section */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-6 text-center mx-auto">کنترل تردد و مرخصی‌ها (نگهبانی)</h1>
+          
+          <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-center">
+            {/* Search Bar */}
+            <div className="relative flex-1 lg:max-w-lg">
+              <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="جستجو نام، کد پرسنلی..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+                className="pr-10 text-right bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors rounded-lg shadow-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -260,8 +352,10 @@ const GuardPage: React.FC = () => {
 
         {!error && morakhasiList.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"> {/* Adjusted grid for potentially more items */}
-              {morakhasiList.map((morakhasi, index) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
+              {morakhasiList
+                .filter(morakhasi => morakhasi.checked !== 1 && morakhasi.checked !== "1") // فیلتر کردن مرخصی‌هایی که checked آن‌ها برابر 1 یا "1" است
+                .map((morakhasi, index) => (
                 <motion.div
                   key={morakhasi.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -271,161 +365,302 @@ const GuardPage: React.FC = () => {
                     delay: index * 0.05,
                     ease: [0.4, 0, 0.2, 1],
                   }}
-                  className="bg-white dark:bg-gray-900 shadow-lg rounded-xl p-4 flex flex-col justify-between min-h-[200px] border border-gray-200 dark:border-gray-800 hover:shadow-xl transition-all duration-300 ease-out group"
+                  className="bg-white dark:bg-gray-900 rounded-2xl p-4 flex flex-col gap-3 shadow hover:shadow-lg transition-shadow min-h-[140px] border border-gray-100 dark:border-gray-800"
                 >
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden mr-3 shrink-0 border-2 border-gray-200 dark:border-gray-700 group-hover:border-blue-400 dark:group-hover:border-blue-500 transition-colors">
-                                {(morakhasi.user as User)?.aks ? (
-                                <Image
-                                    src={(() => {
-                                      const aks = (morakhasi.user as User)?.aks;
-                                      if (!aks) return '/avatars/default.svg';
-                                      if (aks.startsWith('http')) return aks;
-                                      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${aks.startsWith('storage/') ? aks : `storage/${aks}`}`;
-                                    })()}
-                                    alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
-                                    width={40}
-                                    height={40}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { e.currentTarget.src = '/avatars/default.svg'; }}
-                                />
-                                ) : (
-                                <span className="text-base font-bold text-gray-400 dark:text-gray-500">
-                                    {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
-                                </span>
-                                )}
-                            </div>
-                            <div>
-                                <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                                {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
-                                </h2>
-                                {(morakhasi.user as User)?.personnel_code && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    کد: {(morakhasi.user as User)?.personnel_code}
-                                </p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="text-left">
-                            {getStatusBadge(morakhasi)}
-                        </div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                      {(morakhasi.user as User)?.aks ? (
+                        <Image
+                          src={(() => {
+                            const aks = (morakhasi.user as User)?.aks;
+                            if (!aks) return '/avatars/default.svg';
+                            if (aks.startsWith('http')) return aks;
+                            return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/${aks.startsWith('storage/') ? aks : `storage/${aks}`}`;
+                          })()}
+                          alt={((morakhasi.user as User)?.fullname || morakhasi.fullname || 'User') + ' image'}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.src = '/avatars/default.svg'; }}
+                        />
+                      ) : (
+                        <span className="text-base font-bold text-gray-400 dark:text-gray-500">
+                          {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                        </span>
+                      )}
                     </div>
+                    <div className="flex-1">
+                      <div className="flex items-baseline gap-1">
+                        <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                          {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
+                        </h2>
+                      </div>
+                      {(morakhasi.user as User)?.personnel_code && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          کد: {(morakhasi.user as User)?.personnel_code}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-left">
+                      {getStatusBadge(morakhasi)}
+                    </div>
+                  </div>
 
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-1.5 line-clamp-2">
-                      <span className="font-medium text-gray-700 dark:text-gray-200">دلیل:</span> {morakhasi.dalil || <span className="text-gray-400 dark:text-gray-500 italic">ثبت نشده</span>}
-                    </p>
+                  {morakhasi.dalil && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">
+                      <span className="font-medium text-gray-700 dark:text-gray-200">دلیل:</span> {morakhasi.dalil}
+                    </div>
+                  )}
+
+                  {/* نمایش پیام نگهبان اگر وجود داشته باشد */}
+                  {morakhasi.guardmessage && (
+                    <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg mb-1">
+                      <span className="font-medium">پیام نگهبان:</span> {morakhasi.guardmessage}
+                    </div>
+                  )}
+
+                  {/* نمایش اطلاعات تایید کننده */}
+                  {morakhasi.accepted_by && (
+                    <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg mb-1">
+                      <span className="font-medium"></span> {morakhasi.accepted_by}
+                    </div>
+                  )}
+                  
+                  {morakhasi.type === "1" && ( // ساعتی
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
+                      <div>تاریخ: {(() => {
+                        try {
+                          const date = morakhasi.fromtime_1 ? format(parseISO(morakhasi.fromtime_1), 'yyyy/MM/dd') :
+                                       morakhasi.dayli_date ? format(parseISO(morakhasi.dayli_date), 'yyyy/MM/dd') : '-';
+                          return date;
+                        } catch {
+                          return '-';
+                        }
+                      })()}</div>
+                      <div>ساعت: {(() => {
+                        try {
+                          const fromTime = morakhasi.fromtime_1 ? format(parseISO(morakhasi.fromtime_1), 'HH:mm') : '';
+                          const toTime = morakhasi.totime_1 ? format(parseISO(morakhasi.totime_1), 'HH:mm') : '';
+                          return fromTime && toTime ? `${fromTime} الی ${toTime}` : '-';
+                        } catch {
+                          return '-';
+                        }
+                      })()}</div>
+                    </div>
+                  )}
+                  {morakhasi.type === "2" && ( // یک‌روزه
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
+                      <div>تاریخ: {(() => {
+                        try {
+                          const date = morakhasi.dayli_date ? format(parseISO(morakhasi.dayli_date), 'yyyy/MM/dd') :
+                                       morakhasi.fromdate ? format(parseISO(morakhasi.fromdate), 'yyyy/MM/dd') : '-';
+                          return date;
+                        } catch {
+                          return '-';
+                        }
+                      })()}</div>
+                      <div>نوع: تمام روز</div>
+                    </div>
+                  )}
+                  {morakhasi.type === "3" && ( // چندروزه
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
+                      <div>از: {(() => {
+                        try {
+                          return morakhasi.fromdate ? format(parseISO(morakhasi.fromdate), 'yyyy/MM/dd') : '-';
+                        } catch {
+                          return '-';
+                        }
+                      })()}</div>
+                      <div>تا: {(() => {
+                        try {
+                          return morakhasi.todate ? format(parseISO(morakhasi.todate), 'yyyy/MM/dd') : '-';
+                        } catch {
+                          return '-';
+                        }
+                      })()}</div>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
+                    {/* دکمه اجازه خروج - نمایش زمانی که exit_ok برابر 0 یا null باشد */}
+                    {(morakhasi.status === 1 || morakhasi.status === "1") && (morakhasi.exit_ok === 0 || morakhasi.exit_ok === null || morakhasi.exit_ok === "0") && (
+                      <button
+                        onClick={() => openModal('allowExit', morakhasi.id)}
+                        disabled={isLoading}
+                        className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 transition font-medium disabled:opacity-50 shadow-sm text-xs"
+                      >
+                        <LogOut size={14} /> اجازه خروج
+                      </button>
+                    )}
                     
-                    {morakhasi.type === 1 && ( // ساعتی
-                      <>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          <span className="font-medium">تاریخ:</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{toJalali(morakhasi.fromtime_1)?.split('-')[0].trim()}</span>
-                        </p>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          <span className="font-medium">ساعت:</span> <span className="font-semibold text-indigo-600 dark:text-indigo-400">{toJalali(morakhasi.fromtime_1)?.split('-')[1].trim()}</span> الی <span className="font-semibold text-red-600 dark:text-red-400">{toJalali(morakhasi.totime_1)?.split('-')[1].trim()}</span>
-                        </p>
-                      </>
-                    )}
-                    {morakhasi.type === 2 && ( // روزانه
-                      <>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            <span className="font-medium">از:</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{toJalali(morakhasi.fromtime_1)}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                            <span className="font-medium">تا:</span> <span className="font-semibold text-red-600 dark:text-red-400">{toJalali(morakhasi.totime_1)}</span>
-                        </p>
-                      </>
-                    )}
-                     <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1.5">ID: {morakhasi.id}</p>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-2">
-                    {morakhasi.status === 1 && !morakhasi.exit_ok && ( // Approved by manager AND not yet exited
-                        <button
-                        onClick={() => openModal('markExit', morakhasi.id)}
+                    {/* دکمه ثبت ورود - نمایش زمانی که exit_ok برابر 1 و checked null یا 0 باشد */}
+                    {(morakhasi.status === 1 || morakhasi.status === "1") && (morakhasi.exit_ok === 1 || morakhasi.exit_ok === "1") && 
+                     (morakhasi.checked === null || morakhasi.checked === 0 || morakhasi.checked === "0") && (
+                      <button
+                        onClick={() => openModal('markEntry', morakhasi.id)}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-medium disabled:opacity-60 shadow-md text-xs"
-                        >
-                        <LogOut size={15} /> ثبت خروج
-                        </button>
+                        className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800 transition font-medium disabled:opacity-50 shadow-sm text-xs"
+                      >
+                        <LogIn size={14} /> ثبت ورود
+                      </button>
                     )}
-                    {morakhasi.status === 1 && morakhasi.exit_ok === 1 && morakhasi.checked !== 1 && ( // Approved, Exited, AND not yet checked (returned/completed)
-                        <button
-                        onClick={() => openModal('markChecked', morakhasi.id)}
-                        disabled={isLoading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors font-medium disabled:opacity-60 shadow-md text-xs"
-                        >
-                        <LogIn size={15} /> ثبت ورود/تکمیل
-                        </button>
+                    
+                    {/* پیام‌های وضعیت */}
+                    {(morakhasi.status === 1 || morakhasi.status === "1") && (morakhasi.exit_ok === 1 || morakhasi.exit_ok === "1") && 
+                     (morakhasi.checked === 1 || morakhasi.checked === "1") && (
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">فرآیند تکمیل شده</p>
                     )}
-                     {/* Show a message if actions are completed or not applicable */}
-                    {morakhasi.status !== 1 && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">منتظر تایید مدیر</p>
-                    )}
-                    {morakhasi.status === 1 && morakhasi.exit_ok === 1 && morakhasi.checked === 1 && (
-                        <p className="text-xs text-green-600 dark:text-green-400 font-medium">فرآیند تکمیل شده</p>
-                    )}
-
-
                   </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
             </div>
 
             {pagination && pagination.lastPage > 1 && (
-              <div className="mt-10 flex justify-center items-center gap-4">
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1 || isLoading}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
-                  aria-label="قبلی"
-                >
-                  <span className="text-lg">&#8594;</span>
-                </button>
-                <span className="text-gray-700 dark:text-gray-200 text-sm font-medium">
-                  صفحه {pagination.currentPage} از {pagination.lastPage} (کل: {pagination.total})
-                </span>
-                <button
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.lastPage || isLoading}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition disabled:opacity-40"
-                  aria-label="بعدی"
-                >
-                  <span className="text-lg">&#8592;</span>
-                </button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-600 dark:text-gray-400 order-2 sm:order-1">
+                  نمایش {((pagination.currentPage - 1) * pagination.perPage) + 1} تا {Math.min(pagination.currentPage * pagination.perPage, pagination.total)} از {pagination.total} مورد
+                </div>
+                
+                <div className="flex items-center gap-2 order-1 sm:order-2">
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1 || isLoading}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <span className="text-lg">&#8594;</span>
+                    <span className="hidden sm:inline">قبلی</span>
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, pagination.lastPage) }, (_, i) => {
+                      let pageNum;
+                      if (pagination.lastPage <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage >= pagination.lastPage - 2) {
+                        pageNum = pagination.lastPage - 4 + i;
+                      } else {
+                        pageNum = pagination.currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-10 h-10 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md ${
+                            pagination.currentPage === pageNum
+                              ? 'bg-blue-600 text-white shadow-lg'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.lastPage || isLoading}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <span className="hidden sm:inline">بعدی</span>
+                    <span className="text-lg">&#8592;</span>
+                  </button>
+                </div>
               </div>
             )}
           </>
         )}
       </div>
 
-      {/* Confirmation Modals for Guard Actions */}
+      {/* Confirmation Modals */}
       <ConfirmationModal
-        isOpen={modalState.isOpen && modalState.type === 'markExit'}
+        isOpen={modalState.isOpen && modalState.type === 'allowExit'}
         onClose={closeModal}
-        onConfirm={handleMarkExit}
-        title="تایید خروج کاربر"
-        confirmText="تایید و ثبت خروج"
-        isConfirmDisabled={isLoading}
-      >
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          آیا از ثبت خروج برای این درخواست مرخصی اطمینان دارید؟ این عمل قابل بازگشت نیست.
-        </p>
-      </ConfirmationModal>
+        onConfirm={handleAllowExit}
+        title="تایید اجازه خروج"
+        description={
+          <div>
+            آیا از صدور اجازه خروج برای این کاربر اطمینان دارید؟
+            {getCurrentMorakhasi() && (
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">قرآن آموز: </span>
+                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                  {getCurrentMorakhasi()?.fullname}
+                </span>
+              </div>
+            )}
+          </div>
+        }
+        confirmText="اجازه خروج"
+        cancelText="انصراف"
+        variant="warning"
+      />
 
       <ConfirmationModal
-        isOpen={modalState.isOpen && modalState.type === 'markChecked'}
+        isOpen={modalState.isOpen && modalState.type === 'markEntry'}
         onClose={closeModal}
-        onConfirm={handleMarkChecked}
-        title="تایید ورود/تکمیل مرخصی"
-        confirmText="تایید و ثبت"
-        isConfirmDisabled={isLoading}
-      >
-         <p className="text-sm text-gray-600 dark:text-gray-300">
-          آیا از ثبت ورود یا تکمیل این درخواست مرخصی اطمینان دارید؟
-        </p>
-      </ConfirmationModal>
+        onConfirm={handleMarkEntry}
+        title="تایید ثبت ورود"
+        description={
+          <div>
+            آیا از ثبت ورود این کاربر اطمینان دارید؟
+            {getCurrentMorakhasi() && (
+              <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">دانش‌آموز: </span>
+                <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                  {getCurrentMorakhasi()?.fullname}
+                </span>
+              </div>
+            )}
+          </div>
+        }
+        confirmText="ثبت ورود"
+        cancelText="انصراف"
+        variant="default"
+      />
+
+      {/* Late Confirmation Modal */}
+      {lateModalState.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              تایید وضعیت تاخیر
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              آیا این کاربر دیر کرده است؟
+            </p>
+            
+            {getCurrentMorakhasi() && (
+              <div className="mb-6 p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400">دانش‌آموز: </span>
+                <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                  {getCurrentMorakhasi()?.fullname}
+                </span>
+              </div>
+            )}
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => handleLateConfirmation(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                خیر، دیر نکرده
+              </button>
+              <button
+                onClick={() => handleLateConfirmation(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                بله، دیر کرده
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Selector Modal - حذف شده */}
 
     </PageTransition>
   );

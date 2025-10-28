@@ -13,14 +13,10 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { MorakhasiFilters } from "@/lib/types";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { motion } from "framer-motion";
-import dayjs from "dayjs";
-import jalaliday from "jalaliday";
-import "dayjs/locale/fa";
+import { format, differenceInDays, parseISO } from "date-fns-jalali";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { CalendarCheck, Clock, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-dayjs.extend(jalaliday);
 
 const leaveTypes = [
   { value: "all", label: "همه انواع" },
@@ -39,9 +35,9 @@ const statusOptions = [
 ];
 
 function getTypeLabel(type: number | string | undefined) {
-  if (type === 1 || type === "ساعتی") return "ساعتی";
-  if (type === 2 || type === "یک‌روزه") return "یک‌روزه";
-  if (type === 3 || type === "چندروزه") return "چندروزه";
+  if (type === "1" || type === "ساعتی") return "ساعتی";
+  if (type === "2" || type === "یک روزه") return "یک روزه";
+  if (type === "3" || type === "چند روزه") return "چند روزه";
   return "-";
 }
 
@@ -58,17 +54,39 @@ function getStatusLabel(status: number | string | undefined) {
 function getStatusWithLateTime(leave: Morakhasi) {
   const status = getStatusLabel(leave.status);
   if (leave.late_time) {
-    return `${status} (${leave.late_time} دقیقه تاخیر)`;
+    // Check if late_time is in HH:MM:SS format
+    const timePattern = /^(\d{2}):(\d{2}):(\d{2})$/;
+    const match = leave.late_time.match(timePattern);
+    
+    if (match) {
+      const hours = match[1];
+      const minutes = match[2];
+      
+      // If hours is not 00, show as "ساعت تاخیر"
+      if (hours !== '00') {
+        return `${status} (${leave.late_time} ساعت تاخیر)`;
+      } else {
+        // If hours is 00, show as "دقیقه تاخیر"
+        return `${status} (${leave.late_time} دقیقه تاخیر)`;
+      }
+    } else {
+      // Fallback for non-time format (assume it's minutes)
+      return `${status} (${leave.late_time} دقیقه تاخیر)`;
+    }
   }
   return status;
 }
 
 function toJalali(date: string | undefined, showTime = true) {
   if (!date) return '-';
-  const d = dayjs(date).calendar('jalali').locale('fa');
-  return showTime
-    ? d.format('YYYY/MM/DD - HH:mm')
-    : d.format('YYYY/MM/DD');
+  try {
+    const parsedDate = parseISO(date);
+    return showTime
+      ? format(parsedDate, 'yyyy/MM/dd - HH:mm')
+      : format(parsedDate, 'yyyy/MM/dd');
+  } catch (error) {
+    return '-';
+  }
 }
 
 function getLeaveTimeDisplay(leave: Morakhasi) {
@@ -100,6 +118,148 @@ function getLeaveTimeDisplay(leave: Morakhasi) {
     );
   }
   return "-";
+}
+
+// Function to convert time string to minutes
+function timeToMinutes(timeStr: string): number {
+  const timePattern = /^(\d{2}):(\d{2}):(\d{2})$/;
+  const match = timeStr.match(timePattern);
+  
+  if (match) {
+    const hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    return hours * 60 + minutes;
+  }
+  
+  // If it's just a number, assume it's already in minutes
+  const numericValue = parseFloat(timeStr);
+  return isNaN(numericValue) ? 0 : numericValue;
+}
+
+// Function to convert minutes back to hours and minutes display
+function minutesToTimeDisplay(totalMinutes: number): string {
+  if (totalMinutes === 0) return '0 دقیقه';
+  
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  
+  if (hours > 0 && minutes > 0) {
+    return `${hours} ساعت و ${minutes} دقیقه`;
+  } else if (hours > 0) {
+    return `${hours} ساعت`;
+  } else {
+    return `${minutes} دقیقه`;
+  }
+}
+
+// Function to calculate average late time from leaves data
+function calculateAverageLateTime(leavesData: Morakhasi[]): string {
+  const lateLeaves = leavesData.filter(leave => leave.late_time);
+  
+  if (lateLeaves.length === 0) return '0 دقیقه';
+  
+  const totalMinutes = lateLeaves.reduce((sum, leave) => {
+    return sum + timeToMinutes(leave.late_time || '');
+  }, 0);
+  
+  const averageMinutes = totalMinutes / lateLeaves.length;
+  return minutesToTimeDisplay(averageMinutes);
+}
+
+// Function to calculate leaves longer than 2 days
+function calculateLongLeaves(leavesData: Morakhasi[]): { count: number; leaves: Array<{ leave: Morakhasi; duration: number; dateRange: string }> } {
+  const longLeaves: Array<{ leave: Morakhasi; duration: number; dateRange: string }> = [];
+  
+  leavesData.forEach(leave => {
+    // Only check multi-day leaves (چندروزه) that have fromdate and todate
+    if (leave.fromdate && leave.todate) {
+      try {
+        const fromDate = parseISO(leave.fromdate);
+        const toDate = parseISO(leave.todate);
+        const duration = differenceInDays(toDate, fromDate) + 1; // +1 to include both start and end days
+        
+        if (duration > 2) {
+          const dateRange = `${format(fromDate, 'yyyy/MM/dd')} تا ${format(toDate, 'yyyy/MM/dd')}`;
+          longLeaves.push({
+            leave,
+            duration,
+            dateRange
+          });
+        }
+      } catch (error) {
+        // Skip invalid dates
+      }
+    }
+  });
+  
+  return {
+    count: longLeaves.length,
+    leaves: longLeaves
+  };
+}
+
+// Function to calculate average leave duration from leaves data
+function calculateAverageLeaveDuration(leavesData: Morakhasi[]): string {
+  if (leavesData.length === 0) return '0 روز';
+  
+  let totalDays = 0;
+  let validLeaves = 0;
+  
+  leavesData.forEach(leave => {
+    let duration = 0;
+    
+    // چندروزه - calculate days between fromdate and todate
+    if (leave.fromdate && leave.todate) {
+      try {
+        const fromDate = parseISO(leave.fromdate);
+        const toDate = parseISO(leave.todate);
+        duration = differenceInDays(toDate, fromDate) + 1; // +1 to include both start and end days
+      } catch (error) {
+        duration = 0;
+      }
+    }
+    // یک‌روزه - 1 day
+    else if (leave.dayli_date) {
+      duration = 1;
+    }
+    // ساعتی - calculate as fraction of day (8 hours = 1 day)
+    else if (leave.fromtime_1 && leave.totime_1) {
+      try {
+        const fromTime = parseISO(leave.fromtime_1);
+        const toTime = parseISO(leave.totime_1);
+        const diffMs = toTime.getTime() - fromTime.getTime();
+        const hours = diffMs / (1000 * 60 * 60);
+        duration = hours / 8; // Assuming 8-hour workday
+      } catch (error) {
+        duration = 0;
+      }
+    }
+    
+    if (duration > 0) {
+      totalDays += duration;
+      validLeaves++;
+    }
+  });
+  
+  if (validLeaves === 0) return '0 روز';
+  
+  const averageDays = totalDays / validLeaves;
+  
+  if (averageDays < 1) {
+    const hours = Math.round(averageDays * 8);
+    return `${hours} ساعت`;
+  } else if (averageDays === 1) {
+    return '1 روز';
+  } else {
+    const days = Math.floor(averageDays);
+    const remainingHours = Math.round((averageDays - days) * 8);
+    
+    if (remainingHours > 0) {
+      return `${days} روز و ${remainingHours} ساعت`;
+    } else {
+      return `${days} روز`;
+    }
+  }
 }
 
 interface Statistics {
@@ -151,6 +311,8 @@ export default function LeavesListPage() {
   const [statistics, setStatistics] = React.useState<Statistics | null>(null);
   const [isLateLeavesModalOpen, setIsLateLeavesModalOpen] = React.useState(false);
   const [lateLeaves, setLateLeaves] = React.useState<Morakhasi[]>([]);
+  const [isLongLeavesModalOpen, setIsLongLeavesModalOpen] = React.useState(false);
+  const [longLeavesData, setLongLeavesData] = React.useState<Array<{ leave: Morakhasi; duration: number; dateRange: string }>>([]);
 
   React.useEffect(() => {
     if (!accessToken || !user) return;
@@ -305,6 +467,13 @@ export default function LeavesListPage() {
     setIsLateLeavesModalOpen(true);
   };
 
+  // Add this function to handle long leaves modal
+  const handleLongLeavesClick = () => {
+    const longLeavesResult = calculateLongLeaves(leaves);
+    setLongLeavesData(longLeavesResult.leaves);
+    setIsLongLeavesModalOpen(true);
+  };
+
   return (
     <PageTransition>
       <div className="space-y-4 relative">
@@ -353,19 +522,20 @@ export default function LeavesListPage() {
                 </ResponsiveContainer>
               </div>
             </motion.div>
-            {/* Most Common Reason */}
+            {/* Most Common Reason - Replaced with Long Leaves Widget */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.5, type: "spring" }}
               whileHover={{ scale: 1.04 }}
-              className="relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-tr from-pink-500 to-rose-400 dark:from-pink-700 dark:to-rose-800 flex flex-col"
+              onClick={handleLongLeavesClick}
+              className="relative overflow-hidden rounded-2xl shadow-lg p-5 bg-gradient-to-tr from-pink-500 to-rose-400 dark:from-pink-700 dark:to-rose-800 flex flex-col cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-white text-sm font-medium mb-1">شایع‌ترین علت</div>
-                  <div className="text-lg font-bold text-white">{statistics.most_common_reason?.reason ?? '-'}</div>
-                  <div className="text-xs text-rose-100 mt-1">{statistics.most_common_reason?.period} ({statistics.most_common_reason?.count ?? 0} بار)</div>
+                  <div className="text-white text-sm font-medium mb-1">مرخصی‌های بیشتر از 2 روز</div>
+                  <div className="text-2xl font-bold text-white">{calculateLongLeaves(leaves).count}</div>
+                  <div className="text-xs text-rose-100 mt-1">هفته گذشته</div>
                 </div>
                 <div className="bg-white/20 rounded-full p-2">
                   <Info className="w-6 h-6 text-white" />
@@ -390,8 +560,8 @@ export default function LeavesListPage() {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <div className="text-white text-sm font-medium mb-1">میانگین مدت مرخصی</div>
-                  <div className="text-2xl font-bold text-white">{statistics.average_leave_duration?.value ?? '-'}</div>
-                  <div className="text-xs text-yellow-100 mt-1">{statistics.average_leave_duration?.period}</div>
+                  <div className="text-lg font-bold text-white leading-tight">{calculateAverageLeaveDuration(leaves)}</div>
+                  <div className="text-xs text-yellow-100 mt-1">7 روز گذشته</div>
                 </div>
                 <div className="bg-white/20 rounded-full p-2">
                   <CalendarCheck className="w-6 h-6 text-white" />
@@ -416,8 +586,8 @@ export default function LeavesListPage() {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <div className="text-white text-sm font-medium mb-1">میانگین تاخیر</div>
-                  <div className="text-2xl font-bold text-white">{statistics.average_late_time?.value ?? '-'}</div>
-                  <div className="text-xs text-red-100 mt-1">{statistics.average_late_time?.period}</div>
+                  <div className="text-lg font-bold text-white leading-tight">{calculateAverageLateTime(leaves)}</div>
+                  <div className="text-xs text-red-100 mt-1">7 روز گذشته</div>
                 </div>
                 <div className="bg-white/20 rounded-full p-2">
                   <Clock className="w-6 h-6 text-white" />
@@ -752,6 +922,56 @@ export default function LeavesListPage() {
                         {leave.late_time} دقیقه تاخیر
                       </span>
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Long Leaves Modal */}
+        <Dialog open={isLongLeavesModalOpen} onOpenChange={setIsLongLeavesModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                مرخصی‌های بیشتر از 2 روز
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {longLeavesData.length === 0 ? (
+                <div className="text-center text-zinc-500 dark:text-zinc-400 py-8">
+                  هیچ مرخصی بیشتر از 2 روز در هفته گذشته ثبت نشده است
+                </div>
+              ) : (
+                longLeavesData.map((item) => (
+                  <div
+                    key={item.leave.id}
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                        {item.leave.fullname || '-'}
+                      </span>
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {typeof item.leave.created_at === 'string' ? toJalali(item.leave.created_at) : '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-zinc-600 dark:text-zinc-300">
+                        {getTypeLabel(item.leave.type)}
+                      </span>
+                      <span className="bg-pink-100 text-pink-700 dark:bg-pink-800 dark:text-pink-200 px-3 py-1 rounded-full text-xs font-bold">
+                        {item.duration} روز
+                      </span>
+                    </div>
+                    <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                      <span className="font-medium">تاریخ مرخصی:</span> {item.dateRange}
+                    </div>
+                    {item.leave.dalil && (
+                      <div className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
+                        <span className="font-medium">علت:</span> {item.leave.dalil}
+                      </div>
+                    )}
                   </div>
                 ))
               )}

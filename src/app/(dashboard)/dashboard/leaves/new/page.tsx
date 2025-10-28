@@ -11,14 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import LeavesBackgroundPattern from "@/components/LeavesBackgroundPattern";
 import DatePicker, { DateObject } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 
 const leaveTypes = [
   { value: "hourly", label: "ساعتی" },
-  { value: "oneday", label: "یک‌روزه" },
   { value: "multiday", label: "چندروزه" },
 ];
 
@@ -28,7 +26,6 @@ export default function NewLeavePage() {
   const { toast } = useToast();
   const [leaveType, setLeaveType] = useState("hourly");
   const [hourlyDate, setHourlyDate] = useState<DateObject | null>(null);
-  const [onedayDate, setOnedayDate] = useState<DateObject | null>(null);
   const [dateRange, setDateRange] = useState<{ from: DateObject | null; to: DateObject | null }>({ from: null, to: null });
   const [fromTime, setFromTime] = useState<string>("");
   const [toTime, setToTime] = useState<string>("");
@@ -73,20 +70,6 @@ export default function NewLeavePage() {
         fromtime_1: fromTime,
         totime_1: toTime,
       };
-    } else if (leaveType === "oneday") {
-      const dateVal = jalaliDateObjectToDate(onedayDate);
-      if (!dateVal) {
-        toast({
-          title: 'خطا',
-          description: 'لطفا تاریخ را وارد کنید.',
-        });
-        return;
-      }
-      data = {
-        ...data,
-        type: 2,
-        dayli_date: dateVal.toISOString().split("T")[0],
-      };
     } else if (leaveType === "multiday") {
       const fromDate = jalaliDateObjectToDate(dateRange.from);
       const toDateVal = jalaliDateObjectToDate(dateRange.to);
@@ -115,7 +98,6 @@ export default function NewLeavePage() {
       setFromTime("");
       setToTime("");
       setHourlyDate(null);
-      setOnedayDate(null);
       setDateRange({ from: null, to: null });
     } catch (err: unknown) {
       toast({
@@ -130,7 +112,6 @@ export default function NewLeavePage() {
   return (
     <PageTransition>
 
-      <LeavesBackgroundPattern  />
       <div className="flex justify-center items-start min-h-[80vh] py-8 px-2 sm:px-4 md:px-8 bg-transparent">
         <div className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl">
           <div className="space-y-4">
@@ -198,20 +179,6 @@ export default function NewLeavePage() {
                       <div className="flex-1">
                         <TimePicker label="تا ساعت" value={toTime} onChange={setToTime} />
                       </div>
-                    </div>
-                  )}
-                  {leaveType === "oneday" && (
-                    <div>
-                      <label className="block mb-2 font-medium text-zinc-700 dark:text-zinc-200">تاریخ</label>
-                      <DatePicker
-                        value={onedayDate}
-                        onChange={setOnedayDate}
-                        calendar={persian}
-                        locale={persian_fa}
-                        calendarPosition="bottom-right"
-                        style={{ width: "100%" }}
-                        inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
-                      />
                     </div>
                   )}
                   {leaveType === "multiday" && (
