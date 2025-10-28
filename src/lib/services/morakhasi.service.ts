@@ -14,15 +14,15 @@ export interface Morakhasi {
   todate?: string;
   fromtime_2?: string;
   totime_2?: string;
-  status?: number;
+  status?: number | string;
   sms_sent?: number;
   reject_dalil?: string;
-  exit_ok?: number;
+  exit_ok?: number | string;
   accepted_by?: number;
-  checked?: number;
+  checked?: number | string;
   late?: number;
   late_time?: string;
-  type?: number;
+  type?: number | string;
   tenant_id?: number;
   user?: unknown;
   accepted_by_user?: unknown;
@@ -38,8 +38,8 @@ export interface Morakhasi {
 }
 
 export interface GuardUpdatePayload {
-  exit_ok?: 0 | 1;
-  checked?: 0 | 1;
+  exit_ok?: 0 | 1 | "0" | "1";
+  checked?: 0 | 1 | "0" | "1";
   late?: 0 | 1;
   late_time?: string;
 }

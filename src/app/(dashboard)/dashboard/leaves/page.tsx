@@ -60,7 +60,7 @@ function getStatusWithLateTime(leave: Morakhasi) {
     
     if (match) {
       const hours = match[1];
-      const minutes = match[2];
+      // const minutes = match[2];
       
       // If hours is not 00, show as "ساعت تاخیر"
       if (hours !== '00') {
@@ -84,7 +84,7 @@ function toJalali(date: string | undefined, showTime = true) {
     return showTime
       ? format(parsedDate, 'yyyy/MM/dd - HH:mm')
       : format(parsedDate, 'yyyy/MM/dd');
-  } catch (error) {
+  } catch {
     return '-';
   }
 }
@@ -186,7 +186,7 @@ function calculateLongLeaves(leavesData: Morakhasi[]): { count: number; leaves: 
             dateRange
           });
         }
-      } catch (error) {
+      } catch {
         // Skip invalid dates
       }
     }
@@ -214,7 +214,7 @@ function calculateAverageLeaveDuration(leavesData: Morakhasi[]): string {
         const fromDate = parseISO(leave.fromdate);
         const toDate = parseISO(leave.todate);
         duration = differenceInDays(toDate, fromDate) + 1; // +1 to include both start and end days
-      } catch (error) {
+      } catch {
         duration = 0;
       }
     }
@@ -230,7 +230,7 @@ function calculateAverageLeaveDuration(leavesData: Morakhasi[]): string {
         const diffMs = toTime.getTime() - fromTime.getTime();
         const hours = diffMs / (1000 * 60 * 60);
         duration = hours / 8; // Assuming 8-hour workday
-      } catch (error) {
+      } catch {
         duration = 0;
       }
     }

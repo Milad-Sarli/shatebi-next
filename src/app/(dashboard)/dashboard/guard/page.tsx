@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
-import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn, Clock, Calendar, CalendarDays } from 'lucide-react';
+import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn} from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
@@ -24,12 +24,12 @@ interface User {
 }
 
 // Enhanced Morakhasi interface for guard page
-interface GuardMorakhasi extends Morakhasi {
-  user?: User;
-  acceptedBy?: AcceptedBy;
-  tenant?: Tenant;
-  dayli_date?: string; // اضافه شدن فیلد dayli_date برای مرخصی‌های یک‌روزه
-}
+// interface GuardMorakhasi extends Morakhasi {
+//   user?: User;
+//   acceptedBy?: AcceptedBy;
+//   tenant?: Tenant;
+//   dayli_date?: string; // اضافه شدن فیلد dayli_date برای مرخصی‌های یک‌روزه
+// }
 
 // This interface describes the actual flat structure of the API response for pagination
 interface ActualApiResponseData {
@@ -267,36 +267,36 @@ const GuardPage: React.FC = () => {
   // }
 
   function getStatusBadge(morakhasi: Morakhasi) {
-    if (morakhasi.exit_ok === 1 && morakhasi.checked === 1) {
+    if ((morakhasi.exit_ok === 1 || morakhasi.exit_ok === "1") && (morakhasi.checked === 1 || morakhasi.checked === "1")) {
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">تکمیل شده</span>;
     }
-    if (morakhasi.exit_ok === 1) {
+    if (morakhasi.exit_ok === 1 || morakhasi.exit_ok === "1") {
       return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">خارج شده</span>;
     }
-    if (morakhasi.checked === 1) { // This case might be less common if exit_ok must be 1 first
+    if (morakhasi.checked === 1 || morakhasi.checked === "1") { // This case might be less common if exit_ok must be 1 first
       return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">بررسی شده</span>;
     }
-    if (morakhasi.status === 0) { // Pending manager approval
+    if (morakhasi.status === 0 || morakhasi.status === "0") { // Pending manager approval
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">منتظر تایید مدیر</span>;
     }
-    if (morakhasi.status === 1) { // Approved by manager
+    if (morakhasi.status === 1 || morakhasi.status === "1") { // Approved by manager
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">تایید شده</span>;
     }
-    if (morakhasi.status === 2) { // Rejected by manager
+    if (morakhasi.status === 2 || morakhasi.status === "2") { // Rejected by manager
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">رد شده</span>;
     }
     return null;
   }
 
 
-  function formatDateTime(date: string | undefined) {
-    if (!date) return '-';
-    try {
-      return format(parseISO(date), 'yyyy/MM/dd - HH:mm');
-    } catch {
-      return '-';
-    }
-  }
+  // function formatDateTime(date: string | undefined) {
+  //   if (!date) return '-';
+  //   try {
+  //     return format(parseISO(date), 'yyyy/MM/dd - HH:mm');
+  //   } catch {
+  //     return '-';
+  //   }
+  // }
 
   return (
     <PageTransition>
@@ -426,7 +426,7 @@ const GuardPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {morakhasi.type === "1" && ( // ساعتی
+                  {(morakhasi.type === "1" || morakhasi.type === 1) && ( // ساعتی
                     <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
                       <div>تاریخ: {(() => {
                         try {
@@ -448,7 +448,7 @@ const GuardPage: React.FC = () => {
                       })()}</div>
                     </div>
                   )}
-                  {morakhasi.type === "2" && ( // یک‌روزه
+                  {(morakhasi.type === "2" || morakhasi.type === 2) && ( // یک‌روزه
                     <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
                       <div>تاریخ: {(() => {
                         try {
@@ -462,7 +462,7 @@ const GuardPage: React.FC = () => {
                       <div>نوع: تمام روز</div>
                     </div>
                   )}
-                  {morakhasi.type === "3" && ( // چندروزه
+                  {(morakhasi.type === "3" || morakhasi.type === 3) && ( // چندروزه
                     <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
                       <div>از: {(() => {
                         try {

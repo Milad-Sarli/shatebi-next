@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { MorakhasiService, type Morakhasi } from '@/lib/services/morakhasi.service';
+import { MorakhasiService, type Morakhasi, type PendingMorakhasiFilters } from '@/lib/services/morakhasi.service';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
@@ -88,7 +88,7 @@ const WaitingMorakhasiPage: React.FC = () => {
     setError(null);
     try {
       // Clean the filters object - remove undefined values
-      const apiFilters: any = {
+      const apiFilters: PendingMorakhasiFilters = {
         page: filters.page,
         per_page: filters.per_page,
       };

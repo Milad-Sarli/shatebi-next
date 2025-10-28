@@ -172,7 +172,7 @@ export default function OptimizedNumbersPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, filters, debouncedSearch]);
+  }, [accessToken, filters]);
 
   // Update search filter when debounced search changes
   React.useEffect(() => {
