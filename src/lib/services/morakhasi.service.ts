@@ -86,6 +86,7 @@ export interface ListForGuardFilters {
   type?: string;
   per_page?: number;
   page?: number;
+  status?: number;
 }
 
 export class MorakhasiService {
@@ -248,6 +249,7 @@ export class MorakhasiService {
     if (filters.per_page) queryParams.append('per_page', filters.per_page.toString());
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.type) queryParams.append('type', filters.type);
+    if (filters.status !== undefined) queryParams.append('status', filters.status.toString());
 
     const response = await fetch(`${API_URL}/api/morakhasi/list-for-guard?${queryParams.toString()}`, {
       headers: {

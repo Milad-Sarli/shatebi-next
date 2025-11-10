@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/context/auth.context';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search as SearchIcon, AlertTriangle, Info, Loader2, LogOut, LogIn} from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -32,16 +33,16 @@ interface User {
 // }
 
 // This interface describes the actual flat structure of the API response for pagination
-interface ActualApiResponseData {
-  data: Morakhasi[];
-  links?: { first: string | null; last: string | null; prev: string | null; next: string | null };
-  current_page?: number;
-  last_page?: number;
-  total?: number;
-  per_page?: number;
-  from?: number;
-  to?: number;
-}
+// interface ActualApiResponseData {
+//   data: Morakhasi[];
+//   links?: { first: string | null; last: string | null; prev: string | null; next: string | null };
+//   current_page?: number;
+//   last_page?: number;
+//   total?: number;
+//   per_page?: number;
+//   from?: number;
+//   to?: number;
+// }
 
 // Adjusted filters state for guard page, maps to ListForGuardFilters
 interface GuardMorakhasiFiltersState {
@@ -49,6 +50,7 @@ interface GuardMorakhasiFiltersState {
   per_page: number;
   search: string;
   type?: string; 
+  status?: number;
 }
 
 // Define state for modals for guard actions
@@ -74,7 +76,8 @@ const GuardPage: React.FC = () => {
     page: 1,
     per_page: 10, // Adjusted for guard view, perhaps more items
     search: '',
-    type: undefined, 
+    type: undefined,
+    status: undefined,
   });
   const debouncedSearch = useDebounce(filters.search, 500);
 
@@ -105,18 +108,37 @@ const GuardPage: React.FC = () => {
         per_page: filters.per_page,
         search: debouncedSearch,
         type: filters.type,
+        status: filters.status,
       };
       
       const serviceCallResponse = await MorakhasiService.listMorakhasiForGuard(accessToken, apiFilters);
-      const apiData = serviceCallResponse.data as unknown as ActualApiResponseData;
+      type ApiShape = Morakhasi[] | {
+        data: Morakhasi[];
+        meta?: { current_page?: number; last_page?: number; total?: number; per_page?: number };
+        current_page?: number;
+        last_page?: number;
+        total?: number;
+        per_page?: number;
+      };
+      const raw = serviceCallResponse?.data as ApiShape | null;
 
-      if (apiData) {
-        setMorakhasiList(apiData.data || []);
+      if (raw) {
+        const list: Morakhasi[] = Array.isArray(raw)
+          ? raw
+          : (raw.data ?? []);
+
+        const meta = Array.isArray(raw) ? undefined : raw.meta;
+        const currentPage = meta?.current_page ?? (Array.isArray(raw) ? undefined : raw.current_page) ?? filters.page ?? 1;
+        const lastPage = meta?.last_page ?? (Array.isArray(raw) ? undefined : raw.last_page) ?? 1;
+        const total = meta?.total ?? (Array.isArray(raw) ? undefined : raw.total) ?? list.length;
+        const perPage = meta?.per_page ?? (Array.isArray(raw) ? undefined : raw.per_page) ?? filters.per_page ?? 10;
+
+        setMorakhasiList(list);
         setPagination({
-          currentPage: apiData.current_page ?? 1,
-          lastPage: apiData.last_page ?? 1,
-          total: apiData.total ?? 0,
-          perPage: apiData.per_page ?? 10,
+          currentPage,
+          lastPage,
+          total,
+          perPage,
         });
       } else {
         setMorakhasiList([]);
@@ -132,7 +154,7 @@ const GuardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, user, filters.page, filters.per_page, debouncedSearch, filters.type]);
+  }, [accessToken, user, filters.page, filters.per_page, debouncedSearch, filters.type, filters.status]);
 
   useEffect(() => {
     fetchGuardMorakhasiList();
@@ -276,13 +298,18 @@ const GuardPage: React.FC = () => {
     if (morakhasi.checked === 1 || morakhasi.checked === "1") { // This case might be less common if exit_ok must be 1 first
       return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">بررسی شده</span>;
     }
-    if (morakhasi.status === 0 || morakhasi.status === "0") { // Pending manager approval
-        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">منتظر تایید مدیر</span>;
-    }
-    if (morakhasi.status === 1 || morakhasi.status === "1") { // Approved by manager
+    // New mapping based on your status keys:
+    // 1 = accepted, 2 = waiting, 3 = expired, 4 = rejected
+    if (morakhasi.status === 1 || morakhasi.status === "1") {
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">تایید شده</span>;
     }
-    if (morakhasi.status === 2 || morakhasi.status === "2") { // Rejected by manager
+    if (morakhasi.status === 2 || morakhasi.status === "2") {
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">در انتظار تایید</span>;
+    }
+    if (morakhasi.status === 3 || morakhasi.status === "3") {
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300">منقضی شده</span>;
+    }
+    if (morakhasi.status === 4 || morakhasi.status === "4") {
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">رد شده</span>;
     }
     return null;
@@ -300,10 +327,19 @@ const GuardPage: React.FC = () => {
 
   return (
     <PageTransition>
-      <div className="container mx-auto max-w-6xl p-6">
+      <div className=" mx-auto  p-6">
         {/* Header and Search Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-6 text-center mx-auto">کنترل تردد و مرخصی‌ها (نگهبانی)</h1>
+          <div className="mb-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              این لیست مرخصی‌ها 
+              <span className='text-yellow-600 px-2'>
+              (فقط برای یک هفته)
+              </span>
+           هست
+            </p>
+          </div>
           
           <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-center">
             {/* Search Bar */}
@@ -316,6 +352,31 @@ const GuardPage: React.FC = () => {
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
                 className="pr-10 text-right bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors rounded-lg shadow-sm"
               />
+            </div>
+
+            {/* Status Filter */}
+            <div className="w-full lg:w-48">
+              <Select
+                value={filters.status !== undefined ? String(filters.status) : 'all'}
+                onValueChange={(value) =>
+                  setFilters(prev => ({
+                    ...prev,
+                    status: value === 'all' ? undefined : Number(value),
+                    page: 1,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full text-right bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 transition-colors rounded-lg shadow-sm">
+                  <SelectValue placeholder="فیلتر وضعیت" />
+                </SelectTrigger>
+                <SelectContent className="text-right">
+                  <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+                  <SelectItem value="1">تایید شده</SelectItem>
+                  <SelectItem value="2">در انتظار</SelectItem>
+                  <SelectItem value="3">منقضی شده</SelectItem>
+                  <SelectItem value="4">رد شده</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
