@@ -93,7 +93,6 @@ export default function EditUserPage() {
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
-          
           {/* Content */}
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <div className="flex items-center gap-3">

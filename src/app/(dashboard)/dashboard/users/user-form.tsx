@@ -21,6 +21,11 @@ const userSchema = z.object({
   lname: z.string().optional(),
   phone: z.string().regex(/^09\d{9}$/, "شماره موبایل باید با 09 شروع شود و 11 رقم باشد"),
   tenant_id: z.number().min(1, "مرکز را انتخاب کنید"),
+  password: z
+    .string()
+    .min(6, "رمز عبور باید حداقل 6 کاراکتر باشد")
+    .optional()
+    .or(z.literal(""))
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -50,6 +55,7 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
           lname: initialData.lname || "",
           phone: initialData.phone || "",
           tenant_id: initialData.tenant_id || 1,
+          password: "",
         }
       : {
           username: "",
@@ -58,6 +64,7 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
           lname: "",
           phone: "",
           tenant_id: 1,
+          password: "",
         },
   });
 
@@ -68,10 +75,19 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
       setLoading(true);
       
       if (initialData) {
-        await UserService.updateUser(initialData.id, data, accessToken);
+        // Only include password if provided (non-empty)
+        const payload = { ...data } as Partial<User> & { password?: string };
+        if (!payload.password) {
+          delete (payload as { password?: string }).password;
+        }
+        await UserService.updateUser(initialData.id, payload, accessToken);
         toast.success("کاربر با موفقیت بروزرسانی شد");
       } else {
-        await UserService.createUser(data, accessToken);
+        const payload = { ...data } as Partial<User> & { password?: string };
+        if (!payload.password) {
+          delete (payload as { password?: string }).password;
+        }
+        await UserService.createUser(payload, accessToken);
         toast.success("کاربر با موفقیت ایجاد شد");
       }
       onSuccess();
@@ -154,6 +170,23 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
         </div>
       </div>
 
+      {/* Password (optional) */}
+      <div className="space-y-2">
+        <Label htmlFor="password" className="text-zinc-900 dark:text-zinc-100">رمز عبور جدید (اختیاری)</Label>
+        <Input
+          id="password"
+          type="password"
+          {...form.register("password")}
+          placeholder="اگر خالی بماند، رمز عبور تغییر نمی‌کند"
+          className="border-zinc-200 bg-white placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-700 dark:focus:ring-zinc-700"
+        />
+        {form.formState.errors.password && (
+          <p className="text-sm text-red-500 dark:text-red-400">
+            {form.formState.errors.password.message}
+          </p>
+        )}
+      </div>
+
       <div className="flex gap-3">
         {onCancel && (
           <Button 
@@ -180,4 +213,4 @@ export function UserForm({ onSuccess, onCancel, initialData }: UserFormProps) {
       </div>
     </form>
   );
-} 
+}

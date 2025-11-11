@@ -89,7 +89,7 @@ export class UserService {
     return response.json();
   }
 
-  static async createUser(userData: Partial<User>, accessToken: string): Promise<{ data: User }> {
+  static async createUser(userData: Partial<User> & { password?: string }, accessToken: string): Promise<{ data: User }> {
     const response = await fetch(`${API_URL}/api/users`, {
       method: 'POST',
       headers: {
@@ -108,7 +108,7 @@ export class UserService {
     return response.json();
   }
 
-  static async updateUser(id: number, userData: Partial<User>, accessToken: string): Promise<{ data: User }> {
+  static async updateUser(id: number, userData: Partial<User> & { password?: string }, accessToken: string): Promise<{ data: User }> {
     const response = await fetch(`${API_URL}/api/users/${id}`, {
       method: 'PUT',
       headers: {
@@ -159,4 +159,4 @@ export class UserService {
 
     return response.json();
   }
-} 
+}
