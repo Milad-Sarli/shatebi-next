@@ -112,34 +112,43 @@ const GuardPage: React.FC = () => {
       };
       
       const serviceCallResponse = await MorakhasiService.listMorakhasiForGuard(accessToken, apiFilters);
-      type ApiShape = Morakhasi[] | {
-        data: Morakhasi[];
-        meta?: { current_page?: number; last_page?: number; total?: number; per_page?: number };
-        current_page?: number;
-        last_page?: number;
-        total?: number;
-        per_page?: number;
-      };
-      const raw = serviceCallResponse?.data as ApiShape | null;
+      // پشتیبانی از هر دو ساختار پاسخ: تخت و تو در تو (status + data)
+      const raw: unknown = serviceCallResponse?.data ?? null;
 
       if (raw) {
-        const list: Morakhasi[] = Array.isArray(raw)
-          ? raw
-          : (raw.data ?? []);
+        let list: Morakhasi[] = [];
+        let currentPage = filters.page ?? 1;
+        let lastPage = 1;
+        let total = 0;
+        let perPage = filters.per_page ?? 10;
 
-        const meta = Array.isArray(raw) ? undefined : raw.meta;
-        const currentPage = meta?.current_page ?? (Array.isArray(raw) ? undefined : raw.current_page) ?? filters.page ?? 1;
-        const lastPage = meta?.last_page ?? (Array.isArray(raw) ? undefined : raw.last_page) ?? 1;
-        const total = meta?.total ?? (Array.isArray(raw) ? undefined : raw.total) ?? list.length;
-        const perPage = meta?.per_page ?? (Array.isArray(raw) ? undefined : raw.per_page) ?? filters.per_page ?? 10;
+        if (Array.isArray(raw)) {
+          list = raw as Morakhasi[];
+          total = list.length;
+        } else if (typeof raw === 'object' && raw !== null) {
+          const obj = raw as Record<string, any>;
+          // حالت پاسخ تو در تو: { status: 'success', data: { current_page, data: [...], ... } }
+          if (obj.status && obj.data && typeof obj.data === 'object') {
+            const nested = obj.data as Record<string, any>;
+            list = Array.isArray(nested.data) ? (nested.data as Morakhasi[]) : [];
+            currentPage = (nested.current_page as number | undefined) ?? currentPage;
+            lastPage = (nested.last_page as number | undefined) ?? lastPage;
+            total = (nested.total as number | undefined) ?? list.length;
+            perPage = (nested.per_page as number | undefined) ?? perPage;
+          } else {
+            // حالت تخت: { data: [...], meta?: {...}, ... }
+            const flatData = (obj.data as Morakhasi[] | undefined) ?? [];
+            list = Array.isArray(flatData) ? flatData : [];
+            const meta = obj.meta as Record<string, any> | undefined;
+            currentPage = (meta?.current_page as number | undefined) ?? (obj.current_page as number | undefined) ?? currentPage;
+            lastPage = (meta?.last_page as number | undefined) ?? (obj.last_page as number | undefined) ?? lastPage;
+            total = (meta?.total as number | undefined) ?? (obj.total as number | undefined) ?? list.length;
+            perPage = (meta?.per_page as number | undefined) ?? (obj.per_page as number | undefined) ?? perPage;
+          }
+        }
 
         setMorakhasiList(list);
-        setPagination({
-          currentPage,
-          lastPage,
-          total,
-          perPage,
-        });
+        setPagination({ currentPage, lastPage, total, perPage });
       } else {
         setMorakhasiList([]);
         setPagination(null);
@@ -312,6 +321,10 @@ const GuardPage: React.FC = () => {
     if (morakhasi.status === 4 || morakhasi.status === "4") {
         return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">رد شده</span>;
     }
+    // 5 = used (استعمال شده)
+    if (morakhasi.status === 5 || morakhasi.status === "5") {
+        return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">استعمال شده</span>;
+    }
     return null;
   }
 
@@ -375,6 +388,7 @@ const GuardPage: React.FC = () => {
                   <SelectItem value="2">در انتظار</SelectItem>
                   <SelectItem value="3">منقضی شده</SelectItem>
                   <SelectItem value="4">رد شده</SelectItem>
+                  <SelectItem value="5">استعمال شده</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -415,13 +429,12 @@ const GuardPage: React.FC = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
               {morakhasiList
-                .filter(morakhasi => morakhasi.checked !== 1 && morakhasi.checked !== "1") // فیلتر کردن مرخصی‌هایی که checked آن‌ها برابر 1 یا "1" است
                 .map((morakhasi, index) => (
-                <motion.div
-                  key={morakhasi.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
+                  <motion.div
+                    key={morakhasi.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
                     duration: 0.3,
                     delay: index * 0.05,
                     ease: [0.4, 0, 0.2, 1],
