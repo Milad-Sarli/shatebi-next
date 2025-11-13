@@ -66,6 +66,23 @@ interface LateModalState {
   morakhasiId: number | null;
 }
 
+interface PaginationInfo {
+  current_page?: number;
+  last_page?: number;
+  total?: number;
+  per_page?: number;
+}
+
+interface NestedData extends PaginationInfo {
+  data?: Morakhasi[];
+}
+
+interface ApiObject extends PaginationInfo {
+  data?: Morakhasi[] | NestedData;
+  meta?: PaginationInfo;
+  status?: string;
+}
+
 const GuardPage: React.FC = () => {
   const { accessToken, user } = useAuth();
   const [morakhasiList, setMorakhasiList] = useState<Morakhasi[]>([]);
@@ -126,24 +143,22 @@ const GuardPage: React.FC = () => {
           list = raw as Morakhasi[];
           total = list.length;
         } else if (typeof raw === 'object' && raw !== null) {
-          const obj = raw as Record<string, any>;
-          // حالت پاسخ تو در تو: { status: 'success', data: { current_page, data: [...], ... } }
-          if (obj.status && obj.data && typeof obj.data === 'object') {
-            const nested = obj.data as Record<string, any>;
-            list = Array.isArray(nested.data) ? (nested.data as Morakhasi[]) : [];
-            currentPage = (nested.current_page as number | undefined) ?? currentPage;
-            lastPage = (nested.last_page as number | undefined) ?? lastPage;
-            total = (nested.total as number | undefined) ?? list.length;
-            perPage = (nested.per_page as number | undefined) ?? perPage;
+          const obj = raw as ApiObject;
+          if (obj.status && obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+            const nested = obj.data as NestedData;
+            list = Array.isArray(nested.data) ? nested.data : [];
+            currentPage = nested.current_page ?? currentPage;
+            lastPage = nested.last_page ?? lastPage;
+            total = nested.total ?? list.length;
+            perPage = nested.per_page ?? perPage;
           } else {
-            // حالت تخت: { data: [...], meta?: {...}, ... }
             const flatData = (obj.data as Morakhasi[] | undefined) ?? [];
             list = Array.isArray(flatData) ? flatData : [];
-            const meta = obj.meta as Record<string, any> | undefined;
-            currentPage = (meta?.current_page as number | undefined) ?? (obj.current_page as number | undefined) ?? currentPage;
-            lastPage = (meta?.last_page as number | undefined) ?? (obj.last_page as number | undefined) ?? lastPage;
-            total = (meta?.total as number | undefined) ?? (obj.total as number | undefined) ?? list.length;
-            perPage = (meta?.per_page as number | undefined) ?? (obj.per_page as number | undefined) ?? perPage;
+            const meta = obj.meta as PaginationInfo | undefined;
+            currentPage = meta?.current_page ?? obj.current_page ?? currentPage;
+            lastPage = meta?.last_page ?? obj.last_page ?? lastPage;
+            total = meta?.total ?? obj.total ?? list.length;
+            perPage = meta?.per_page ?? obj.per_page ?? perPage;
           }
         }
 
