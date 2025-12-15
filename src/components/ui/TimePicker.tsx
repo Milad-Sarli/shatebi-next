@@ -5,6 +5,7 @@ interface TimePickerProps {
   value?: string;
   onChange?: (value: string) => void;
   label?: string;
+  variant?: "default" | "minimal";
 }
 
 const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
@@ -19,7 +20,7 @@ function vibrate(ms = 10) {
   }
 }
 
-const TimePicker: React.FC<TimePickerProps> = ({ value = "10:00", onChange, label }) => {
+const TimePicker: React.FC<TimePickerProps> = ({ value = "10:00", onChange, label, variant = "default" }) => {
   // Modal state
   const [show, setShow] = useState(false);
   // Parse value (e.g. "14:05")
@@ -163,12 +164,20 @@ const TimePicker: React.FC<TimePickerProps> = ({ value = "10:00", onChange, labe
     ? `${toPersianNumber(selected.split(":")[0])}:${toPersianNumber(selected.split(":")[1])}`
     : persianPlaceholder;
 
+  const containerClass = variant === "minimal"
+    ? "flex flex-col gap-1 w-full"
+    : "flex flex-col gap-2 w-full max-w-xs mx-auto";
+
   return (
-    <div className="flex flex-col gap-2 w-full max-w-xs mx-auto" dir="rtl">
-      {label && <label className="mb-1 font-bold text-zinc-700 dark:text-zinc-200 text-right">{persianLabel}</label>}
+    <div className={containerClass} dir="rtl">
+      {label && <label className="mb-1 font-medium text-zinc-700 dark:text-zinc-200 text-right">{persianLabel}</label>}
       <button
         type="button"
-        className="w-full text-right px-4 py-3 rounded-xl border-2 border-yellow-400/60 bg-zinc-900 text-yellow-400 font-bold text-lg shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all duration-200"
+        className={
+          variant === "minimal"
+            ? "w-full text-right px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            : "w-full text-right px-4 py-3 rounded-xl border-2 border-yellow-400/60 bg-zinc-900 text-yellow-400 font-bold text-lg shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all duration-200"
+        }
         onClick={() => setShow(true)}
       >
         {persianInputValue}

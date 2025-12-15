@@ -29,6 +29,8 @@ export default function NewLeavePage() {
   const [dateRange, setDateRange] = useState<{ from: DateObject | null; to: DateObject | null }>({ from: null, to: null });
   const [fromTime, setFromTime] = useState<string>("");
   const [toTime, setToTime] = useState<string>("");
+  const [fromTimeMulti, setFromTimeMulti] = useState<string>("");
+  const [toTimeMulti, setToTimeMulti] = useState<string>("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -73,10 +75,10 @@ export default function NewLeavePage() {
     } else if (leaveType === "multiday") {
       const fromDate = jalaliDateObjectToDate(dateRange.from);
       const toDateVal = jalaliDateObjectToDate(dateRange.to);
-      if (!fromDate || !toDateVal) {
+      if (!fromDate || !toDateVal || !fromTimeMulti || !toTimeMulti) {
         toast({
           title: 'خطا',
-          description: 'لطفا بازه تاریخ را کامل وارد کنید.',
+          description: 'لطفا بازه تاریخ و زمان را کامل وارد کنید.',
         });
         return;
       }
@@ -85,6 +87,8 @@ export default function NewLeavePage() {
         type: 3,
         fromdate: fromDate.toISOString().split("T")[0],
         todate: toDateVal.toISOString().split("T")[0],
+        fromtime_2: fromTimeMulti,
+        totime_2: toTimeMulti,
       };
     }
     setLoading(true);
@@ -97,6 +101,8 @@ export default function NewLeavePage() {
       setReason("");
       setFromTime("");
       setToTime("");
+      setFromTimeMulti("");
+      setToTimeMulti("");
       setHourlyDate(null);
       setDateRange({ from: null, to: null });
     } catch (err: unknown) {
@@ -112,44 +118,39 @@ export default function NewLeavePage() {
   return (
     <PageTransition>
 
-      <div className="flex justify-center items-start min-h-[80vh] py-8 px-2 sm:px-4 md:px-8 bg-transparent">
-        <div className="w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl">
+      <div className="px-4 sm:px-6 md:px-8 lg:px-12">
+        <div className="w-full">
           <div className="space-y-4">
-            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl p-6 overflow-hidden shadow-lg bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5">
-              <div className="absolute inset-0 pointer-events-none" />
-              <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  درخواست مرخصی جدید
-                </h1>
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push('/dashboard/leaves')}
-                  className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-                >
-                  <ArrowLeft className="ml-2 h-4 w-4" />
-                  بازگشت به لیست مرخصی‌ها
-                </Button>
-              </div>
+            <div className="flex items-center justify-between py-4">
+              <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">درخواست مرخصی جدید</h1>
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/dashboard/leaves')}
+                className="text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <ArrowLeft className="ml-2 h-4 w-4" />
+                بازگشت
+              </Button>
             </div>
-            <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800 rounded-2xl shadow-xl">
-              <CardHeader className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
-                <CardTitle className="text-zinc-900 dark:text-zinc-100 text-lg sm:text-xl">فرم درخواست مرخصی</CardTitle>
+            <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800 rounded-lg shadow-none max-w-4xl mx-auto">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-zinc-900 dark:text-zinc-100 text-base sm:text-lg">فرم درخواست مرخصی</CardTitle>
               </CardHeader>
-              <CardContent className="pt-8 pb-6 px-4 sm:px-8 md:px-12">
-                <form onSubmit={handleSubmit} className="space-y-10">
+              <CardContent className="pt-4 pb-4 px-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {/* نوع مرخصی */}
                   <div>
                     <label className="block mb-4 font-semibold text-zinc-700 dark:text-zinc-200 text-base sm:text-lg">نوع مرخصی</label>
-                    <div className="flex gap-4 justify-center">
+                    <div className="flex gap-3 justify-center">
                       {leaveTypes.map((type) => (
                         <button
                           type="button"
                           key={type.value}
                           className={cn(
-                            "px-6 py-2 rounded-xl border transition font-bold text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400",
+                            "px-4 py-2 rounded-md border transition text-sm focus:outline-none focus:ring-2 focus:ring-blue-400",
                             leaveType === type.value
-                              ? "bg-gradient-to-r from-blue-500 to-green-400 text-white border-blue-500 scale-105"
-                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
                           )}
                           onClick={() => setLeaveType(type.value)}
                         >
@@ -160,9 +161,9 @@ export default function NewLeavePage() {
                   </div>
                   {/* انتخاب تاریخ/ساعت */}
                   {leaveType === "hourly" && (
-                    <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="flex-1">
-                        <label className="block mb-2 font-medium text-zinc-700 dark:text-zinc-200">تاریخ</label>
+                        <label className="block mb-1 font-medium text-zinc-700 dark:text-zinc-200">تاریخ</label>
                         <DatePicker
                           value={hourlyDate}
                           onChange={setHourlyDate}
@@ -170,42 +171,52 @@ export default function NewLeavePage() {
                           locale={persian_fa}
                           calendarPosition="bottom-right"
                           style={{ width: "100%" }}
-                          inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
+                          inputClass="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2 text-sm"
                         />
                       </div>
                       <div className="flex-1">
-                        <TimePicker label="از ساعت" value={fromTime} onChange={setFromTime} />
+                        <TimePicker label="از ساعت" value={fromTime} onChange={setFromTime} variant="minimal" />
                       </div>
                       <div className="flex-1">
-                        <TimePicker label="تا ساعت" value={toTime} onChange={setToTime} />
+                        <TimePicker label="تا ساعت" value={toTime} onChange={setToTime} variant="minimal" />
                       </div>
                     </div>
                   )}
                   {leaveType === "multiday" && (
-                    <div className="flex flex-col sm:flex-row gap-6">
-                      <div className="flex-1">
-                        <label className="block mb-2 font-medium text-zinc-700 dark:text-zinc-200">از تاریخ</label>
-                        <DatePicker
-                          value={dateRange.from}
-                          onChange={date => setDateRange(prev => ({ ...prev, from: date }))}
-                          calendar={persian}
-                          locale={persian_fa}
-                          calendarPosition="bottom-right"
-                          style={{ width: "100%" }}
-                          inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-1">
+                          <label className="block mb-1 font-medium text-zinc-700 dark:text-zinc-200">از تاریخ</label>
+                          <DatePicker
+                            value={dateRange.from}
+                            onChange={date => setDateRange(prev => ({ ...prev, from: date }))}
+                            calendar={persian}
+                            locale={persian_fa}
+                            calendarPosition="bottom-right"
+                            style={{ width: "100%" }}
+                            inputClass="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <TimePicker label="از ساعت" value={fromTimeMulti} onChange={setFromTimeMulti} variant="minimal" />
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <label className="block mb-2 font-medium text-zinc-700 dark:text-zinc-200">تا تاریخ</label>
-                        <DatePicker
-                          value={dateRange.to}
-                          onChange={date => setDateRange(prev => ({ ...prev, to: date }))}
-                          calendar={persian}
-                          locale={persian_fa}
-                          calendarPosition="bottom-right"
-                          style={{ width: "100%" }}
-                          inputClass="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-1">
+                          <label className="block mb-1 font-medium text-zinc-700 dark:text-zinc-200">تا تاریخ</label>
+                          <DatePicker
+                            value={dateRange.to}
+                            onChange={date => setDateRange(prev => ({ ...prev, to: date }))}
+                            calendar={persian}
+                            locale={persian_fa}
+                            calendarPosition="bottom-right"
+                            style={{ width: "100%" }}
+                            inputClass="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <TimePicker label="تا ساعت" value={toTimeMulti} onChange={setToTimeMulti} variant="minimal" />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -217,12 +228,12 @@ export default function NewLeavePage() {
                       onChange={(e) => setReason(e.target.value)}
                       rows={3}
                       placeholder="علت مرخصی را وارد کنید..."
-                      className="resize-none rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="resize-none rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
                     />
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10 text-lg py-3 rounded-xl"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2.5 rounded-md"
                     disabled={loading}
                   >
                     {loading ? (

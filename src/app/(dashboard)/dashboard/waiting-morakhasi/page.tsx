@@ -215,16 +215,6 @@ const WaitingMorakhasiPage: React.FC = () => {
   };
 
 
-  function toJalali(date: string | undefined) {
-    if (!date) return '-';
-    try {
-      const parsedDate = parseISO(date);
-      return format(parsedDate, 'yyyy/MM/dd - HH:mm');
-    } catch (error) {
-      console.error('Error parsing date:', error);
-      return '-';
-    }
-  }
 
   function getLeaveTypeLabel(type: string | number | undefined) {
     if (type === undefined) return 'نامشخص';
@@ -257,52 +247,48 @@ const WaitingMorakhasiPage: React.FC = () => {
   }
 
   function formatTimeRange(morakhasi: Morakhasi) {
-    // Helper to convert to Persian numerals
     const toPersian = (str: string) => str.replace(/\d/g, d => String.fromCharCode(d.charCodeAt(0) + 1728));
+    const isFullDateTime = (s?: string) => !!s && /\d{4}-\d{2}-\d{2}/.test(s);
 
     try {
       const typeNum = typeof morakhasi.type === 'string' ? parseInt(morakhasi.type) : morakhasi.type;
-      
-      // Hourly leave (type 1): show from hour to hour, with date
+      const fmtDate = (iso: string) => toPersian(format(parseISO(iso), 'yyyy/MM/dd'));
+      const fmtTime = (isoOrTime: string) => {
+        if (isFullDateTime(isoOrTime)) {
+          return toPersian(format(parseISO(isoOrTime.replace(' ', 'T')), 'HH:mm'));
+        }
+        return toPersian(isoOrTime);
+      };
+
       if (typeNum === 1 && morakhasi.fromtime_1 && morakhasi.totime_1) {
-        const fromTime = parseISO(morakhasi.fromtime_1);
-        const toTime = parseISO(morakhasi.totime_1);
-        
-        const from = toPersian(format(fromTime, 'HH:mm'));
-        const to = toPersian(format(toTime, 'HH:mm'));
-        const dateStr = toPersian(format(fromTime, 'yyyy/MM/dd'));
-        return `${from} تا ${to} — ${dateStr}`;
+        const date = morakhasi.dayli_date ? fmtDate(morakhasi.dayli_date) : (isFullDateTime(morakhasi.fromtime_1) ? fmtDate(morakhasi.fromtime_1.replace(' ', 'T')) : undefined);
+        const timeLine = `ساعت: ${fmtTime(morakhasi.fromtime_1)} تا ${fmtTime(morakhasi.totime_1)}`;
+        return date ? `تاریخ: ${date}\n${timeLine}` : timeLine;
       }
-      
-      // Single day leave (type 2): show date from dayli_date
+
       if (typeNum === 2 && morakhasi.dayli_date) {
-        const date = parseISO(morakhasi.dayli_date);
-        const dateStr = toPersian(format(date, 'yyyy/MM/dd'));
-        return dateStr;
+        return `تاریخ: ${fmtDate(morakhasi.dayli_date)}`;
       }
-      
-      // Multi-day leave (type 3): show from date to date
+
       if (typeNum === 3 && morakhasi.fromdate && morakhasi.todate) {
-        const fromDate = parseISO(morakhasi.fromdate);
-        const toDate = parseISO(morakhasi.todate);
-        
-        const from = toPersian(format(fromDate, 'yyyy/MM/dd'));
-        const to = toPersian(format(toDate, 'yyyy/MM/dd'));
-        return `${from} تا ${to}`;
+        const dateLine = `تاریخ: ${fmtDate(morakhasi.fromdate)} تا ${fmtDate(morakhasi.todate)}`;
+        if (morakhasi.fromtime_2 && morakhasi.totime_2) {
+          return `${dateLine}\nساعت: ${fmtTime(morakhasi.fromtime_2)} تا ${fmtTime(morakhasi.totime_2)}`;
+        }
+        if (morakhasi.fromtime_1 && morakhasi.totime_1) {
+          return `${dateLine}\nساعت: ${fmtTime(morakhasi.fromtime_1)} تا ${fmtTime(morakhasi.totime_1)}`;
+        }
+        return dateLine;
       }
-      
-      // Fallback: show raw times if available
+
       if (morakhasi.fromtime_1 && morakhasi.totime_1) {
-        return `${toPersian(toJalali(morakhasi.fromtime_1))} تا ${toPersian(toJalali(morakhasi.totime_1))}`;
+        return `ساعت: ${fmtTime(morakhasi.fromtime_1)} تا ${fmtTime(morakhasi.totime_1)}`;
       }
-      
-      // Another fallback for dates
       if (morakhasi.fromdate && morakhasi.todate) {
-        return `${toPersian(toJalali(morakhasi.fromdate))} تا ${toPersian(toJalali(morakhasi.todate))}`;
+        return `تاریخ: ${fmtDate(morakhasi.fromdate)} تا ${fmtDate(morakhasi.todate)}`;
       }
-      
-    } catch (error) {
-      console.error('Error formatting date range:', error);
+    } catch {
+      return '-';
     }
     return '-';
   }
@@ -310,7 +296,7 @@ const WaitingMorakhasiPage: React.FC = () => {
 
   return (
     <PageTransition>
-        <div className="container mx-auto max-w-6xl p-6">
+        <div className="container mx-auto w-full p-6">
           {/* Header and Search/Filter Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-6 text-center mx-auto">مرخصی‌های در انتظار تایید</h1>
@@ -404,17 +390,17 @@ const WaitingMorakhasiPage: React.FC = () => {
                         />
                       ) : (
                         <span className="text-base font-bold text-gray-400 dark:text-gray-500">
-                          {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                          {((morakhasi.user as User)?.fullname || morakhasi.fullname || 'N A').split(' - ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
                         </span>
                       )}
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                      <h2 className="text-sm flex font-semibold text-gray-900 dark:text-white leading-tight">
                         {(morakhasi.user as User)?.fullname || morakhasi.fullname || 'نامشخص'}
                         {morakhasi.student?.FatherName && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal mr-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-normal mr-2 px-2">
                             {morakhasi.student.FatherName}
-                          </span>
+                          </p>
                         )}
                       </h2>
                     </div>
@@ -430,7 +416,7 @@ const WaitingMorakhasiPage: React.FC = () => {
                   {morakhasi.dalil && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">دلیل :  {morakhasi.dalil}</div>
                   )}
-                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-2 whitespace-pre-line">
                     {formatTimeRange(morakhasi)}
                   </div>
                   <div className="flex justify-end gap-2 mt-auto">
