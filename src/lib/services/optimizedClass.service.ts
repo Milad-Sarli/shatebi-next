@@ -10,6 +10,8 @@ export interface OptimizedClass {
   user_id: number;
   droos_id: number;
   status: boolean; // true for active, false for inactive
+  start_time: string | null;
+  end_time: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -50,6 +52,8 @@ export interface CreateOptimizedClassDto {
   user_id: number;
   droos_id: number;
   status?: boolean; // true for active, false for inactive
+  start_time?: string | null;
+  end_time?: string | null;
   students?: number[];
   masters?: MasterDataItem[];
 }
@@ -272,6 +276,27 @@ export const optimizedClassService = {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+  },
+
+  async bulkUpdateSchedule(
+    classIds: number[],
+    data: Pick<UpdateOptimizedClassDto, "start_time" | "end_time">,
+    accessToken: string
+  ): Promise<{ updated_count: number }> {
+    const response = await axios.patch(
+      `${API_URL}/api/optimized-classes/bulk-schedule`,
+      {
+        class_ids: classIds,
+        ...data,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    return response.data.data;
   },
 
   async getStudents(id: number, date: string, accessToken: string): Promise<StudentsResponse> {

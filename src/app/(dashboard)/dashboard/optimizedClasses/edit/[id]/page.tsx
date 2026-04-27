@@ -117,6 +117,8 @@ export default function EditClassPage() {
     droos_ids: [] as number[],
     teacher_ids: [] as number[],
     status: true as boolean, // true for active, false for inactive
+    start_time: "",
+    end_time: "",
   });
 
   // Search students function
@@ -272,6 +274,8 @@ export default function EditClassPage() {
           droos_ids: currentLessonIds,
           teacher_ids: currentTeacherIds,
           status: classResponse.status,
+          start_time: classResponse.start_time || "",
+          end_time: classResponse.end_time || "",
         });
 
       } catch (error) {
@@ -307,6 +311,8 @@ export default function EditClassPage() {
       user_id: formData.user_ids[0],
       droos_id: formData.droos_ids[0],
       status: formData.status,
+      start_time: formData.start_time || null,
+      end_time: formData.end_time || null,
       students: formData.user_ids,
       masters: formData.teacher_ids.map(teacherId => ({
         master_id: teacherId,
@@ -455,6 +461,40 @@ export default function EditClassPage() {
                       <SelectItem value="false">غیرفعال</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    زمان شروع
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        start_time: e.target.value,
+                      }))
+                    }
+                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    زمان پایان
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        end_time: e.target.value,
+                      }))
+                    }
+                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-6">

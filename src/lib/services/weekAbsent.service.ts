@@ -172,7 +172,7 @@ export class WeekAbsentService {
     }
 
     // Update attendance record
-    static async update(id: number, data: { date: string; students: WeekAbsentStudent[] }, token: string): Promise<ApiResponse<WeekAbsent>> {
+    static async update(id: number, data: { date?: string; students?: WeekAbsentStudent[] }, token: string): Promise<ApiResponse<WeekAbsent>> {
         const response = await fetch(`${API_URL}/api/week-absents/${id}`, {
             method: 'PUT',
             headers: {

@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Edit,
   Trash2,
+  Clock3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -36,6 +38,7 @@ import {
 } from "@/lib/services/optimizedClass.service";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/constants";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Student {
   student: {
@@ -133,11 +136,36 @@ export default function OptimizedClassesPage() {
   const [selectedClassStudents, setSelectedClassStudents] = React.useState<Student[]>([]);
   const [fetchingStudents, setFetchingStudents] = React.useState(false);
   const [allStudentsData, setAllStudentsData] = React.useState<Map<number, Student[]>>(new Map());
+  const [selectedClassIds, setSelectedClassIds] = React.useState<number[]>([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = React.useState(false);
+  const [scheduleSubmitting, setScheduleSubmitting] = React.useState(false);
+  const [scheduleTargetIds, setScheduleTargetIds] = React.useState<number[]>([]);
+  const [scheduleForm, setScheduleForm] = React.useState({
+    start_time: "",
+    end_time: "",
+  });
 
   // Reference to track if a search is already in progress
   const searchInProgress = React.useRef(false);
 
   const router = useRouter();
+
+  const visibleClasses = React.useMemo(() => {
+    const classList = Array.isArray(classes) ? classes : [];
+
+    if (!isClientSidePagination) {
+      return classList;
+    }
+
+    return classList.slice(
+      (filters.page - 1) * filters.per_page,
+      filters.page * filters.per_page
+    );
+  }, [classes, filters.page, filters.per_page, isClientSidePagination]);
+
+  const allVisibleSelected =
+    visibleClasses.length > 0 &&
+    visibleClasses.every((classItem) => selectedClassIds.includes(classItem.id));
 
   const fetchClasses = React.useCallback(
     async (searchTerm?: string) => {
@@ -311,6 +339,71 @@ export default function OptimizedClassesPage() {
     }
   };
 
+  const formatTime = React.useCallback((value?: string | null) => {
+    if (!value) {
+      return "ثبت نشده";
+    }
+
+    return value.slice(0, 5);
+  }, []);
+
+  const toggleClassSelection = (classId: number, checked: boolean) => {
+    setSelectedClassIds((prev) =>
+      checked ? Array.from(new Set([...prev, classId])) : prev.filter((id) => id !== classId)
+    );
+  };
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    const visibleIds = visibleClasses.map((classItem) => classItem.id);
+
+    setSelectedClassIds((prev) => {
+      if (checked) {
+        return Array.from(new Set([...prev, ...visibleIds]));
+      }
+
+      return prev.filter((id) => !visibleIds.includes(id));
+    });
+  };
+
+  const openScheduleDialog = (targetIds: number[], initialValues?: { start_time?: string | null; end_time?: string | null }) => {
+    setScheduleTargetIds(targetIds);
+    setScheduleForm({
+      start_time: initialValues?.start_time || "",
+      end_time: initialValues?.end_time || "",
+    });
+    setScheduleDialogOpen(true);
+  };
+
+  const handleBulkScheduleUpdate = async () => {
+    if (!accessToken || scheduleTargetIds.length === 0) return;
+
+    if (!scheduleForm.start_time && !scheduleForm.end_time) {
+      toast.error("حداقل یکی از زمان‌ها را وارد کنید");
+      return;
+    }
+
+    try {
+      setScheduleSubmitting(true);
+      await optimizedClassService.bulkUpdateSchedule(
+        scheduleTargetIds,
+        {
+          start_time: scheduleForm.start_time || undefined,
+          end_time: scheduleForm.end_time || undefined,
+        },
+        accessToken
+      );
+      toast.success("زمان کلاس‌ها با موفقیت بروزرسانی شد");
+      setScheduleDialogOpen(false);
+      setSelectedClassIds([]);
+      await fetchClasses();
+    } catch (error) {
+      toast.error("خطا در بروزرسانی زمان کلاس‌ها");
+      console.error(error);
+    } finally {
+      setScheduleSubmitting(false);
+    }
+  };
+
   const getStudentsData = React.useCallback(async (classId: number): Promise<Student[]> => {
     if (!accessToken) {
       console.log('No access token available for getStudentsData');
@@ -348,6 +441,11 @@ export default function OptimizedClassesPage() {
     }
   }, [classes, accessToken, getStudentsData]);
 
+  React.useEffect(() => {
+    const currentIds = new Set((Array.isArray(classes) ? classes : []).map((classItem) => classItem.id));
+    setSelectedClassIds((prev) => prev.filter((id) => currentIds.has(id)));
+  }, [classes]);
+
   const handleOpenStudentsModal = React.useCallback(async (classItem: OptimizedClass) => {
     setSelectedClassMasterName(classItem.optimized_class_masters?.[0]?.master?.fullname || null);
     setShowStudentsModal(true);
@@ -371,6 +469,15 @@ export default function OptimizedClassesPage() {
             کلاس‌ها
           </h1>
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            <Button
+              variant="outline"
+              className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              onClick={() => openScheduleDialog(selectedClassIds)}
+              disabled={selectedClassIds.length === 0}
+            >
+              <Clock3 className="ml-2 h-4 w-4" />
+              ویرایش زمان گروهی
+            </Button>
             <Button
               className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               onClick={() => router.push("/dashboard/optimizedClasses/add")}
@@ -410,11 +517,32 @@ export default function OptimizedClassesPage() {
               </Button>
             </div>
 
+            {selectedClassIds.length > 0 && (
+              <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+                <span>{selectedClassIds.length} کلاس برای ویرایش گروهی انتخاب شده است.</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                  onClick={() => setSelectedClassIds([])}
+                >
+                  پاک کردن انتخاب‌ها
+                </Button>
+              </div>
+            )}
+
             {/* Desktop table view */}
             <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800 hidden md:block">
               <table className="w-full text-right text-sm">
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   <tr>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={(checked) => toggleVisibleSelection(Boolean(checked))}
+                        aria-label="انتخاب همه کلاس‌های این صفحه"
+                      />
+                    </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       #
                     </th>
@@ -428,6 +556,9 @@ export default function OptimizedClassesPage() {
                       قرآن آموزان
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      زمان
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
                       عملیات
                     </th>
                   </tr>
@@ -437,7 +568,7 @@ export default function OptimizedClassesPage() {
                     {loading ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           در حال بارگذاری...
@@ -446,19 +577,14 @@ export default function OptimizedClassesPage() {
                     ) : (Array.isArray(classes) ? classes : []).length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400"
                         >
                           کلاسی یافت نشد
                         </td>
                       </tr>
                     ) : (
-                      (Array.isArray(classes) ? classes : [])
-                        .slice(
-                          isClientSidePagination ? (filters.page - 1) * filters.per_page : 0,
-                          isClientSidePagination ? filters.page * filters.per_page : classes.length
-                        )
-                        .map((classItem, index) => (
+                      visibleClasses.map((classItem, index) => (
                           <motion.tr
                             key={classItem.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -467,6 +593,13 @@ export default function OptimizedClassesPage() {
                             transition={{ duration: 0.2 }}
                             className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                           >
+                            <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                              <Checkbox
+                                checked={selectedClassIds.includes(classItem.id)}
+                                onCheckedChange={(checked) => toggleClassSelection(classItem.id, Boolean(checked))}
+                                aria-label={`انتخاب کلاس ${classItem.id}`}
+                              />
+                            </td>
                             <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
                               {pagination.from ? pagination.from + index : (pagination.current_page - 1) * pagination.per_page + index + 1}
                             </td>
@@ -503,7 +636,27 @@ export default function OptimizedClassesPage() {
                                 نمایش قرآن آموزان
                               </Button>
                             </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                              <div className="flex flex-col gap-1 text-xs sm:text-sm">
+                                <span>شروع: {formatTime(classItem.start_time)}</span>
+                                <span>پایان: {formatTime(classItem.end_time)}</span>
+                              </div>
+                            </td>
                             <td className="whitespace-nowrap px-4 py-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                onClick={() =>
+                                  openScheduleDialog([classItem.id], {
+                                    start_time: classItem.start_time,
+                                    end_time: classItem.end_time,
+                                  })
+                                }
+                              >
+                                <Clock3 className="h-4 w-4 ml-1" />
+                                زمان
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -543,12 +696,7 @@ export default function OptimizedClassesPage() {
                     کلاسی یافت نشد
                   </div>
                 ) : (
-                  (Array.isArray(classes) ? classes : [])
-                    .slice(
-                      isClientSidePagination ? (filters.page - 1) * filters.per_page : 0,
-                      isClientSidePagination ? filters.page * filters.per_page : classes.length
-                    )
-                    .map((classItem, index) => (
+                  visibleClasses.map((classItem, index) => (
                       <motion.div
                         key={classItem.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -558,10 +706,15 @@ export default function OptimizedClassesPage() {
                         className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                       >
                         <div className="p-4">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-2 gap-2">
                             <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
                               کلاس #{classItem.id}
                             </h3>
+                            <Checkbox
+                              checked={selectedClassIds.includes(classItem.id)}
+                              onCheckedChange={(checked) => toggleClassSelection(classItem.id, Boolean(checked))}
+                              aria-label={`انتخاب کلاس ${classItem.id}`}
+                            />
                           </div>
                           <div className="space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
                             <p>
@@ -600,8 +753,24 @@ export default function OptimizedClassesPage() {
                               نوع کلاس:{" "}
                               {classItem.dars?.title}
                             </p>
+                            <p>زمان شروع: {formatTime(classItem.start_time)}</p>
+                            <p>زمان پایان: {formatTime(classItem.end_time)}</p>
                           </div>
                           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                              onClick={() =>
+                                openScheduleDialog([classItem.id], {
+                                  start_time: classItem.start_time,
+                                  end_time: classItem.end_time,
+                                })
+                              }
+                            >
+                              <Clock3 className="h-4 w-4 ml-1" />
+                              زمان
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -820,6 +989,79 @@ export default function OptimizedClassesPage() {
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setShowStudentsModal(false)} className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800">
                 بستن
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+          <DialogContent className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 w-[90vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-zinc-900 dark:text-zinc-100">
+                {scheduleTargetIds.length > 1 ? "ویرایش گروهی زمان کلاس‌ها" : "تنظیم زمان کلاس"}
+              </DialogTitle>
+              <DialogDescription className="text-right">
+                زمان شروع و پایان را مشخص کنید. اگر یکی از فیلدها را خالی بگذارید، همان مقدار قبلی حفظ می‌شود.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-4 py-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  زمان شروع
+                </label>
+                <input
+                  type="time"
+                  value={scheduleForm.start_time}
+                  onChange={(e) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      start_time: e.target.value,
+                    }))
+                  }
+                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  زمان پایان
+                </label>
+                <input
+                  type="time"
+                  value={scheduleForm.end_time}
+                  onChange={(e) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      end_time: e.target.value,
+                    }))
+                  }
+                  className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                />
+              </div>
+            </div>
+            <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
+              <span>{scheduleTargetIds.length} کلاس انتخاب شده</span>
+              <button
+                type="button"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+                onClick={() => setScheduleForm({ start_time: "", end_time: "" })}
+              >
+                پاک کردن فیلدها
+              </button>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setScheduleDialogOpen(false)}
+                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                انصراف
+              </Button>
+              <Button
+                onClick={handleBulkScheduleUpdate}
+                disabled={scheduleSubmitting}
+                className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                {scheduleSubmitting ? "در حال ذخیره..." : "ذخیره زمان"}
               </Button>
             </div>
           </DialogContent>

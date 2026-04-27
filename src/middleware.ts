@@ -17,6 +17,11 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get('access_token')
   const appRoles = request.cookies.get('app_roles')
 
+  // Always allow static assets from `public/` and any file-based route.
+  if (pathname.match(/\.[a-zA-Z0-9]+$/)) {
+    return NextResponse.next()
+  }
+
   // Check if the route is public
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
@@ -59,6 +64,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api|_next/static|_next/image|.*\\..*$).*)',
   ],
-} 
+}

@@ -1,9 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   images: {
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "admin.shatebiapp.ir",
+        pathname: "/storage/**",
+      },
+      {
+        protocol: "https",
+        hostname: "admin-shatebiapp.test",
+        pathname: "/storage/**",
+      },
       {
         protocol: 'https',
         hostname: 'galaxe.bikerasol.ir',
@@ -18,6 +27,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'test.bikerasol.ir',
         pathname: '/storage/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'test.bikerasol.ir',
+        pathname: '/shatebi/**',
       },
     ],
   },
