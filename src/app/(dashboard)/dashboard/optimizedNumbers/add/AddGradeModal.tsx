@@ -47,8 +47,8 @@ const oneGradeSurahSchema = z.object({
   end_verse: z.string().min(1, "آیه پایان الزامی است"),
   number: z.string()
     .min(1, "نمره الزامی است")
-    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
-      message: "نمره باید بین 0 تا 100 باشد"
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 55 && Number(val) <= 100, {
+      message: "نمره باید بین 55 تا 100 باشد"
     }),
 });
 
@@ -57,8 +57,8 @@ const oneGradePageSchema = z.object({
   end_page: z.string().min(1, "صفحه پایان الزامی است"),
   number: z.string()
     .min(1, "نمره الزامی است")
-    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
-      message: "نمره باید بین 0 تا 100 باشد"
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 55 && Number(val) <= 100, {
+      message: "نمره باید بین 55 تا 100 باشد"
     }),
 });
 
@@ -442,7 +442,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                               name="number"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-sm font-medium text-right block">نمره (0-100)</FormLabel>
+                                  <FormLabel className="text-sm font-medium text-right block">نمره (55-100)</FormLabel>
                                   <FormControl>
                                     <Input {...field} type="number" min="0" max="100" placeholder="نمره" className="text-center text-lg" />
                                   </FormControl>
@@ -564,7 +564,7 @@ function AddGradeModal({ student, onSubmit, isOpen, onOpenChange, onFormRefsChan
                             name="number"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-sm font-medium text-right block">نمره (0-100)</FormLabel>
+                                <FormLabel className="text-sm font-medium text-right block">نمره (55-100)</FormLabel>
                                 <FormControl>
                                   <Input {...field} type="number" min="0" max="100" placeholder="نمره" className="text-center text-lg" />
                                 </FormControl>

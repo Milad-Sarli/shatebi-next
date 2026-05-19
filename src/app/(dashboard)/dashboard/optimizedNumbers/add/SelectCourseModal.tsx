@@ -30,7 +30,7 @@ const SelectCourseModal: React.FC<SelectCourseModalProps> = ({ isOpen, onOpenCha
           courses.push({
             id: child.id,
             title: child.title,
-            is_one_grade: child.is_one_grade || "0",
+            is_one_grade: child.is_one_grade ? "1" : "0",
           });
         }
       });
@@ -39,7 +39,7 @@ const SelectCourseModal: React.FC<SelectCourseModalProps> = ({ isOpen, onOpenCha
       courses.push({
         id: dars.id,
         title: dars.title,
-        is_one_grade: dars.is_one_grade || "0",
+        is_one_grade: dars.is_one_grade ? "1" : "0",
       });
     }
     return courses;

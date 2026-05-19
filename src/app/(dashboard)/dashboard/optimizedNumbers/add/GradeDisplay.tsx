@@ -26,7 +26,7 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({
           const isReadingGrade = Number(grade.number) > 0 && Number(grade.hefz) === 0 && Number(grade.tajvid) === 0 && Number(grade.sout) === 0 && Number(grade.details) === 0;
           
           // Check if this is a single-grade lesson (either by is_one_grade flag or by grade pattern)
-          const isSingleGradeLesson = grade.dars?.is_one_grade === "1" || grade.droos_id?.is_one_grade === "1" ||
+          const isSingleGradeLesson = !!grade.dars?.is_one_grade || !!grade.droos_id?.is_one_grade ||
                                     (Number(grade.number) > 0 && Number(grade.hefz) === 0 && Number(grade.tajvid) === 0 && Number(grade.sout) === 0 && Number(grade.details) === 0);
           
           let totalScore: number;
