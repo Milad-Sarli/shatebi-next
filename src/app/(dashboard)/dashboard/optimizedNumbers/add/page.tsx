@@ -482,7 +482,7 @@ export default function AddNumberPage() {
   const handleCourseSelect = (course: Course) => {
     if (course) {
       setSelectedCourse(course);
-      setIsOneGrade(!!course.is_one_grade);
+      setIsOneGrade(course.is_one_grade === "1" || course.is_one_grade === true);
     }
     setIsModalOpen(true);
   };
