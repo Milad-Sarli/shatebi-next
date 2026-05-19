@@ -53,7 +53,7 @@ export function LessonForm({ lesson, parentId, onSuccess, availableParents = [] 
       tenant_id: lesson?.tenant_id,
       pages: lesson?.pages ?? null,
       start_page: lesson?.start_page ?? null,
-      is_one_grade: lesson?.is_one_grade ?? "0",
+      is_one_grade: String(lesson?.is_one_grade ?? "0"),
     },
   });
 
@@ -69,7 +69,7 @@ export function LessonForm({ lesson, parentId, onSuccess, availableParents = [] 
         tenant_id: lesson.tenant_id,
         pages: lesson.pages ?? null,
         start_page: lesson.start_page ?? null,
-        is_one_grade: lesson.is_one_grade ?? "0",
+        is_one_grade: String(lesson.is_one_grade ?? "0"),
       });
     }
   }, [lesson, reset, parentId]);

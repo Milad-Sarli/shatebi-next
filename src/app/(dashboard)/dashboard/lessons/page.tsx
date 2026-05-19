@@ -301,11 +301,11 @@ export default function LessonsPage() {
     if (!accessToken || !lesson.id) return;
 
     try {
-      const newIsOneGrade = lesson.is_one_grade === "1" ? "0" : "1";
-      await LessonService.toggleOneGrade(lesson.id, accessToken);
+      const response = await LessonService.toggleOneGrade(lesson.id, accessToken);
+      const newValue = response?.data?.is_one_grade ?? !lesson.is_one_grade;
       setLessons((prevLessons) =>
         prevLessons.map((l) =>
-          l.id === lesson.id ? { ...l, is_one_grade: newIsOneGrade } : l
+          l.id === lesson.id ? { ...l, is_one_grade: newValue } : l
         )
       );
       toast.success("وضعیت تک نمره‌ای با موفقیت تغییر یافت.");
@@ -605,7 +605,7 @@ export default function LessonsPage() {
                           <td className="whitespace-nowrap px-4 py-3">
                             <div className="flex items-center justify-center">
                               <CustomToggle
-                                checked={lesson.is_one_grade === "1"}
+                                checked={!!lesson.is_one_grade}
                                 onCheckedChange={() => handleToggleOneGrade(lesson)}
                               />
                             </div>
@@ -721,7 +721,7 @@ export default function LessonsPage() {
                         <div className="flex items-center gap-2 mb-4">
                           <span className="text-sm text-zinc-500 dark:text-zinc-400">تک نمره:</span>
                           <CustomToggle
-                            checked={lesson.is_one_grade === "1"}
+                            checked={!!lesson.is_one_grade}
                             onCheckedChange={() => handleToggleOneGrade(lesson)}
                           />
                         </div>
