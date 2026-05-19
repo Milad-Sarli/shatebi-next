@@ -78,7 +78,7 @@ interface Filters {
 }
 
 export default function OptimizedNumbersPage() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [masters, setMasters] = React.useState<Master[]>([]);
   const [, setAllNumbers] = React.useState<OptimizedNumber[]>([]);
   const [filteredNumbers, setFilteredNumbers] = React.useState<OptimizedNumber[]>([]);
@@ -196,6 +196,24 @@ export default function OptimizedNumbersPage() {
     };
     fetchMasters();
   }, [accessToken]);
+
+  const autoFilterInitialized = React.useRef(false);
+  React.useEffect(() => {
+    if (!accessToken || !user || masters.length === 0) return;
+    if (autoFilterInitialized.current) return;
+    if (filters.teacher !== "all") return;
+
+    const foundMaster = masters.find((m) => m.user_id === user.id)
+      || masters.find((m) => m.mellicode === user.username)
+      || masters.find((m) => m.fullname === user.name)
+      || masters.find((m) => m.mellicode?.toString() === user.username?.toString())
+      || masters.find((m) => m.user_id?.toString() === user.id?.toString());
+
+    if (foundMaster) {
+      autoFilterInitialized.current = true;
+      setFilters(prev => ({ ...prev, teacher: foundMaster.id.toString(), page: 1 }));
+    }
+  }, [accessToken, user, masters, filters.teacher]);
 
   const handlePageChange = React.useCallback((page: number) => {
     setFilters(prev => ({
