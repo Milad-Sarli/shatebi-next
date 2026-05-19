@@ -223,27 +223,17 @@ export default function LessonsPage() {
     if (!accessToken) return;
     
     try {
-      // دریافت لیست دروس قابل انتساب به عنوان والد
       await fetchAvailableParents(lesson.id);
       
-      // اطمینان از اینکه اطلاعات کامل درس را داریم
       const detailedLesson = await LessonService.getLessonById(lesson.id, accessToken);
       if (detailedLesson && detailedLesson.data) {
         console.log("درس با جزئیات کامل:", detailedLesson.data);
-        // اطمینان از اینکه parent_id به درستی تنظیم شده است
-        const lessonWithParent = {
-          ...detailedLesson.data,
-          // تبدیل parent از string به number یا null
-          parent_id: detailedLesson.data.parent ? parseInt(detailedLesson.data.parent) : null
-        };
-        console.log("درس با parent_id اصلاح شده:", lessonWithParent.parent_id);
-        setLessonToEdit(lessonWithParent);
+        setLessonToEdit(detailedLesson.data);
       } else {
         setLessonToEdit(lesson);
       }
     } catch (error) {
       console.error("خطا در دریافت اطلاعات درس:", error);
-      // حتی در صورت خطا، فرم ویرایش را نمایش می‌دهیم
       setLessonToEdit(lesson);
     }
   };

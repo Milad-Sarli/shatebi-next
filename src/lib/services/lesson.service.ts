@@ -7,7 +7,7 @@ export interface Lesson {
   title: string;
   description?: string;
   tenant_id?: number;
-  parent_id?: number;
+  parent_id?: number | null;
   created_at?: string;
   updated_at?: string;
   is_one_grade?: boolean | string | number | null;
@@ -96,23 +96,7 @@ export class LessonService {
   }
 
   static async updateLesson(id: number, data: LessonUpdateData, token: string) {
-    // اطمینان از اینکه parent_id به درستی ارسال می‌شود
-    // تبدیل مستقیم به عدد برای اطمینان از ارسال صحیح به سرور
-    const formattedData = {
-      ...data,
-    };
-
-    // اگر parent_id وجود دارد، آن را به عدد تبدیل می‌کنیم
-    if (data.parent_id !== null && data.parent_id !== undefined) {
-      formattedData.parent_id = Number(data.parent_id);
-    } else {
-      // در غیر این صورت، مقدار null را به صورت صریح ارسال می‌کنیم
-      formattedData.parent_id = null;
-    }
-
-    console.log("Final data sent to API:", JSON.stringify(formattedData));
-
-    const response = await axios.put(`${API_URL}/api/droos/${id}`, formattedData, {
+    const response = await axios.put(`${API_URL}/api/droos/${id}`, data, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
