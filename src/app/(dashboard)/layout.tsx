@@ -344,7 +344,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         <div className="p-4 md:p-6 relative">
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {children}
             </AnimatePresence>
             <PusherTest />

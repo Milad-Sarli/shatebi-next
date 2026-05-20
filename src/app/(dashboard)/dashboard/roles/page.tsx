@@ -148,7 +148,7 @@ export default function RolesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence>
                     {roles.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">

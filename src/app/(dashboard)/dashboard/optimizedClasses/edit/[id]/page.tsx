@@ -228,9 +228,9 @@ export default function EditClassPage() {
         const classResponse = await optimizedClassService.getById(classId, accessToken);
         setClassData(classResponse);
         
-        // Fetch all lessons for dropdown (lessons are usually limited in number)
+        // Fetch lessons for dropdown with reasonable limit
         const lessonsResponse = await LessonService.getLessons(
-          { per_page: 1000 }, 
+          { per_page: 200 }, 
           accessToken
         );
         setLessons(lessonsResponse.data || []);

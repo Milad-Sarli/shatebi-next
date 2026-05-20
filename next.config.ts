@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
         pathname: '/storage/**',
       },
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/storage/**',
+      },
+      {
         protocol: 'https',
         hostname: 'test.bikerasol.ir',
         pathname: '/shatebi/**',

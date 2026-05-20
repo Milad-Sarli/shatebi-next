@@ -247,7 +247,7 @@ export default function NotificationsTablePage() {
       </div>
       {/* Mobile card view */}
       <div className="space-y-4 md:hidden">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {loading ? (
             <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
               در حال بارگذاری...

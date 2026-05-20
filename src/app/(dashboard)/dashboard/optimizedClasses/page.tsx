@@ -564,7 +564,7 @@ export default function OptimizedClassesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence>
                     {loading ? (
                       <tr>
                         <td
@@ -686,7 +686,7 @@ export default function OptimizedClassesPage() {
 
             {/* Mobile card view */}
             <div className="space-y-4 md:hidden">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {loading ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...

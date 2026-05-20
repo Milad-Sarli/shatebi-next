@@ -20,6 +20,7 @@ import {
   optimizedNumberService,
   OptimizedNumber,
 } from "@/lib/services/number.service";
+import { API_URL } from "@/lib/constants";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,17 @@ interface NumberFormProps {
   onSuccess?: () => void;
 }
 
+interface StudentOption {
+  id: number;
+  Fname: string;
+  Lname: string;
+}
+
+interface TeacherOption {
+  id: number;
+  fullname: string;
+}
+
 export function NumberForm({
   initialData,
   numberId,
@@ -54,8 +66,8 @@ export function NumberForm({
 }: NumberFormProps) {
   const { accessToken } = useAuth();
   const [loading, setLoading] = React.useState(false);
-  const [students, setStudents] = React.useState([]);
-  const [teachers, setTeachers] = React.useState([]);
+  const [students, setStudents] = React.useState<StudentOption[]>([]);
+  const [teachers, setTeachers] = React.useState<TeacherOption[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,23 +89,27 @@ export function NumberForm({
       if (!accessToken) return;
 
       try {
-        // Fetch teachers
-        const teachersResponse = await fetch('/api/teachers', {
+        // Fetch teachers with reasonable limit
+        const teachersResponse = await fetch(`${API_URL}/api/masters?per_page=500`, {
           headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
           }
         });
-        const teachersData = await teachersResponse.json();
-        setTeachers(teachersData);
+        const teachersJson = await teachersResponse.json();
+        const teachersList = teachersJson?.data?.data || teachersJson?.data || [];
+        setTeachers(Array.isArray(teachersList) ? teachersList : []);
 
-        // Fetch students
-        const studentsResponse = await fetch('/api/students', {
+        // Fetch students with reasonable limit
+        const studentsResponse = await fetch(`${API_URL}/api/students?per_page=500`, {
           headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
           }
         });
-        const studentsData = await studentsResponse.json();
-        setStudents(studentsData);
+        const studentsJson = await studentsResponse.json();
+        const studentsList = studentsJson?.data?.data || studentsJson?.data || [];
+        setStudents(Array.isArray(studentsList) ? studentsList : []);
       } catch (error) {
         console.error(error);
         toast.error("Error loading data");

@@ -156,8 +156,18 @@ async function getStoredAuthToken() {
 // Helper function to get API URL
 async function getApiUrl() {
   // This should match your NEXT_PUBLIC_API_URL
-  return 'https://test.bikerasol.ir'; // Default fallback, should be configured
+  return self.apiUrl || 'http://localhost:8000';
 }
+
+// Fetch handler — bypass API calls to avoid SW overhead, passthrough everything else
+self.addEventListener('fetch', function(event) {
+  if (!(event.request.url.startsWith('http:') || event.request.url.startsWith('https:'))) return;
+  // Skip API calls — let them go directly to network without SW overhead
+  if (event.request.url.includes('/api/')) return;
+  event.respondWith(fetch(event.request).catch(function() {
+    return new Response('', { status: 408, statusText: 'Service worker fetch failed' });
+  }));
+});
 
 // Listen for messages from the main thread (for token updates, etc.)
 self.addEventListener('message', function(event) {

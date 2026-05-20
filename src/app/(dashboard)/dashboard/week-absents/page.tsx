@@ -429,7 +429,7 @@ export default function WeekAbsentsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {currentTabRecords.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">
@@ -520,7 +520,7 @@ export default function WeekAbsentsPage() {
               </div>
 
               <div className="space-y-3 md:hidden">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                   {currentTabRecords.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0 }}

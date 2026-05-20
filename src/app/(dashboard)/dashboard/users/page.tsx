@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/context/auth.context";
+import { API_URL } from "@/lib/constants";
 import { UserService, User, UserFilters } from "@/lib/services/user.service";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -79,6 +80,8 @@ export default function UsersPage() {
   const [roleOptions, setRoleOptions] = React.useState([{ value: "all", label: "همه نقش‌ها" }]);
   const [selectedAttachRole, setSelectedAttachRole] = React.useState("");
   const [attachLoading, setAttachLoading] = React.useState(false);
+  const [editingTenantUser, setEditingTenantUser] = React.useState<number | null>(null);
+  const [tenants, setTenants] = React.useState<Array<{ id: number; name: string; title: string }>>([]);
 
   const fetchUsers = React.useCallback(
     async (searchTerm?: string) => {
@@ -248,10 +251,17 @@ export default function UsersPage() {
       if (!accessToken) return;
       try {
         const res = await AppRoleService.getAppRoles({}, accessToken);
-        const roles = res.data.map((role) => ({
-          value: role.name,
-          label: ROLE_FA_MAP[role.name] || role.name,
-        }));
+        const seen = new Set();
+        const roles = res.data
+          .filter((role) => {
+            if (seen.has(role.name)) return false;
+            seen.add(role.name);
+            return true;
+          })
+          .map((role) => ({
+            value: role.name,
+            label: ROLE_FA_MAP[role.name] || role.name,
+          }));
         setRoleOptions([{ value: "all", label: "همه نقش‌ها" }, ...roles]);
       } catch (e) {
         toast.error("خطا در دریافت نقش‌ها");
@@ -259,6 +269,30 @@ export default function UsersPage() {
     };
     fetchRoles();
   }, [accessToken]);
+
+  React.useEffect(() => {
+    if (!accessToken) return;
+    fetch(`${API_URL}/api/tenants`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+    })
+      .then((r) => r.json())
+      .then((data) => setTenants(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [accessToken]);
+
+  const handleUpdateTenant = async (userId: number, tenantId: number) => {
+    if (!accessToken) return;
+    try {
+      await UserService.updateUser(userId, { tenant_id: tenantId } as any, accessToken);
+      toast.success("مرکز با موفقیت تغییر یافت");
+      setEditingTenantUser(null);
+      fetchUsers();
+    } catch {
+      toast.error("خطا در تغییر مرکز");
+    }
+  };
+
+  const cancelEditingTenant = () => setEditingTenantUser(null);
 
   return (
     <PageTransition>
@@ -336,7 +370,7 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence>
                     {loading ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
@@ -369,11 +403,11 @@ export default function UsersPage() {
                           <td className="whitespace-nowrap px-4 py-3">
                             <div className="flex flex-wrap items-center gap-1">
                               {(user.app_roles && user.app_roles.length > 0) ? (
-                                user.app_roles.map((role, idx) => {
+                                user.app_roles.map((role) => {
                                   const color = ROLE_COLOR_MAP[role.name] || ROLE_COLOR_MAP["user"];
                                   const faName = ROLE_FA_MAP[role.name] || role.name;
                                   return (
-                                    <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
+                                    <span key={role.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
                                       {faName}
                                     </span>
                                   );
@@ -394,7 +428,31 @@ export default function UsersPage() {
                               </Button>
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{user.tenant?.title}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">
+                            {editingTenantUser === user.id ? (
+                              <Select
+                                value={String(user.tenant_id)}
+                                onValueChange={(val) => handleUpdateTenant(user.id, Number(val))}
+                                onOpenChange={(open) => { if (!open) cancelEditingTenant(); }}
+                              >
+                                <SelectTrigger className="w-[160px] h-8 text-xs border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {tenants.map((t) => (
+                                    <SelectItem key={t.id} value={String(t.id)}>{t.title}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span
+                                className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                onClick={() => setEditingTenantUser(user.id)}
+                              >
+                                {user.tenant?.title || "—"}
+                              </span>
+                            )}
+                          </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{user.phone}</td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button 
@@ -424,7 +482,7 @@ export default function UsersPage() {
 
             {/* Mobile card view */}
             <div className="space-y-4 md:hidden">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {loading ? (
                   <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                     در حال بارگذاری...
@@ -448,11 +506,11 @@ export default function UsersPage() {
                           <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{getUserFullName(user)}</h3>
                           <div className="flex gap-1 items-center">
                             {(user.app_roles && user.app_roles.length > 0) ? (
-                              user.app_roles.map((role, idx) => {
+                              user.app_roles.map((role) => {
                                 const color = ROLE_COLOR_MAP[role.name] || ROLE_COLOR_MAP["user"];
                                 const faName = ROLE_FA_MAP[role.name] || role.name;
                                 return (
-                                  <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
+                                  <span key={role.id} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mr-1 ${color}`}>
                                     {faName}
                                   </span>
                                 );
@@ -485,12 +543,32 @@ export default function UsersPage() {
                               {user.email}
                             </div>
                           )}
-                          {user.tenant?.title && (
-                            <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
-                              <Building className="h-4 w-4 ml-2 text-zinc-400" />
-                              {user.tenant.title}
-                            </div>
-                          )}
+                          <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
+                            <Building className="h-4 w-4 ml-2 text-zinc-400 shrink-0" />
+                            {editingTenantUser === user.id ? (
+                              <Select
+                                value={String(user.tenant_id)}
+                                onValueChange={(val) => handleUpdateTenant(user.id, Number(val))}
+                                onOpenChange={(open) => { if (!open) cancelEditingTenant(); }}
+                              >
+                                <SelectTrigger className="h-7 text-xs border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {tenants.map((t) => (
+                                    <SelectItem key={t.id} value={String(t.id)}>{t.title}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span
+                                className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                onClick={() => setEditingTenantUser(user.id)}
+                              >
+                                {user.tenant?.title || "—"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         
                         <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
