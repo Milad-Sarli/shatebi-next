@@ -1,18 +1,21 @@
 'use client'
 
 import { AuthProvider } from '@/lib/context/auth.context'
-import { ThemeProvider } from '@/components/ui/theme-provider'
+import { ThemeProvider as ShadcnThemeProvider } from '@/components/ui/theme-provider'
+import { ThemeProvider } from '@/lib/context/theme.context'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider
+    <ShadcnThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
           >
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </ThemeProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </ThemeProvider>
+    </ShadcnThemeProvider>
   )
 } 
