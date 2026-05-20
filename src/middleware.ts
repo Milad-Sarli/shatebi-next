@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // List of public routes that don't require authentication
-const publicRoutes = ['/auth/login', '/auth/adminlogin', '/auth/register', '/registeration/']
+const publicRoutes = ['/', '/auth/login', '/auth/adminlogin', '/auth/register', '/registeration/']
 
 // List of admin-only routes
 const adminRoutes = ['/dashboard/roles']
@@ -23,7 +23,10 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if the route is public
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some(route => {
+    if (route === '/') return pathname === '/'
+    return pathname.startsWith(route)
+  })
 
   // If the route is public, allow access
   if (isPublicRoute) {
