@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { AppRoleService } from '@/lib/services/approle.service';
 import { AppRolePermissionService } from '@/lib/services/app-role-permission.service';
 import { Button } from '@/components/ui/button';
@@ -14,112 +14,103 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export default function CreateRolePage() {
+export default function EditRolePage() {
+  const router = useRouter();
+  const params = useParams();
+  const roleId = params?.id as string;
   const [roleName, setRoleName] = useState<string>('');
   const [roleDescription, setRoleDescription] = useState<string>('');
   const [permissions, setPermissions] = useState({
     create: false,
     view: false,
     edit: false,
-    delete: false
+    delete: false,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { toast } = useToast();
-  const { accessToken, user } = useAuth();
-  const router = useRouter();
+  const { accessToken } = useAuth();
 
-  const handleCreateRole = async () => {
+  useEffect(() => {
+    if (!accessToken || !roleId) return;
+    const fetchRole = async () => {
+      try {
+        const [roleRes, permRes] = await Promise.all([
+          AppRoleService.getAppRole(Number(roleId), accessToken),
+          AppRolePermissionService.getAppRolePermissions({ role_id: Number(roleId) }, accessToken),
+        ]);
+        const role = roleRes.data;
+        setRoleName(role.name);
+        setRoleDescription(role.description || '');
+        const perms = permRes.data.map((p) => p.name);
+        setPermissions({
+          create: perms.includes('create'),
+          view: perms.includes('view'),
+          edit: perms.includes('edit'),
+          delete: perms.includes('delete'),
+        });
+      } catch {
+        toast({
+          title: 'خطا',
+          description: 'در دریافت اطلاعات نقش مشکلی پیش آمده است',
+        });
+        router.push('/dashboard/roles');
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchRole();
+  }, [accessToken, roleId, router, toast]);
+
+  const handleUpdateRole = async () => {
     if (!roleName) {
-      toast({
-        title: 'خطا',
-        description: 'لطفا نام نقش را وارد کنید',
-      });
-      return;
-    }
-
-    if (!user?.id) {
-      toast({
-        title: 'خطا',
-        description: 'شناسه کاربری یافت نشد',
-      });
+      toast({ title: 'خطا', description: 'لطفا نام نقش را وارد کنید' });
       return;
     }
 
     setIsLoading(true);
     try {
-      // Create the role first
-      const roleResponse = await AppRoleService.createAppRole(
-        {
-          name: roleName,
-          description: roleDescription,
-          user_id: user.id
-        },
-        accessToken!
-      );
+      await AppRoleService.updateAppRole(Number(roleId), { name: roleName, description: roleDescription }, accessToken!);
 
-      // Create permissions for the role
-      const roleId = roleResponse.data.id;
-      const permissionPromises = [];
+      const permRes = await AppRolePermissionService.getAppRolePermissions({ role_id: Number(roleId) }, accessToken!);
+      const existingPerms = permRes.data;
 
-      if (permissions.create) {
-        permissionPromises.push(
-          AppRolePermissionService.createAppRolePermission(
-            { role_id: roleId, name: 'create' },
-            accessToken!
-          )
-        );
-      }
-      if (permissions.view) {
-        permissionPromises.push(
-          AppRolePermissionService.createAppRolePermission(
-            { role_id: roleId, name: 'view' },
-            accessToken!
-          )
-        );
-      }
-      if (permissions.edit) {
-        permissionPromises.push(
-          AppRolePermissionService.createAppRolePermission(
-            { role_id: roleId, name: 'edit' },
-            accessToken!
-          )
-        );
-      }
-      if (permissions.delete) {
-        permissionPromises.push(
-          AppRolePermissionService.createAppRolePermission(
-            { role_id: roleId, name: 'delete' },
-            accessToken!
-          )
-        );
-      }
+      const desiredPerms = ['create', 'view', 'edit', 'delete'].filter((p) => permissions[p as keyof typeof permissions]);
+      const existingNames = existingPerms.map((p) => p.name);
 
-      await Promise.all(permissionPromises);
+      const toCreate = desiredPerms.filter((p) => !existingNames.includes(p));
+      const toDelete = existingPerms.filter((p) => !desiredPerms.includes(p.name));
 
-      toast({
-        title: 'موفق',
-        description: 'نقش با موفقیت ایجاد شد',
-      });
+      await Promise.all([
+        ...toCreate.map((p) => AppRolePermissionService.createAppRolePermission({ role_id: Number(roleId), name: p }, accessToken!)),
+        ...toDelete.map((p) => AppRolePermissionService.deleteAppRolePermission(p.id, accessToken!)),
+      ]);
+
+      toast({ title: 'موفق', description: 'نقش با موفقیت ویرایش شد' });
       router.push('/dashboard/roles');
     } catch {
-      toast({
-        title: 'خطا',
-        description: 'در ایجاد نقش مشکلی پیش آمده است',
-      });
+      toast({ title: 'خطا', description: 'در ویرایش نقش مشکلی پیش آمده است' });
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <PageTransition>
       <div className="space-y-4">
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
-          
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">
-              ایجاد نقش جدید
+              ویرایش نقش
             </h1>
             <Button
               variant="ghost"
@@ -134,7 +125,7 @@ export default function CreateRolePage() {
 
         <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
-            <CardTitle className="text-zinc-900 dark:text-zinc-100">فرم ایجاد نقش</CardTitle>
+            <CardTitle className="text-zinc-900 dark:text-zinc-100">فرم ویرایش نقش</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-6">
@@ -166,9 +157,7 @@ export default function CreateRolePage() {
                     <Checkbox
                       id="create"
                       checked={permissions.create}
-                      onCheckedChange={(checked) => 
-                        setPermissions(prev => ({ ...prev, create: checked as boolean }))
-                      }
+                      onCheckedChange={(checked) => setPermissions((prev) => ({ ...prev, create: checked as boolean }))}
                     />
                     <Label htmlFor="create">ایجاد</Label>
                   </div>
@@ -176,9 +165,7 @@ export default function CreateRolePage() {
                     <Checkbox
                       id="view"
                       checked={permissions.view}
-                      onCheckedChange={(checked) => 
-                        setPermissions(prev => ({ ...prev, view: checked as boolean }))
-                      }
+                      onCheckedChange={(checked) => setPermissions((prev) => ({ ...prev, view: checked as boolean }))}
                     />
                     <Label htmlFor="view">مشاهده</Label>
                   </div>
@@ -186,9 +173,7 @@ export default function CreateRolePage() {
                     <Checkbox
                       id="edit"
                       checked={permissions.edit}
-                      onCheckedChange={(checked) => 
-                        setPermissions(prev => ({ ...prev, edit: checked as boolean }))
-                      }
+                      onCheckedChange={(checked) => setPermissions((prev) => ({ ...prev, edit: checked as boolean }))}
                     />
                     <Label htmlFor="edit">ویرایش</Label>
                   </div>
@@ -196,9 +181,7 @@ export default function CreateRolePage() {
                     <Checkbox
                       id="delete"
                       checked={permissions.delete}
-                      onCheckedChange={(checked) => 
-                        setPermissions(prev => ({ ...prev, delete: checked as boolean }))
-                      }
+                      onCheckedChange={(checked) => setPermissions((prev) => ({ ...prev, delete: checked as boolean }))}
                     />
                     <Label htmlFor="delete">حذف</Label>
                   </div>
@@ -206,17 +189,17 @@ export default function CreateRolePage() {
               </div>
 
               <Button
-                onClick={handleCreateRole}
+                onClick={handleUpdateRole}
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 dark:shadow-blue-500/10"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="animate-spin w-4 h-4 ml-2" />
-                    در حال ایجاد...
+                    در حال ذخیره...
                   </>
                 ) : (
-                  'ایجاد نقش'
+                  'ذخیره تغییرات'
                 )}
               </Button>
             </div>
@@ -225,4 +208,4 @@ export default function CreateRolePage() {
       </div>
     </PageTransition>
   );
-} 
+}

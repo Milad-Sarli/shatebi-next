@@ -3,7 +3,8 @@ import { AppRole } from "@/lib/types";
 export interface AppRolePermission {
     id: number;
     role_id: number;
-    permission: string;
+    name: string;
+    permission?: string;
     role?: AppRole;
 }
 
@@ -11,6 +12,7 @@ export interface AppRolePermissionFilters {
     page?: number;
     per_page?: number;
     search?: string;
+    role_id?: number;
 }
 
 export interface AppRolePermissionResponse {
@@ -27,7 +29,7 @@ export interface AppRolePermissionResponse {
 
 export interface CreateAppRolePermissionData {
     role_id: number;
-    permission: string;
+    name: string;
 }
 
 export interface UpdateAppRolePermissionData {
@@ -41,6 +43,7 @@ export class AppRolePermissionService {
         if (filters.page) queryParams.append("page", filters.page.toString());
         if (filters.per_page) queryParams.append("per_page", filters.per_page.toString());
         if (filters.search) queryParams.append("search", filters.search);
+        if (filters.role_id) queryParams.append("role_id", filters.role_id.toString());
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/app-role-permissions?${queryParams}`, {
             headers: {

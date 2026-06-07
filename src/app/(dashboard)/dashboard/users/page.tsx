@@ -747,7 +747,7 @@ export default function UsersPage() {
                   <SelectValue placeholder="نقش را انتخاب کنید" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roleOptions.map((role) => (
+                  {roleOptions.filter((r) => r.value !== "all").map((role) => (
                     <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                   ))}
                 </SelectContent>

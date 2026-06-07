@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/context/auth.context';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit } from 'lucide-react';
 import { PageTransition } from '@/components/ui/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -174,39 +174,49 @@ export default function RolesPage() {
                             {role.description || '-'}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                  onClick={() => setRoleToDelete({ id: role.id, user_id: role.user_id })}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    این عمل قابل بازگشت نیست. نقش &apos;{roleTranslations[role.name as keyof typeof roleTranslations]?.fa || role.name}&apos; برای همیشه حذف خواهد شد.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setRoleToDelete(null)}>لغو</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => {
-                                      if (roleToDelete && roleToDelete.id === role.id) {
-                                        handleRemoveRole(roleToDelete.id, roleToDelete.user_id);
-                                      }
-                                    }}
-                                    className="bg-red-600 hover:bg-red-700"
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-500 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                onClick={() => router.push(`/dashboard/roles/edit/${role.id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    onClick={() => setRoleToDelete({ id: role.id, user_id: role.user_id })}
                                   >
-                                    حذف
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      این عمل قابل بازگشت نیست. نقش &apos;{roleTranslations[role.name as keyof typeof roleTranslations]?.fa || role.name}&apos; برای همیشه حذف خواهد شد.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setRoleToDelete(null)}>لغو</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        if (roleToDelete && roleToDelete.id === role.id) {
+                                          handleRemoveRole(roleToDelete.id, roleToDelete.user_id);
+                                        }
+                                      }}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      حذف
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </td>
                         </motion.tr>
                       ))

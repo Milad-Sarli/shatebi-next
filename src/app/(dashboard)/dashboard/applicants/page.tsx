@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
+import { format, parseISO } from "date-fns-jalali";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
@@ -149,6 +150,7 @@ export default function ApplicantsPage() {
                     <th className="whitespace-nowrap px-4 py-3 font-medium">نام خانوادگی</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">کد ملی</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">شماره موبایل داوطلب</th>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">تاریخ ثبت‌نام</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عملیات</th>
                   </tr>
                 </thead>
@@ -156,13 +158,13 @@ export default function ApplicantsPage() {
                   <AnimatePresence>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                        <td colSpan={9} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
                           در حال بارگذاری...
                         </td>
                       </tr>
                     ) : applicants.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                        <td colSpan={9} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
                           هیچ متقاضی یافت نشد
                         </td>
                       </tr>
@@ -199,7 +201,9 @@ export default function ApplicantsPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{applicant.Lname}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{applicant.Mellicode || '-'}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{applicant.Phone || '-'}</td>
-                        
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300 text-xs" dir="ltr">
+                            {applicant.created_at ? format(parseISO(applicant.created_at), 'yyyy/MM/dd HH:mm') : '-'}
+                          </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button 
                               variant="ghost" 
@@ -258,8 +262,13 @@ export default function ApplicantsPage() {
                           </p>
                         )}
                         {applicant.Phone && (
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">
                             شماره موبایل داوطلب : {applicant.Phone}
+                          </p>
+                        )}
+                        {applicant.created_at && (
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4" dir="ltr">
+                            تاریخ ثبت‌نام: {format(parseISO(applicant.created_at), 'yyyy/MM/dd HH:mm')}
                           </p>
                         )}
                         <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
@@ -462,7 +471,12 @@ export default function ApplicantsPage() {
                     <p className="text-zinc-500 dark:text-zinc-400">آدرس:</p>
                     <p className="text-zinc-900 dark:text-zinc-100">{selectedApplicant.Adress || '-'}</p>
                   </div>
-                  {/* Consider adding other relevant fields from the Applicant type here if needed */}
+                  <div className="space-y-1">
+                    <p className="text-zinc-500 dark:text-zinc-400">تاریخ ثبت‌نام:</p>
+                    <p className="text-zinc-900 dark:text-zinc-100" dir="ltr">
+                      {selectedApplicant.created_at ? format(parseISO(selectedApplicant.created_at), 'yyyy/MM/dd HH:mm') : '-'}
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (
