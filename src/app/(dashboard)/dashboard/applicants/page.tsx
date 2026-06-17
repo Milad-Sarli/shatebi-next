@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Download, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ export default function ApplicantsPage() {
   });
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
+  const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
   const [selectedApplicant, setSelectedApplicant] = React.useState<Applicant | null>(null);
   const [isViewApplicantOpen, setIsViewApplicantOpen] = React.useState(false);
 
@@ -92,6 +93,30 @@ export default function ApplicantsPage() {
     setFilters((prev) => ({ ...prev, page }));
   };
 
+  const isAllSelected = applicants.length > 0 && applicants.every(a => selectedIds.has(a.id));
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      const newSet = new Set(selectedIds);
+      applicants.forEach(a => newSet.delete(a.id));
+      setSelectedIds(newSet);
+    } else {
+      const newSet = new Set(selectedIds);
+      applicants.forEach(a => newSet.add(a.id));
+      setSelectedIds(newSet);
+    }
+  };
+
+  const handleSelectOne = (id: number) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
   const handleViewApplicantDetails = (applicant: Applicant) => {
     setSelectedApplicant(applicant);
     setIsViewApplicantOpen(true);
@@ -103,6 +128,26 @@ export default function ApplicantsPage() {
       search: searchInput || undefined,
       page: 1,
     }));
+  };
+
+  const handleExportExcel = async () => {
+    if (!accessToken) return;
+    try {
+      const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined;
+      const blob = await ApplicantService.exportExcel(accessToken, ids);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `applicants-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('خروجی اکسل با موفقیت دانلود شد');
+    } catch (error) {
+      toast.error('خطا در دانلود خروجی اکسل');
+      console.error(error);
+    }
   };
 
   return (
@@ -137,13 +182,33 @@ export default function ApplicantsPage() {
               >
                 جستجو
               </Button>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={handleExportExcel}
+                className="border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <Download className="h-4 w-4 ml-1" />
+                خروجی اکسل
+              </Button>
             </div>
+
+            {selectedIds.size > 0 && (
+              <div className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+                {selectedIds.size} متقاضی انتخاب شده
+              </div>
+            )}
 
             {/* Desktop table view */}
             <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800 hidden md:block">
               <table className="w-full text-right text-sm">
                 <thead className="bg-zinc-50 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   <tr>
+                    <th className="whitespace-nowrap px-4 py-3 font-medium">
+                      <button onClick={handleSelectAll} className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100">
+                        {isAllSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                      </button>
+                    </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">#</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">عکس</th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">نام</th>
@@ -158,13 +223,13 @@ export default function ApplicantsPage() {
                   <AnimatePresence>
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                        <td colSpan={10} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
                           در حال بارگذاری...
                         </td>
                       </tr>
                     ) : applicants.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
+                        <td colSpan={10} className="px-4 py-3 text-center text-zinc-500 dark:text-zinc-400">
                           هیچ متقاضی یافت نشد
                         </td>
                       </tr>
@@ -176,10 +241,14 @@ export default function ApplicantsPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -20 }}
                           transition={{ duration: 0.2 }}
-                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 cursor-pointer"
-                          onClick={() => handleViewApplicantDetails(applicant)}
+                          className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50"
                         >
-                          <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <button onClick={(e) => { e.stopPropagation(); handleSelectOne(applicant.id); }} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                              {selectedIds.has(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                            </button>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300 cursor-pointer" onClick={() => handleViewApplicantDetails(applicant)}>
                             {pagination.from ? pagination.from + index : index + 1}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
@@ -242,12 +311,16 @@ export default function ApplicantsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.2, delay: index * 0.05 }}
-                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden cursor-pointer"
-                      onClick={() => handleViewApplicantDetails(applicant)}
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden"
                     >
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{applicant.Fname} {applicant.Lname}</h3>
+                          <div className="flex items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); handleSelectOne(applicant.id); }} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                              {selectedIds.has(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                            </button>
+                            <h3 className="font-medium text-zinc-900 dark:text-zinc-100 cursor-pointer" onClick={() => handleViewApplicantDetails(applicant)}>{applicant.Fname} {applicant.Lname}</h3>
+                          </div>
                            <Badge variant={applicant.status === 1 ? "default" : "outline"} className={
                                 applicant.status === 1 
                                 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"

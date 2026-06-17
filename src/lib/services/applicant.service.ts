@@ -228,6 +228,27 @@ export class ApplicantService {
         return response.json();
     }
 
+    static async exportExcel(token: string, ids?: number[]): Promise<Blob> {
+        const params = new URLSearchParams();
+        if (ids && ids.length > 0) {
+            params.append('ids', ids.join(','));
+        }
+        const query = params.toString();
+        const response = await fetch(`${API_URL}/api/applicants/export${query ? '?' + query : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Error exporting applicants' }));
+            throw new Error(error.message || 'Error exporting applicants');
+        }
+
+        return response.blob();
+    }
+
     static async deleteApplicant(id: number, token: string): Promise<{ message: string }> {
         const response = await fetch(`${API_URL}/api/applicants/${id}`, {
             method: 'DELETE',
