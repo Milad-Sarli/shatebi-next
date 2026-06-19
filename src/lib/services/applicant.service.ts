@@ -228,10 +228,19 @@ export class ApplicantService {
         return response.json();
     }
 
-    static async exportExcel(token: string, ids?: number[]): Promise<Blob> {
+    static async exportExcel(token: string, options: {
+        ids?: number[];
+        search?: string;
+        excludeIds?: number[];
+    } = {}): Promise<Blob> {
         const params = new URLSearchParams();
-        if (ids && ids.length > 0) {
-            params.append('ids', ids.join(','));
+        if (options.ids && options.ids.length > 0) {
+            params.append('ids', options.ids.join(','));
+        } else {
+            if (options.search) params.append('search', options.search);
+            if (options.excludeIds && options.excludeIds.length > 0) {
+                params.append('exclude_ids', options.excludeIds.join(','));
+            }
         }
         const query = params.toString();
         const response = await fetch(`${API_URL}/api/applicants/export${query ? '?' + query : ''}`, {

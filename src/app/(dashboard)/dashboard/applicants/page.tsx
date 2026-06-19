@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, ChevronLeft, ChevronRight, Eye, Download, CheckSquare, Square } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Download, CheckSquare, Square, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,16 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+function toJalali(date: string | undefined, showTime = true): string {
+  if (!date) return '-';
+  try {
+    const parsed = parseISO(date);
+    return showTime ? format(parsed, 'yyyy/MM/dd HH:mm') : format(parsed, 'yyyy/MM/dd');
+  } catch {
+    return '-';
+  }
+}
+
 export default function ApplicantsPage() {
   const { accessToken } = useAuth();
   const [applicants, setApplicants] = React.useState<Applicant[]>([]);
@@ -54,6 +64,8 @@ export default function ApplicantsPage() {
   const [searchInput, setSearchInput] = React.useState("");
   const debouncedSearch = useDebounce(searchInput, 500);
   const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
+  const [selectAllAcrossPages, setSelectAllAcrossPages] = React.useState(false);
+  const [excludedIds, setExcludedIds] = React.useState<Set<number>>(new Set());
   const [selectedApplicant, setSelectedApplicant] = React.useState<Applicant | null>(null);
   const [isViewApplicantOpen, setIsViewApplicantOpen] = React.useState(false);
 
@@ -83,6 +95,9 @@ export default function ApplicantsPage() {
       search: debouncedSearch || undefined,
       page: 1,
     }));
+    setSelectAllAcrossPages(false);
+    setExcludedIds(new Set());
+    setSelectedIds(new Set());
   }, [debouncedSearch]);
 
   React.useEffect(() => {
@@ -93,28 +108,61 @@ export default function ApplicantsPage() {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const isAllSelected = applicants.length > 0 && applicants.every(a => selectedIds.has(a.id));
+  const isRowSelected = (id: number) => selectAllAcrossPages ? !excludedIds.has(id) : selectedIds.has(id);
+
+  const isAllOnPageSelected = applicants.length > 0 && applicants.every(a => isRowSelected(a.id));
+  const isIndeterminate = !isAllOnPageSelected && applicants.some(a => isRowSelected(a.id));
 
   const handleSelectAll = () => {
-    if (isAllSelected) {
-      const newSet = new Set(selectedIds);
-      applicants.forEach(a => newSet.delete(a.id));
-      setSelectedIds(newSet);
+    if (selectAllAcrossPages) {
+      const newExcluded = new Set(excludedIds);
+      if (isAllOnPageSelected) {
+        applicants.forEach(a => newExcluded.add(a.id));
+      } else {
+        applicants.forEach(a => newExcluded.delete(a.id));
+      }
+      setExcludedIds(newExcluded);
     } else {
       const newSet = new Set(selectedIds);
-      applicants.forEach(a => newSet.add(a.id));
+      if (isAllOnPageSelected) {
+        applicants.forEach(a => newSet.delete(a.id));
+      } else {
+        applicants.forEach(a => newSet.add(a.id));
+      }
       setSelectedIds(newSet);
     }
   };
 
+  const handleSelectAllAcrossPages = () => {
+    setSelectAllAcrossPages(true);
+    setExcludedIds(new Set());
+    setSelectedIds(new Set());
+  };
+
+  const handleClearSelection = () => {
+    setSelectAllAcrossPages(false);
+    setExcludedIds(new Set());
+    setSelectedIds(new Set());
+  };
+
   const handleSelectOne = (id: number) => {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
+    if (selectAllAcrossPages) {
+      const newExcluded = new Set(excludedIds);
+      if (newExcluded.has(id)) {
+        newExcluded.delete(id);
+      } else {
+        newExcluded.add(id);
+      }
+      setExcludedIds(newExcluded);
     } else {
-      newSet.add(id);
+      const newSet = new Set(selectedIds);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      setSelectedIds(newSet);
     }
-    setSelectedIds(newSet);
   };
 
   const handleViewApplicantDetails = (applicant: Applicant) => {
@@ -133,8 +181,21 @@ export default function ApplicantsPage() {
   const handleExportExcel = async () => {
     if (!accessToken) return;
     try {
-      const ids = selectedIds.size > 0 ? Array.from(selectedIds) : undefined;
-      const blob = await ApplicantService.exportExcel(accessToken, ids);
+      let blob: Blob;
+      if (selectAllAcrossPages) {
+        blob = await ApplicantService.exportExcel(accessToken, {
+          search: filters.search,
+          excludeIds: Array.from(excludedIds),
+        });
+      } else if (selectedIds.size > 0) {
+        blob = await ApplicantService.exportExcel(accessToken, {
+          ids: Array.from(selectedIds),
+        });
+      } else {
+        blob = await ApplicantService.exportExcel(accessToken, {
+          search: filters.search,
+        });
+      }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -193,11 +254,23 @@ export default function ApplicantsPage() {
               </Button>
             </div>
 
-            {selectedIds.size > 0 && (
-              <div className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
-                {selectedIds.size} متقاضی انتخاب شده
+            {selectAllAcrossPages ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <span>همه {pagination.total} متقاضی انتخاب شد</span>
+                {excludedIds.size > 0 && <span>(به جز {excludedIds.size} مورد)</span>}
+                <button onClick={handleClearSelection} className="text-red-500 hover:underline">لغو انتخاب</button>
               </div>
-            )}
+            ) : selectedIds.size > 0 ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <span>{selectedIds.size} متقاضی انتخاب شده</span>
+                {isAllOnPageSelected && pagination.total > applicants.length && (
+                  <button onClick={handleSelectAllAcrossPages} className="text-blue-500 hover:underline">
+                    انتخاب همه {pagination.total} متقاضی
+                  </button>
+                )}
+                <button onClick={handleClearSelection} className="text-red-500 hover:underline">لغو انتخاب</button>
+              </div>
+            ) : null}
 
             {/* Desktop table view */}
             <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800 hidden md:block">
@@ -206,7 +279,7 @@ export default function ApplicantsPage() {
                   <tr>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       <button onClick={handleSelectAll} className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100">
-                        {isAllSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                        {isAllOnPageSelected ? <CheckSquare className="h-4 w-4" /> : isIndeterminate ? <Minus className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                       </button>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">#</th>
@@ -245,7 +318,7 @@ export default function ApplicantsPage() {
                         >
                           <td className="whitespace-nowrap px-4 py-3">
                             <button onClick={(e) => { e.stopPropagation(); handleSelectOne(applicant.id); }} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                              {selectedIds.has(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                              {isRowSelected(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                             </button>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300 cursor-pointer" onClick={() => handleViewApplicantDetails(applicant)}>
@@ -271,7 +344,7 @@ export default function ApplicantsPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{applicant.Mellicode || '-'}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-900 dark:text-zinc-100">{applicant.Phone || '-'}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-300 text-xs" dir="ltr">
-                            {applicant.created_at ? format(parseISO(applicant.created_at), 'yyyy/MM/dd HH:mm') : '-'}
+                            {toJalali(applicant.created_at)}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <Button 
@@ -317,7 +390,7 @@ export default function ApplicantsPage() {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <button onClick={(e) => { e.stopPropagation(); handleSelectOne(applicant.id); }} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                              {selectedIds.has(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                              {isRowSelected(applicant.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                             </button>
                             <h3 className="font-medium text-zinc-900 dark:text-zinc-100 cursor-pointer" onClick={() => handleViewApplicantDetails(applicant)}>{applicant.Fname} {applicant.Lname}</h3>
                           </div>
@@ -341,7 +414,7 @@ export default function ApplicantsPage() {
                         )}
                         {applicant.created_at && (
                           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4" dir="ltr">
-                            تاریخ ثبت‌نام: {format(parseISO(applicant.created_at), 'yyyy/MM/dd HH:mm')}
+                            تاریخ ثبت‌نام: {toJalali(applicant.created_at)}
                           </p>
                         )}
                         <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
@@ -547,7 +620,7 @@ export default function ApplicantsPage() {
                   <div className="space-y-1">
                     <p className="text-zinc-500 dark:text-zinc-400">تاریخ ثبت‌نام:</p>
                     <p className="text-zinc-900 dark:text-zinc-100" dir="ltr">
-                      {selectedApplicant.created_at ? format(parseISO(selectedApplicant.created_at), 'yyyy/MM/dd HH:mm') : '-'}
+                      {toJalali(selectedApplicant.created_at)}
                     </p>
                   </div>
                 </div>
