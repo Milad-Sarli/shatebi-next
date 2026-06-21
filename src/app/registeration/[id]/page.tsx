@@ -77,7 +77,7 @@ export default function RegistrationForm() {
   const [isTypingHealthDetails, setIsTypingHealthDetails] = useState(false);
   const params = useParams();
   const id = params?.id as string;
-  const [dynamicTitle, setDynamicTitle] = useState('دارالقرآن امام شاطبی (رح)');
+  const [dynamicTitle, setDynamicTitle] = useState('');
 
   const [step, setStep] = useState<Step>('otp-phone');
   const [otpPhone, setOtpPhone] = useState('');
@@ -87,8 +87,13 @@ export default function RegistrationForm() {
   const [showFireworks, setShowFireworks] = useState(false);
 
   useEffect(() => {
-    if (id === '7') setDynamicTitle('مسجد و مکتبخانه رحمت');
-    else setDynamicTitle('دارالقرآن امام شاطبی (رح)');
+    if (!id) return;
+    ApplicantOtpService.getPublicTenants()
+      .then(tenants => {
+        const tenant = tenants.find(t => t.id === Number(id));
+        if (tenant?.title) setDynamicTitle(tenant.title);
+      })
+      .catch(() => {});
   }, [id]);
 
   useEffect(() => {

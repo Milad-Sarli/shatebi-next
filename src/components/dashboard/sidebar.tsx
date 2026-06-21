@@ -15,6 +15,9 @@ import {
   ChevronRight,
   Clock,
   Home,
+  BookMarked,
+  ListChecks,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
@@ -133,6 +136,27 @@ const items: NavItem[] = [
         href: "/dashboard/guard",
         icon: Shield, // Icon specific to this sub-item
         requiredRole: ["admin", "guard"],
+      },
+    ],
+  },
+  {
+    title: "جزء خوانی قرآن",
+    icon: BookMarked,
+    subItems: [
+      {
+        title: "داشبورد جزء خوانی",
+        href: "/dashboard/juz",
+        icon: Library,
+      },
+      {
+        title: "مدیریت تکالیف هفتگی",
+        href: "/dashboard/juz/assignments",
+        icon: ListChecks,
+      },
+      {
+        title: "ثبت قرائت",
+        href: "/dashboard/juz/reading-logs",
+        icon: BookMarked,
       },
     ],
   },
