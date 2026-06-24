@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/context/auth.context";
 import { Student, StudentService } from "@/lib/services/student.service";
@@ -572,6 +573,17 @@ export function StudentForm({ student, onSuccess, onCancel }: StudentFormProps) 
         <div className="space-y-2">
           <Label htmlFor="Adress">آدرس</Label>
           <Input id="Adress" {...form.register("Adress")} placeholder="آدرس" />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="Description">توضیحات</Label>
+          <Textarea
+            id="Description"
+            {...form.register("Description")}
+            placeholder="توضیحات"
+            rows={3}
+          />
         </div>
 
         {/* Image Upload */}
