@@ -80,7 +80,7 @@ export default function TaskListPage() {
       }
       const res = await JuzService.getAssignmentsWithStatus(params);
       if (res.status === "success") {
-        const raw = res.data as { data: JuzAssignmentWithRecord[]; current_page: number; last_page: number };
+        const raw = res.data as unknown as { data: JuzAssignmentWithRecord[]; current_page: number; last_page: number };
         let items: JuzAssignmentWithRecord[];
         if (Array.isArray(raw)) {
           items = raw;
@@ -89,7 +89,7 @@ export default function TaskListPage() {
           setTotalPages(raw.last_page || 1);
         }
         items = items.map((i) => {
-          const raw = i as Record<string, unknown>;
+          const raw = i as unknown as Record<string, unknown>;
           return {
             ...i,
             readingRecord: (raw.reading_record as JuzStudentReadingRecord | null) ?? raw.readingRecord as JuzStudentReadingRecord | null,
