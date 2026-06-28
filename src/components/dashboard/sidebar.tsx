@@ -158,6 +158,11 @@ const items: NavItem[] = [
         href: "/dashboard/juz/reading-logs",
         icon: BookMarked,
       },
+      {
+        title: "لیست تکالیف",
+        href: "/dashboard/juz/task-list",
+        icon: ListChecks,
+      },
     ],
   },
   {

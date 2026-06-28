@@ -8,6 +8,7 @@ import { GraduationCap, Trophy, AlertCircle, Bell } from "lucide-react";
 import { useAuth } from "@/lib/context/auth.context";
 import { DashboardService } from "@/lib/services/dashboard.service";
 import { PageTransition } from "@/components/ui/page-transition";
+import MyAssignmentsWidget from "@/components/dashboard/MyAssignmentsWidget";
 import AverageScoresChart from "@/components/charts/AverageScoresChart";
 import NotificationDisplay, { Notification } from "@/components/NotificationDisplay";
 import { fetchNotifications } from "@/lib/services/notification.service";
@@ -261,6 +262,10 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+
+        {/* My Assignments Widget — shows for all authenticated users */}
+        <MyAssignmentsWidget />
+
       </div>
     </PageTransition>
   );

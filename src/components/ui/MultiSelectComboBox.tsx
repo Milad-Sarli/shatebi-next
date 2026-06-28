@@ -75,14 +75,12 @@ export const MultiSelectComboBox: React.FC<MultiSelectComboBoxProps> = ({
       .replace(/\s+/g, " ");
   };
 
-  // If onSearch is provided, show all options (API will filter), otherwise filter locally
-  const filteredOptions = onSearch 
-    ? options.filter((opt) => !value.includes(opt.value))
-    : options.filter(
-        (opt) =>
-          normalizeText(opt.label).includes(normalizeText(inputValue)) &&
-          !value.includes(opt.value)
-      );
+  // Always filter locally by inputValue; onSearch is used for API-side fetching only
+  const filteredOptions = options.filter(
+    (opt) =>
+      normalizeText(opt.label).includes(normalizeText(inputValue)) &&
+      !value.includes(opt.value)
+  );
 
   const handleSelect = (val: string | number) => {
     onChange([...value, val]);
