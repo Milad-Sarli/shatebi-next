@@ -37,6 +37,7 @@ export interface AppRole {
 export interface LoginWithPasswordResponse {
   access_token: string;
   token_type: string;
+  impersonated_by?: number;
   user: {
     id: number;
     username: string;
@@ -144,6 +145,25 @@ export class AuthService {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'خطا در خروج از سامانه');
+    }
+
+    return response.json();
+  }
+
+  static async loginAsUser(userId: number, accessToken: string): Promise<LoginWithPasswordResponse> {
+    const response = await fetch(`${API_URL}/api/auth/login-as-user/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'خطا در ورود به عنوان کاربر');
     }
 
     return response.json();

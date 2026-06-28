@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean
   user: User | null
   accessToken: string | null
+  impersonatedBy: number | null
 }
 
 interface AuthActions {
@@ -18,6 +19,7 @@ interface AuthActions {
   resendOtp: (token: string) => Promise<ResendOtpResponse>
   _setState: (newState: Partial<AuthState>) => void
   loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
+  impersonateUser: (userId: number) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -27,6 +29,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isAuthenticated: false,
       user: null,
       accessToken: null,
+      impersonatedBy: null,
 
       // Internal state setter
       _setState: (newState) => set(newState),
@@ -52,11 +55,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             throw new Error('Invalid response format from server during OTP verification')
           }
 
-          // Set state in Zustand store
           set({
             isAuthenticated: true,
             user: verifyResponse.user,
             accessToken: verifyResponse.access_token,
+            impersonatedBy: null,
           });
 
           // Set cookies (consider if still needed with localStorage persistence)
@@ -112,7 +115,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
 
         // Clear state and cookies/storage
-        set({ isAuthenticated: false, user: null, accessToken: null })
+        set({ isAuthenticated: false, user: null, accessToken: null, impersonatedBy: null })
         Cookies.remove('access_token')
         Cookies.remove('user')
         Cookies.remove('app_roles')
@@ -132,6 +135,45 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
+      impersonateUser: async (userId: number) => {
+        const currentToken = get().accessToken;
+        if (!currentToken) throw new Error('No access token');
+        try {
+          const response = await AuthService.loginAsUser(userId, currentToken);
+          if (!response.user || !response.access_token) {
+            throw new Error('Invalid response format from server during impersonation');
+          }
+          set({
+            isAuthenticated: true,
+            user: {
+              ...response.user,
+              tenant_id: response.user.tenant_id ? Number(response.user.tenant_id) : undefined,
+            },
+            accessToken: response.access_token,
+            impersonatedBy: response.impersonated_by ?? null,
+          });
+          const cookieOptions = {
+            expires: 1,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict' as const,
+          };
+          Cookies.set('access_token', response.access_token, cookieOptions);
+          const userDataToStore = {
+            id: response.user.id,
+            username: response.user.username,
+            phone: response.user.phone,
+            tenant_id: response.user.tenant_id ? Number(response.user.tenant_id) : undefined,
+          };
+          Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions);
+          if (response.user.app_roles) {
+            Cookies.set('app_roles', encodeURIComponent(JSON.stringify(response.user.app_roles)), cookieOptions);
+          }
+        } catch (error) {
+          console.error('Impersonation error:', error);
+          throw error;
+        }
+      },
+
       loginWithUsernameAndPassword: async (username: string, password: string) => {
         try {
           const response = await AuthService.loginWithUsernameAndPassword(username, password);
@@ -147,6 +189,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
               tenant_id: response.user.tenant_id ? Number(response.user.tenant_id) : undefined,
             },
             accessToken: response.access_token,
+            impersonatedBy: null,
           });
 
           // Set cookies (same as verifyOtp)

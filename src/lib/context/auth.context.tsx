@@ -11,11 +11,13 @@ interface AuthContextType {
   isAuthenticated: boolean
   user: User | null
   accessToken: string | null
+  impersonatedBy: number | null
   login: (username: string) => Promise<LoginResponse>
   loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
   verifyOtp: (otp: string, token: string, phone: string) => Promise<void>
   logout: () => Promise<void>
   resendOtp: (token: string) => Promise<ResendOtpResponse>
+  impersonateUser: (userId: number) => Promise<void>
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -27,12 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     user,
     accessToken,
+    impersonatedBy,
     login: storeLogin,
     verifyOtp: storeVerifyOtp,
     logout: storeLogout,
     resendOtp: storeResendOtp,
     loginWithUsernameAndPassword: loginWithUsernameAndPasswordStore,
-    // _setState // Remove unused variable
+    impersonateUser: storeImpersonateUser,
   } = useAuthStore();
 
   const login = React.useCallback(async (username: string) => {
@@ -55,15 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loginWithUsernameAndPasswordStore(username, password)
   }, [loginWithUsernameAndPasswordStore])
 
+  const impersonateUser = React.useCallback(async (userId: number) => {
+    await storeImpersonateUser(userId)
+  }, [storeImpersonateUser])
+
   const value = {
     isAuthenticated,
     user,
     accessToken,
+    impersonatedBy,
     login,
     loginWithUsernameAndPassword,
     verifyOtp,
     logout,
     resendOtp,
+    impersonateUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

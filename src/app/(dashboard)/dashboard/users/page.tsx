@@ -54,7 +54,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function UsersPage() {
-  const { accessToken } = useAuth();
+  const { accessToken, impersonateUser } = useAuth();
   const router = useRouter();
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -170,6 +170,16 @@ export default function UsersPage() {
       console.error(error);
     } finally {
       setUserToDelete(null);
+    }
+  };
+
+  const handleImpersonate = async (user: User) => {
+    try {
+      await impersonateUser(user.id);
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error) {
+      toast.error('خطا در ورود به عنوان کاربر');
     }
   };
 
@@ -466,6 +476,15 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                              onClick={() => handleImpersonate(user)}
+                              title="ورود به عنوان کاربر"
+                            >
+                              ورود
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                               onClick={() => handleDeleteUser(user.id)}
                             >
@@ -580,6 +599,14 @@ export default function UsersPage() {
                           >
                             <Trash2 className="h-4 w-4 ml-1" />
                             حذف
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                            onClick={() => handleImpersonate(user)}
+                          >
+                            ورود
                           </Button>
                           <Button 
                             variant="ghost" 
