@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/context/auth.context";
 import { DashboardService } from "@/lib/services/dashboard.service";
 import { PageTransition } from "@/components/ui/page-transition";
 import MyAssignmentsWidget from "@/components/dashboard/MyAssignmentsWidget";
+import StudentGradesWidget from "@/components/dashboard/StudentGradesWidget";
 import AverageScoresChart from "@/components/charts/AverageScoresChart";
 import NotificationDisplay, { Notification } from "@/components/NotificationDisplay";
 import { fetchNotifications } from "@/lib/services/notification.service";
@@ -265,6 +266,9 @@ export default function DashboardPage() {
 
         {/* My Assignments Widget — shows for all authenticated users */}
         <MyAssignmentsWidget />
+
+        {/* Student Grades Widget */}
+        <StudentGradesWidget />
 
       </div>
     </PageTransition>
