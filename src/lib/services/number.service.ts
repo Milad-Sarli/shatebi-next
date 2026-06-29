@@ -107,11 +107,6 @@ export const optimizedNumberService = {
     endDate: string | null = null,
     negative_scores: boolean = false
   ): Promise<PaginatedResponse<OptimizedNumber>> {
-    console.log("Making request to:", `${API_URL}/api/optimized-numbers`);
-    console.log("Request headers:", {
-      Authorization: `Bearer ${accessToken}`,
-    });
-
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("per_page", per_page.toString());

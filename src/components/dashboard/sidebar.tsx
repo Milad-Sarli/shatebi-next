@@ -142,26 +142,31 @@ const items: NavItem[] = [
   {
     title: "جزء خوانی قرآن",
     icon: BookMarked,
+    requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
     subItems: [
       {
         title: "داشبورد جزء خوانی",
         href: "/dashboard/juz",
         icon: Library,
+        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "مدیریت تکالیف هفتگی",
         href: "/dashboard/juz/assignments",
         icon: ListChecks,
+        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "ثبت قرائت",
         href: "/dashboard/juz/reading-logs",
         icon: BookMarked,
+        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "لیست تکالیف",
         href: "/dashboard/juz/task-list",
         icon: ListChecks,
+        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
     ],
   },
@@ -204,11 +209,12 @@ export function Sidebar({ className, setSidebarOpen, ...props }: SidebarProps) {
   const processedItems = React.useMemo(() => {
     return items.map(item => {
       if (item.subItems) {
+        if (!hasRequiredRole(item.requiredRole)) return null;
         const visibleSubItems = item.subItems.filter(subItem => hasRequiredRole(subItem.requiredRole));
         if (visibleSubItems.length > 0) {
           return { ...item, subItems: visibleSubItems, isGroup: true };
         }
-        return null; // Filter out group if no subItems are visible
+        return null;
       }
       if (hasRequiredRole(item.requiredRole)) {
         return { ...item, isGroup: false };

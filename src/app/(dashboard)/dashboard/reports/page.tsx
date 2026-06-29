@@ -59,16 +59,16 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
     <MotionCard
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex-1 min-w-[160px] dark:bg-neutral-900 dark:border-neutral-800"
+      className="flex-1 min-w-0 dark:bg-neutral-900 dark:border-neutral-800"
     >
-      <CardContent className="flex items-start gap-4 p-4">
-        <div className={`rounded-lg p-2.5`} style={{ backgroundColor: color + "20" }}>
-          <Icon className="h-5 w-5" style={{ color }} />
+      <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-5 flex-row-reverse sm:flex-row-reverse">
+        <div className="shrink-0 rounded-lg p-2 sm:p-2.5" style={{ backgroundColor: color + "20" }}>
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color }} />
         </div>
-        <div className="space-y-1 min-w-0">
-          <p className="text-xs text-muted-foreground truncate">{label}</p>
-          <p className="text-xl font-bold tabular-nums">{value}</p>
-          {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+        <div className="space-y-1.5 sm:space-y-2 min-w-0 flex-1 text-right">
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate leading-relaxed">{label}</p>
+          <p className="text-sm sm:text-xl font-bold tabular-nums leading-relaxed break-words">{value}</p>
+          {sub && <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-relaxed">{sub}</p>}
         </div>
       </CardContent>
     </MotionCard>
@@ -387,23 +387,29 @@ export default function ReportsPage() {
                   {/* Pages by Lesson */}
                   {studentProgress.pages_by_lesson.length > 0 && (
                     <Card className="dark:bg-neutral-900 dark:border-neutral-800">
-                      <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <BookOpen className="h-4 w-4 text-primary" />
-                          صفحات تحویل داده شده بر اساس درس
+                      <CardHeader className="flex-row items-center justify-between py-2 sm:py-3 px-3 sm:px-4">
+                        <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-primary shrink-0" />
+                          صفحات تحویل داده شده
                         </CardTitle>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {studentProgress.pages_by_lesson.reduce((a, b) => a + b.total_pages, 0)} صفحه
+                        </Badge>
                       </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {studentProgress.pages_by_lesson.map((p) => (
-                            <div key={p.lesson_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                              <div>
-                                <p className="font-medium text-sm">{p.lesson_title}</p>
-                                {p.parent_title && <p className="text-[10px] text-muted-foreground">{p.parent_title}</p>}
+                            <div key={p.lesson_id} className="flex items-center justify-between gap-2 p-2 sm:p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors">
+                              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                <BookOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs sm:text-sm font-medium truncate">{p.lesson_title}</p>
+                                  {p.parent_title && <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">{p.parent_title}</p>}
+                                </div>
                               </div>
-                              <div className="text-left">
-                                <p className="text-lg font-bold tabular-nums">{p.total_pages}</p>
-                                <p className="text-[10px] text-muted-foreground">صفحه / {p.total_grades} نمره</p>
+                              <div className="text-left shrink-0">
+                                <p className="text-sm sm:text-base font-bold tabular-nums">{p.total_pages}</p>
+                                <p className="text-[9px] sm:text-[10px] text-muted-foreground whitespace-nowrap">{p.total_grades} نمره</p>
                               </div>
                             </div>
                           ))}
@@ -416,9 +422,9 @@ export default function ReportsPage() {
                   {studentProgress.score_trend.length > 0 && (
                     <Card className="dark:bg-neutral-900 dark:border-neutral-800">
                       <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base flex items-center gap-2 justify-end">
                           روند نمرات
+                          <TrendingUp className="h-4 w-4 text-primary shrink-0" />
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -446,11 +452,11 @@ export default function ReportsPage() {
                   {/* Progress by Lesson Type */}
                   {studentProgress.progress_by_lesson.length > 0 && (
                     <div>
-                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-primary" />
+                      <h3 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
                         پیشرفت به تفکیک درس
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                         {studentProgress.progress_by_lesson.map((pl, idx) => (
                            <MotionCard
                              key={pl.lesson.id}
@@ -459,63 +465,51 @@ export default function ReportsPage() {
                              transition={{ delay: idx * 0.05 }}
                              className="dark:bg-neutral-900 dark:border-neutral-800"
                            >
-                            <CardHeader>
-                              <CardTitle className="text-sm flex items-center justify-between">
-                                <span>{pl.lesson.title}</span>
-                                <Badge variant="outline">{pl.total_grades} نمره</Badge>
-                              </CardTitle>
+                            <CardHeader className="flex-row items-center justify-between py-2.5 sm:py-3 px-3 sm:px-4">
+                              <CardTitle className="text-xs sm:text-sm font-medium">{pl.lesson.title}</CardTitle>
+                              <Badge variant="outline" className="text-[9px] sm:text-[10px] shrink-0">{pl.total_grades} نمره</Badge>
                             </CardHeader>
-                            <CardContent className="space-y-3">
-                              {/* Score bars */}
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs">
+                            <CardContent className="space-y-2.5 sm:space-y-3 px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
+                              {/* Score bar + min/max */}
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-[10px] sm:text-xs">
                                   <span className="text-muted-foreground">میانگین</span>
-                                  <span className="font-medium tabular-nums" style={{ color: pl.avg_total >= 80 ? '#22c55e' : '#ef4444' }}>
+                                  <span className="font-bold tabular-nums" style={{ color: pl.avg_total >= 80 ? '#22c55e' : '#ef4444' }}>
                                     {pl.avg_total}
                                   </span>
                                 </div>
                                 <ScoreGauge score={pl.avg_total} size="md" />
-                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <div className="flex justify-between text-[9px] sm:text-[10px] text-muted-foreground">
                                   <span>کمترین: {pl.min_score ?? '—'}</span>
                                   <span>بیشترین: {pl.max_score ?? '—'}</span>
                                 </div>
                               </div>
 
-                              {/* Progress: first → last */}
-                              <div className="border-t pt-3">
-                                <p className="text-xs font-medium text-muted-foreground mb-2">محدوده پیشرفت:</p>
-                                <div className="grid grid-cols-[auto,1fr,auto] gap-2 items-center text-xs">
-                                  <span className="text-muted-foreground">از:</span>
-                                  <div className="h-px bg-border relative">
-                                    <ArrowLeftRight className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                  </div>
+                              {/* Progress range */}
+                              <div className="border-t pt-2.5 sm:pt-3 space-y-1.5">
+                                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">محدوده پیشرفت:</p>
+                                <div className="flex items-center gap-2 text-[10px] sm:text-xs">
+                                  <span className="text-muted-foreground shrink-0">از</span>
                                   <LessonAreaBadge area={pl.first_area} compact />
-                                </div>
-                                <div className="grid grid-cols-[auto,1fr,auto] gap-2 items-center text-xs mt-1">
-                                  <span className="text-muted-foreground">تا:</span>
-                                  <div className="h-px bg-border" />
+                                  <ArrowLeftRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+                                  <span className="text-muted-foreground shrink-0">تا</span>
                                   <LessonAreaBadge area={pl.last_area} compact />
                                 </div>
                               </div>
 
                               {/* Score details */}
-                              <div className="grid grid-cols-4 gap-2 border-t pt-2 text-[10px] text-center">
-                                <div>
-                                  <p className="text-muted-foreground">حفظ</p>
-                                  <p className="font-medium">{pl.avg_hefz}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">تجوید</p>
-                                  <p className="font-medium">{pl.avg_tajvid}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">صوت</p>
-                                  <p className="font-medium">{pl.avg_sout}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">دقت</p>
-                                  <p className="font-medium">{pl.avg_details}</p>
-                                </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 border-t pt-2.5 sm:pt-3">
+                                {[
+                                  { label: 'حفظ', value: pl.avg_hefz },
+                                  { label: 'تجوید', value: pl.avg_tajvid },
+                                  { label: 'صوت', value: pl.avg_sout },
+                                  { label: 'دقت', value: pl.avg_details },
+                                ].map((item) => (
+                                  <div key={item.label} className="text-center rounded-md bg-muted/30 py-1.5 sm:py-2 px-1">
+                                    <p className="text-[9px] sm:text-[10px] text-muted-foreground">{item.label}</p>
+                                    <p className="text-xs sm:text-sm font-bold tabular-nums">{item.value ?? '—'}</p>
+                                  </div>
+                                ))}
                               </div>
                             </CardContent>
                           </MotionCard>
@@ -528,9 +522,9 @@ export default function ReportsPage() {
                   {studentProgress.grades.length > 0 && (
                     <Card className="dark:bg-neutral-900 dark:border-neutral-800">
                       <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <FileSpreadsheet className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base flex items-center gap-2 justify-end">
                           جزئیات نمرات
+                          <FileSpreadsheet className="h-4 w-4 text-primary shrink-0" />
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-0">

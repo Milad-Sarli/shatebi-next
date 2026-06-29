@@ -5,6 +5,7 @@ export interface JuzSummary {
   active_students_this_month: number;
   total_readings: number;
   total_khatms: number;
+  remaining_juz_for_next_khatm: number[];
   juz_distribution: Record<number, number>;
 }
 
@@ -86,7 +87,7 @@ export interface JuzDistributionItem {
 export interface WeeklyCompletion {
   week_start: string;
   week_end: string;
-  daily: Array<{ day: string; count: number }>;
+  items: Array<{ juz_number: number; count: number }>;
 }
 
 export interface StudentTaskReading {
