@@ -123,8 +123,8 @@ export default function EditRolePage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">فرم ویرایش نقش</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">

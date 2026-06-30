@@ -38,7 +38,7 @@ export default function AddStudentPage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
           <CardContent className="p-6">
             <StudentForm onSuccess={handleSuccess} />
           </CardContent>

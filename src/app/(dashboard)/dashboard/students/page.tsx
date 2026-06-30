@@ -11,7 +11,6 @@ import {
   Edit,
   Trash2,
   Printer,
-  Check,
   Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,21 +39,8 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-
-// Custom debounce hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
+import { useDebounce } from "@/lib/hooks/useDebounce";
+import { useApiList } from "@/lib/hooks/useApi";
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function StudentsPageContent() {
@@ -65,119 +51,51 @@ function StudentsPageContent() {
   // Get initial page from URL params or default to 1
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
   
-  const [students, setStudents] = React.useState<Student[]>([]);
-  const [loading, setLoading] = React.useState(true);
   const [selectedStudents, setSelectedStudents] = React.useState<Set<number>>(new Set());
-  const [filters, setFilters] = React.useState({
-    page: initialPage,
-    per_page: 10,
-  });
-  const [pagination, setPagination] = React.useState({
-    current_page: initialPage,
-    last_page: 1,
-    total: 0,
-    per_page: 10,
-    from: 0,
-    to: 0,
-  });
+  const [page, setPage] = React.useState(initialPage);
+  const [perPage, setPerPage] = React.useState(10);
   const [searchInput, setSearchInput] = React.useState("");
-  const debouncedSearch = useDebounce(searchInput, 500);
-  const [studentToDelete, setStudentToDelete] = React.useState<number | null>(
-    null
-  );
+  const [studentToDelete, setStudentToDelete] = React.useState<number | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<
     "انتقالی" | "فارغ التحصیل" | "در حال تحصیل" | "ترک تحصیل" | "اخراجی" | undefined
   >(undefined);
   const [selectedStudent, setSelectedStudent] = React.useState<Student | null>(null);
   const [isViewStudentOpen, setIsViewStudentOpen] = React.useState(false);
 
-  // Reference to track if a search is already in progress
-  const searchInProgress = React.useRef(false);
+  const debouncedSearch = useDebounce(searchInput, 500);
 
-  // Sync page state with URL params when returning from edit page
-  React.useEffect(() => {
-    const currentPage = parseInt(searchParams.get('page') || '1', 10);
-    if (currentPage !== filters.page) {
-      setFilters(prev => ({ ...prev, page: currentPage }));
-      setPagination(prev => ({ ...prev, current_page: currentPage }));
-    }
-  }, [searchParams, filters.page]);
-
-  // Check if all students on current page are selected
-  const allSelected = students.length > 0 && students.every(student => selectedStudents.has(student.id));
-  
-  // Check if some students are selected (for indeterminate state)
-  const someSelected = students.some(student => selectedStudents.has(student.id)) && !allSelected;
-
-  const fetchStudents = React.useCallback(
-    async (searchTerm?: string) => {
-      if (!accessToken) return;
-      if (searchInProgress.current) return;
-
-      try {
-        searchInProgress.current = true;
-        setLoading(true);
-
-        const searchQuery =
-          searchTerm !== undefined ? searchTerm : debouncedSearch;
-
-        const response: any = await StudentService.getStudents(
-          {
-            page: filters.page,
-            per_page: filters.per_page,
-            search: searchQuery || undefined,
-            status: statusFilter,
-            with: 'tenant',
-          },
-          accessToken
-        );
-        console.log(response);
-
-        setStudents(
-          Array.isArray(response.data?.data) ? response.data.data : []
-        );
-        if (response.data) {
-          setPagination({
-            current_page: response.data.current_page,
-            last_page: response.data.last_page,
-            total: response.data.total,
-            per_page: response.data.per_page,
-            from: response.data.from,
-            to: response.data.to,
-          });
-        }
-      } catch (error) {
-        toast.error("خطا در دریافت لیست قرآن آموزان");
-        console.error(error);
-        setStudents([]);
-      } finally {
-        setLoading(false);
-        searchInProgress.current = false;
-      }
+  const { items: students, pagination, isLoading: loading, mutate } = useApiList(
+    '/api/students',
+    {
+      page,
+      per_page: perPage,
+      search: debouncedSearch || undefined,
+      status: statusFilter,
+      with: 'tenant',
     },
-    [accessToken, filters.page, filters.per_page, debouncedSearch, statusFilter]
   );
 
-  // Effect to handle page and per_page changes
+  // Sync page state with URL params
   React.useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents, filters.page, filters.per_page]);
+    const currentPage = parseInt(searchParams.get('page') || '1', 10);
+    if (currentPage !== page) {
+      setPage(currentPage);
+    }
+  }, [searchParams, page]);
 
-  // Effect to handle debounced search changes
+  // Reset to page 1 when search or filter changes
   React.useEffect(() => {
-    setFilters((prev) => ({ ...prev, page: 1 }));
-    fetchStudents();
-  }, [debouncedSearch, fetchStudents]);
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
 
-  // Effect to handle status filter changes
-  React.useEffect(() => {
-    setFilters((prev) => ({ ...prev, page: 1 }));
-    fetchStudents();
-  }, [statusFilter, fetchStudents]);
+  // Check if all students on current page are selected
+  const allSelected = students.length > 0 && students.every((student: Student) => selectedStudents.has(student.id));
+  
+  // Check if some students are selected (for indeterminate state)
+  const someSelected = students.some((student: Student) => selectedStudents.has(student.id)) && !allSelected;
 
   const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-    // Update URL with new page
+    setPage(page);
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', page.toString());
     router.replace(`/dashboard/students?${params.toString()}`);
@@ -193,7 +111,7 @@ function StudentsPageContent() {
     try {
       await StudentService.deleteStudent(studentToDelete, accessToken);
       toast.success("قرآن آموز با موفقیت حذف شد");
-      fetchStudents();
+      mutate();
     } catch (error) {
       toast.error("خطا در حذف قرآن آموز");
     } finally {
@@ -202,23 +120,14 @@ function StudentsPageContent() {
   };
 
   const handleEditStudent = (student: Student) => {
-    // Preserve current page in URL when navigating to edit
     const params = new URLSearchParams();
-    params.set('page', filters.page.toString());
-    router.push(`/dashboard/students/edit/${student.id}?returnPage=${filters.page}`);
+    params.set('page', page.toString());
+    router.push(`/dashboard/students/edit/${student.id}?returnPage=${page}`);
   };
 
   const handleViewStudentDetails = (student: Student) => {
     setSelectedStudent(student);
     setIsViewStudentOpen(true);
-  };
-
-  const handleSearch = () => {
-    if (filters.page !== 1) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    } else {
-      fetchStudents(searchInput);
-    }
   };
 
   // Handle individual student selection
@@ -236,9 +145,9 @@ function StudentsPageContent() {
   const handleSelectAll = (checked: boolean) => {
     const newSelected = new Set(selectedStudents);
     if (checked) {
-      students.forEach(student => newSelected.add(student.id));
+      students.forEach((student: Student) => newSelected.add(student.id));
     } else {
-      students.forEach(student => newSelected.delete(student.id));
+      students.forEach((student: Student) => newSelected.delete(student.id));
     }
     setSelectedStudents(newSelected);
   };
@@ -250,7 +159,7 @@ function StudentsPageContent() {
       return;
     }
 
-    const selectedStudentsList = students.filter(student => selectedStudents.has(student.id));
+    const selectedStudentsList = students.filter((student: Student) => selectedStudents.has(student.id));
     
     // Create print content
     const printContent = `
@@ -293,7 +202,7 @@ function StudentsPageContent() {
             </tr>
           </thead>
           <tbody>
-            ${selectedStudentsList.map((student, index) => `
+            ${selectedStudentsList.map((student: Student, index: number) => `
               <tr>
                 <td>${index + 1}</td>
                 <td>${student.Fname}</td>
@@ -326,8 +235,8 @@ function StudentsPageContent() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md border border-zinc-100 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             مدیریت قرآن آموزان
           </h1>
@@ -351,8 +260,8 @@ function StudentsPageContent() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">
               لیست قرآن آموزان
             </CardTitle>
@@ -454,7 +363,7 @@ function StudentsPageContent() {
                         </td>
                       </tr>
                     ) : (
-                      students.map((student, index) => (
+                      students.map((student: Student, index: number) => (
                         <motion.tr
                           key={student.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -578,7 +487,7 @@ function StudentsPageContent() {
                     هیچ قرآن آموزی یافت نشد
                   </div>
                 ) : (
-                  students.map((student, index) => (
+                  students.map((student: Student, index: number) => (
                     <motion.div
                       key={student.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -799,14 +708,11 @@ function StudentsPageContent() {
                     تعداد در صفحه:
                   </span>
                   <Select
-                    value={filters.per_page?.toString()}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        page: 1,
-                        per_page: parseInt(value),
-                      }))
-                    }
+                    value={perPage.toString()}
+                    onValueChange={(value) => {
+                      setPerPage(parseInt(value))
+                      setPage(1)
+                    }}
                   >
                     <SelectTrigger className="w-20 border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                       <SelectValue placeholder="10" />

@@ -158,8 +158,8 @@ export default function MastersPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg bg-white dark:bg-zinc-900 p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md border border-zinc-100 dark:border-zinc-800">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">مدیریت استادها</h1>
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <Link href="/dashboard/masters/add" passHref>
@@ -171,8 +171,8 @@ export default function MastersPage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست استادها</CardTitle>
           </CardHeader>
           <CardContent>

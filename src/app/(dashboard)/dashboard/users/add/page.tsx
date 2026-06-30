@@ -45,7 +45,7 @@ export default function AddUserPage() {
         </div>
         {/* User Form Card */}
         <Card>
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
               <UserIcon className="h-5 w-5" />
               اطلاعات کاربر

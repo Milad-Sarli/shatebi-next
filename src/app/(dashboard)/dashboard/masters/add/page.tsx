@@ -36,7 +36,7 @@ export default function AddMasterPage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
           <CardHeader>
             <CardTitle className="text-zinc-900 dark:text-zinc-100">فرم افزودن استاد</CardTitle>
           </CardHeader>

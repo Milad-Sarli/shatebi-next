@@ -277,7 +277,7 @@ export default function NotificationsTablePage() {
                   />
                   <span className="text-xs text-zinc-500">انتخاب</span>
                 </div>
-                <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+                <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
                   <CardTitle className="text-zinc-900 dark:text-zinc-100 text-right text-base">
                     {n.data?.title}
                   </CardTitle>

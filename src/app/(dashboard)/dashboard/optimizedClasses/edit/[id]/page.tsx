@@ -385,7 +385,7 @@ export default function EditClassPage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
           <CardHeader>
             <CardTitle>ویرایش اطلاعات کلاس</CardTitle>
             <div className="text-sm text-zinc-600 dark:text-zinc-400">

@@ -342,7 +342,7 @@ export default function WeekAbsentsPage() {
       </div>
 
       <Card className="border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+        <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
           <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست حضور و غیاب</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">

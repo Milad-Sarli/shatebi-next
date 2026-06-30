@@ -132,7 +132,7 @@ export default function NewLeavePage() {
                 بازگشت
               </Button>
             </div>
-            <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800 rounded-lg shadow-none max-w-4xl mx-auto">
+            <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md rounded-lg shadow-none max-w-4xl mx-auto">
               <CardHeader className="pb-2">
                 <CardTitle className="text-zinc-900 dark:text-zinc-100 text-base sm:text-lg">فرم درخواست مرخصی</CardTitle>
               </CardHeader>

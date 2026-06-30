@@ -306,7 +306,7 @@ export default function UsersPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
@@ -327,8 +327,8 @@ export default function UsersPage() {
           </div>
         </div>
 
-        <Card className="border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800">
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+        <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">لیست کاربران</CardTitle>
           </CardHeader>
           <CardContent>
@@ -745,7 +745,7 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle className="text-zinc-900 dark:text-zinc-100">افزودن نقش به کاربر</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
               <div className="text-zinc-700 dark:text-zinc-200 font-medium">
                 کاربر: {attachRoleUser ? getUserFullName(attachRoleUser) : ""}
               </div>
