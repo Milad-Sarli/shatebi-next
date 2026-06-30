@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
-import PusherTest from "@/components/PusherTest";
+// import PusherTest from "@/components/PusherTest";
 import ThemeToggleButton from "@/components/ui/theme-toggle-button";
 import NotificationDisplay, { Notification } from "@/components/NotificationDisplay";
 import { fetchNotifications } from "@/lib/services/notification.service";
@@ -262,7 +262,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <AnimatePresence>
             {children}
             </AnimatePresence>
-            <PusherTest />
+        
         </div>
       </div>
     </div>

@@ -88,9 +88,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
              // Decide if this should throw or just warn
           }
 
-          // Navigate and refresh
+          // Navigate to dashboard
           router.push('/dashboard')
-          router.refresh()
         } catch (error) {
           console.error('Verify OTP Error in store:', error)
           // Clear potentially partially set state on error?

@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import * as motion from "motion/react-client"
 import { useAuth } from '@/lib/context/auth.context'
 import { OTPInput } from '@/components/ui/otp-input'
+import { toast } from 'sonner'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
 import Image from 'next/image'
 
@@ -93,6 +94,7 @@ export default function LoginPage() {
       setCountdown(120) // 2 minutes countdown
     } catch (error) {
       console.error('Login error:', error)
+      toast.error(error instanceof Error ? error.message : 'خطا در ورود')
     } finally {
       setIsLoading(false)
     }
@@ -107,6 +109,7 @@ export default function LoginPage() {
       setOtpInputKey((k) => k + 1)
     } catch (error) {
       console.error('OTP verification error:', error)
+      toast.error(error instanceof Error ? error.message : 'خطا در تایید کد')
     } finally {
       setIsLoading(false)
     }
@@ -122,6 +125,7 @@ export default function LoginPage() {
       setCountdown(120) // Reset countdown to 2 minutes
     } catch (error) {
       console.error('Resend OTP error:', error)
+      toast.error(error instanceof Error ? error.message : 'خطا در ارسال مجدد کد')
     } finally {
       setIsLoading(false)
     }
