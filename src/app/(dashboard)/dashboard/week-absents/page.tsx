@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageTransition } from '@/components/ui/page-transition';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -317,7 +318,8 @@ export default function WeekAbsentsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <PageTransition>
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
       <div className="relative flex flex-col gap-4 overflow-hidden rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
         <div className="relative flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -806,5 +808,6 @@ export default function WeekAbsentsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageTransition>
   );
 }

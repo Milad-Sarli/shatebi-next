@@ -476,7 +476,7 @@ export default function LeavesListPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4 relative">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full py-3 sm:py-6">
        
         {/* Content */}
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">

@@ -1,9 +1,12 @@
 import { API_URL } from '@/lib/constants';
 
+export type OtpMethod = 'sms' | 'bale';
+
 export interface LoginResponse {
   message: string;
   token: string;
   phone: string;
+  bale_not_linked?: boolean;
 }
 
 export interface VerifyOtpResponse {
@@ -68,23 +71,28 @@ export class AuthService {
     document.cookie = `app_roles=${encodeURIComponent(JSON.stringify(appRoles))}; path=/; secure; samesite=strict; max-age=86400`;
   }
 
-  static async login(username: string): Promise<LoginResponse> {
+  static async login(username: string, method: OtpMethod = 'sms'): Promise<LoginResponse> {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, method }),
       credentials: 'include',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'خطا در ورود به سامانه');
+    const data = await response.json();
+
+    if (data.bale_not_linked) {
+      return data;
     }
 
-    return response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'خطا در ورود به سامانه');
+    }
+
+    return data;
   }
 
   static async verifyOtp(otp: string, token: string, phone: string): Promise<VerifyOtpResponse> {
@@ -113,14 +121,14 @@ export class AuthService {
     return data;
   }
 
-  static async resendOtp(token: string): Promise<ResendOtpResponse> {
+  static async resendOtp(token: string, method: OtpMethod = 'sms'): Promise<ResendOtpResponse> {
     const response = await fetch(`${API_URL}/api/auth/resend-otp`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, method }),
       credentials: 'include',
     });
 

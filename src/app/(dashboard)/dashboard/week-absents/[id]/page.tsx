@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns-jalali';
@@ -120,7 +121,8 @@ export default function WeekAbsentDetailPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <PageTransition>
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
       <Button onClick={() => router.push('/dashboard/week-absents')} className="mb-4">بازگشت به لیست</Button>
       <Card>
         <CardHeader>
@@ -373,5 +375,6 @@ export default function WeekAbsentDetailPage() {
         </CardContent>
       </Card>
     </div>
+    </PageTransition>
   );
 }

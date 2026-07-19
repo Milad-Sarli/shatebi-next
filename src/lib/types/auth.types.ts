@@ -39,7 +39,8 @@ export interface User {
 export interface LoginResponse {
   token: string
   phone: string
-  // other login response fields if any
+  message?: string
+  bale_not_linked?: boolean
 }
 
 export interface VerifyOtpResponse {

@@ -165,6 +165,7 @@ export default function DegreesPage() {
 
   return (
     <PageTransition>
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
       <Card>
         <CardHeader>
           <CardTitle>مدیریت نمرات</CardTitle>
@@ -303,6 +304,7 @@ export default function DegreesPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </PageTransition>
   );
 }

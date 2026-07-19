@@ -88,7 +88,7 @@ export default function EditStudentPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-md border border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">

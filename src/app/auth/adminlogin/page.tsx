@@ -25,10 +25,16 @@ const loginFormSchema = z.object({
 })
 
 export default function AdminLoginPage() {
-  const { loginWithUsernameAndPassword } = useAuth()
+  const { loginWithUsernameAndPassword, isAuthenticated } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
   const router = useRouter()
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, router])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),

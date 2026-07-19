@@ -1,21 +1,30 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getRequiredRoles, hasRole } from '@/lib/config/route-permissions'
 
 // List of public routes that don't require authentication
 const publicRoutes = ['/', '/auth/login', '/auth/adminlogin', '/auth/register', '/registeration/', '/tenant/']
-
-// List of admin-only routes
-const adminRoutes = ['/dashboard/roles']
 
 interface AppRole {
   name: string;
   [key: string]: unknown;
 }
 
+// Parse the app_roles cookie (set on login) into a list of role names.
+function getUserRoles(request: NextRequest): string[] {
+  const appRoles = request.cookies.get('app_roles')
+  if (!appRoles) return []
+  try {
+    const roles = JSON.parse(decodeURIComponent(appRoles.value)) as AppRole[]
+    return roles.map((role) => role.name)
+  } catch {
+    return []
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const accessToken = request.cookies.get('access_token')
-  const appRoles = request.cookies.get('app_roles')
 
   // Always allow static assets from `public/` and any file-based route.
   if (pathname.match(/\.[a-zA-Z0-9]+$/)) {
@@ -30,6 +39,10 @@ export function middleware(request: NextRequest) {
 
   // If the route is public, allow access
   if (isPublicRoute) {
+    // If user is already authenticated and trying to access auth pages, redirect to dashboard
+    if (accessToken && pathname.startsWith('/auth/')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
     return NextResponse.next()
   }
 
@@ -40,17 +53,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Check if the route requires admin access
-  const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route))
-  if (isAdminRoute) {
-    // Parse app roles from cookie
-    const roles = appRoles ? JSON.parse(decodeURIComponent(appRoles.value)) as AppRole[] : []
-    const isAdmin = roles.some((role) => role.name === 'admin')
-
-    if (!isAdmin) {
-      // Redirect to dashboard if user is not admin   
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
+  // Role-based access control: block direct URL access to pages the user's
+  // roles are not allowed to see (menu is only a cosmetic filter otherwise).
+  const requiredRoles = getRequiredRoles(pathname)
+  if (requiredRoles !== null && !hasRole(getUserRoles(request), requiredRoles)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return NextResponse.next()

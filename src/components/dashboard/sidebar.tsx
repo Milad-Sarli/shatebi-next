@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
 import { Calendar } from "react-multi-date-picker";
+import { getRequiredRoles, hasRole, type RequiredRole } from "@/lib/config/route-permissions";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   setSidebarOpen?: (open: boolean) => void;
@@ -32,87 +33,74 @@ interface NavItem {
   title: string;
   href?: string; // Optional for groups that are not direct links
   icon: React.ElementType;
-  requiredRole?: string | string[];
+  requiredRole?: RequiredRole;
   subItems?: Omit<NavItem, 'subItems' | 'isGroup'>[]; // Sub-items don't have further sub-items
   isGroup?: boolean; // To distinguish groups in the processed list
 }
 
-const items: NavItem[] = [
+// Menu structure is defined here (titles, icons, grouping). The required role
+// for each entry is derived from the single source of truth in
+// `@/lib/config/route-permissions` so menu visibility and direct-URL access
+// control can never diverge.
+const rawItems: Omit<NavItem, 'requiredRole'>[] = [
   {
     title: "داشبورد",
     href: "/dashboard",
     icon: Home,
-    requiredRole: "",
   },
   {
     title: "مدیریت کاربران",
     href: "/dashboard/users",
     icon: Users,
-    requiredRole: "admin",
   },
   {
     title: "نقش‌ها و دسترسی‌ها",
     href: "/dashboard/roles",
     icon: Shield,
-    requiredRole: "admin",
   },
   {
     title: "دروس",
     href: "/dashboard/lessons",
     icon: BookOpen,
-    requiredRole: "admin",
   },
   {
     title: "قرآن آموزان",
     href: "/dashboard/students",
     icon: GraduationCap,
-    requiredRole: "admin",
   },
   {
     title: "اساتید و مربیان ",
     href: "/dashboard/masters",
     icon: Briefcase,
-    requiredRole: "admin",
   },
   {
     title: "کلاس‌ها",
     href: "/dashboard/optimizedClasses",
     icon: BookOpen,
-    requiredRole: "admin",
   },
-  // {
-  //   title: "نمرات",
-  //   href: "/dashboard/optimizedNumbers",
-  //   icon: GraduationCap,
-  //   requiredRole: ["admin", "master"],
-  // },
   {
     title: "ثبت نمرات",
     href: "/dashboard/optimizedNumbers/add",
     icon: GraduationCap,
-    requiredRole: ["admin", "master"],
   },
-    {
+  {
     title: "نمرات",
     href: "/dashboard/optimizedNumbers",
     icon: GraduationCap,
-    requiredRole: ["admin", "master"],
   },
   {
     title: "متقاضیان ثبت نام",
     href: "/dashboard/applicants",
     icon: UserPlus,
-    requiredRole: "admin",
   },
   {
     title: "حضور غیاب هفتگی",
     href: "/dashboard/week-absents",
     icon: Clock,
-    requiredRole: "admin",
   },
   {
     title: "مدیریت مرخصی ها",
-    icon: BookOpen, // Or a more generic group icon if preferred
+    icon: BookOpen,
     subItems: [
       {
         title: "مرخصی‌ها",
@@ -123,50 +111,42 @@ const items: NavItem[] = [
         title: "درخواست مرخصی جدید",
         href: "/dashboard/leaves/new",
         icon: BookOpen,
-        requiredRole: ["admin", "master"],
       },
       {
         title: "مرخصی‌های در انتظار تایید",
         href: "/dashboard/waiting-morakhasi",
-        icon: Clock, // Changed to Clock icon to represent waiting/pending status
-        requiredRole: "admin",
+        icon: Clock,
       },
       {
         title: "نگهبانی",
         href: "/dashboard/guard",
-        icon: Shield, // Icon specific to this sub-item
-        requiredRole: ["admin", "guard"],
+        icon: Shield,
       },
     ],
   },
   {
     title: "جزء خوانی قرآن",
     icon: BookMarked,
-    requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
     subItems: [
       {
         title: "داشبورد جزء خوانی",
         href: "/dashboard/juz",
         icon: Library,
-        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "مدیریت تکالیف هفتگی",
         href: "/dashboard/juz/assignments",
         icon: ListChecks,
-        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "ثبت قرائت",
         href: "/dashboard/juz/reading-logs",
         icon: BookMarked,
-        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
       {
         title: "لیست تکالیف",
         href: "/dashboard/juz/task-list",
         icon: ListChecks,
-        requiredRole: ["admin", "amoozeshi_deputy", "ejraee_deputy", "supervisor"],
       },
     ],
   },
@@ -174,32 +154,38 @@ const items: NavItem[] = [
     title: "گزارشات و آمار ها",
     href: "/dashboard/reports",
     icon: BookOpen,
-    requiredRole: "admin",
   },
-    {
+  {
     title: "درجه بندی",
     href: "/dashboard/degrees",
-    icon: GraduationCap, // Changed to GraduationCap icon which better represents ranking/degrees
-    requiredRole: "admin",
+    icon: GraduationCap,
   },
 ];
+
+// Attach requiredRole from the central permission config (longest-prefix match).
+const items: NavItem[] = rawItems.map((item) => {
+  if (item.subItems) {
+    return {
+      ...item,
+      requiredRole: getRequiredRoles(item.subItems[0]?.href ?? ''),
+      subItems: item.subItems.map((sub) => ({
+        ...sub,
+        requiredRole: getRequiredRoles(sub.href ?? ''),
+      })),
+    };
+  }
+  return { ...item, requiredRole: getRequiredRoles(item.href ?? '') };
+});
 
 export function Sidebar({ className, setSidebarOpen, ...props }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
 
-  const hasRequiredRole = (requiredRole?: string | string[]) => {
-    // If no requiredRole is specified, the item is visible to everyone.
-    if (!requiredRole) return true;
-    if (!user?.app_roles) return false;
-
-    const userRoles = user.app_roles.map(role => role.name);
-
-    if (Array.isArray(requiredRole)) {
-      return requiredRole.some(role => userRoles.includes(role));
-    }
-    return userRoles.includes(requiredRole);
+  const hasRequiredRole = (requiredRole?: RequiredRole) => {
+    if (!user?.app_roles) return requiredRole ? false : true;
+    const userRoles = user.app_roles.map((role) => role.name);
+    return hasRole(userRoles, requiredRole ?? null);
   };
 
   const toggleSection = (title: string) => {

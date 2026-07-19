@@ -1172,7 +1172,7 @@ export default function AddNumberPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4 min-h-[80vh]">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
         <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-md">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800">
             <CardTitle className="text-zinc-900 dark:text-zinc-100">

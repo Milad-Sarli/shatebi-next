@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { AuthService } from '@/lib/services/auth.service'
+import { AuthService, OtpMethod } from '@/lib/services/auth.service'
 import Cookies from 'js-cookie'
 import { User, LoginResponse, ResendOtpResponse, VerifyOtpResponse } from '@/lib/types/auth.types'
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
@@ -13,10 +13,10 @@ interface AuthState {
 }
 
 interface AuthActions {
-  login: (username: string) => Promise<LoginResponse>
+  login: (username: string, method?: OtpMethod) => Promise<LoginResponse>
   verifyOtp: (otp: string, token: string, phone: string, router: AppRouterInstance) => Promise<void>
   logout: (router: AppRouterInstance) => Promise<void>
-  resendOtp: (token: string) => Promise<ResendOtpResponse>
+  resendOtp: (token: string, method?: OtpMethod) => Promise<ResendOtpResponse>
   _setState: (newState: Partial<AuthState>) => void
   loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
   impersonateUser: (userId: number) => Promise<void>
@@ -35,10 +35,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       _setState: (newState) => set(newState),
 
       // Actions
-      login: async (username: string) => {
+      login: async (username: string, method: OtpMethod = 'sms') => {
         try {
-          // Login just gets the token for OTP, doesn't set authenticated state yet
-          const response = await AuthService.login(username)
+          const response = await AuthService.login(username, method)
           return response
         } catch (error) {
           console.error('Login Error:', error)
@@ -124,9 +123,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         router.refresh()
       },
 
-      resendOtp: async (token: string) => {
+      resendOtp: async (token: string, method: OtpMethod = 'sms') => {
         try {
-          const response = await AuthService.resendOtp(token)
+          const response = await AuthService.resendOtp(token, method)
           return response
         } catch (error) {
           console.error('Resend OTP Error:', error)

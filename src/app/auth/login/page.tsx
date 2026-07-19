@@ -20,6 +20,8 @@ import { OTPInput } from '@/components/ui/otp-input'
 import { toast } from 'sonner'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
 import Image from 'next/image'
+import { MessageSquare, Smartphone } from 'lucide-react'
+import { OtpMethod } from '@/lib/services/auth.service'
 
 // Step 1: National ID Only
 const loginFormSchema = z.object({
@@ -38,13 +40,20 @@ const otpFormSchema = z.object({
 })
 
 export default function LoginPage() {
-  const { login, verifyOtp, resendOtp } = useAuth()
+  const { login, verifyOtp, resendOtp, isAuthenticated } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [showOTP, setShowOTP] = React.useState(false)
   const [countdown, setCountdown] = React.useState(0)
   const [otpToken, setOtpToken] = React.useState('')
   const [otpInputKey, setOtpInputKey] = React.useState(0)
   const [userPhone, setUserPhone] = React.useState('')
+  const [otpMethod, setOtpMethod] = React.useState<OtpMethod>('sms')
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      window.location.href = '/dashboard'
+    }
+  }, [isAuthenticated])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
@@ -84,14 +93,22 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await login(values.username)
+      const response = await login(values.username, otpMethod)
+      
+      if (response.bale_not_linked) {
+        toast.error('حساب بله شما به سامانه متصل نشده است', {
+          description: 'لطفاً ابتدا در ربات @Shatebiapp_bot شماره موبایل خود را ثبت کنید.'
+        })
+        setIsLoading(false)
+        return
+      }
+      
       setOtpToken(response.token)
       setUserPhone(response.phone)
-      // Reset OTP form before showing OTP screen and force re-mount
       otpForm.reset({ otp: '' })
       setOtpInputKey((k) => k + 1)
       setShowOTP(true)
-      setCountdown(120) // 2 minutes countdown
+      setCountdown(120)
     } catch (error) {
       console.error('Login error:', error)
       toast.error(error instanceof Error ? error.message : 'خطا در ورود')
@@ -120,9 +137,9 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const response = await resendOtp(otpToken)
+      const response = await resendOtp(otpToken, otpMethod)
       setOtpToken(response.token)
-      setCountdown(120) // Reset countdown to 2 minutes
+      setCountdown(120)
     } catch (error) {
       console.error('Resend OTP error:', error)
       toast.error(error instanceof Error ? error.message : 'خطا در ارسال مجدد کد')
@@ -133,12 +150,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Primary Gradient Background */}
       <div className="" />
-      
-     
-      
-    
 
       <div className="relative z-10 min-h-screen w-full grid lg:grid-cols-2 items-center justify-center gap-8 lg:gap-0 p-4">
         {/* Logo and Brand Section */}
@@ -216,7 +228,9 @@ export default function LoginPage() {
                 <p className="pt-2 text-sm md:text-base text-slate-300">
                   {!showOTP 
                     ? 'برای ورود به سامانه، کد ملی خود را وارد کنید'
-                    : 'کد تایید ارسال شده را وارد کنید'
+                    : otpMethod === 'bale'
+                      ? 'کد تایید ارسال شده به بله را وارد کنید'
+                      : 'کد تایید ارسال شده را وارد کنید'
                   }
                 </p>
               </motion.div>
@@ -260,6 +274,45 @@ export default function LoginPage() {
                         <motion.div
                           initial={{ y: 10, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                          className="space-y-2"
+                        >
+                          <FormLabel className="text-slate-200 text-sm">روش دریافت کد تایید</FormLabel>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setOtpMethod('sms')}
+                              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                                otpMethod === 'sms'
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+                              }`}
+                            >
+                              <Smartphone className="h-4 w-4" />
+                              پیامک
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setOtpMethod('bale')}
+                              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                                otpMethod === 'bale'
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-white/[0.08] bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+                              }`}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              بله
+                            </button>
+                          </div>
+                          {otpMethod === 'bale' && (
+                            <p className="text-xs text-slate-400 mt-1">
+                              برای دریافت کد از بله، ابتدا باید در ربات <span className="text-primary">@Shatebiapp_bot</span> شماره خود را ثبت کنید.
+                            </p>
+                          )}
+                        </motion.div>
+                        <motion.div
+                          initial={{ y: 10, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: 0.3 }}
                           className="pt-2"
                         >
@@ -275,10 +328,10 @@ export default function LoginPage() {
                                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                   className="mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"
                                 />
-                                در حال ارسال کد...
+                                {otpMethod === 'bale' ? 'در حال ارسال به بله...' : 'در حال ارسال کد...'}
                               </>
                             ) : (
-                              'دریافت کد تایید'
+                              otpMethod === 'bale' ? 'دریافت کد از بله' : 'دریافت کد تایید'
                             )}
                           </Button>
                         </motion.div>
@@ -354,7 +407,7 @@ export default function LoginPage() {
                               disabled={isLoading}
                               onClick={handleResendOTP}
                             >
-                              ارسال مجدد کد تایید
+                              {otpMethod === 'bale' ? 'ارسال مجدد کد به بله' : 'ارسال مجدد کد تایید'}
                             </Button>
                           )}
                         </motion.div>
@@ -397,6 +450,7 @@ export default function LoginPage() {
                               setShowOTP(false)
                               setCountdown(0)
                               setOtpToken('')
+                              setOtpMethod('sms')
                               otpForm.reset({ otp: '' })
                               setOtpInputKey((k) => k + 1)
                             }}

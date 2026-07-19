@@ -117,11 +117,8 @@ export default function NewLeavePage() {
 
   return (
     <PageTransition>
-
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="w-full">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-4">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
+          <div className="flex items-center justify-between">
               <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">درخواست مرخصی جدید</h1>
               <Button
                 variant="ghost"
@@ -249,8 +246,6 @@ export default function NewLeavePage() {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
     </PageTransition>
   );
 }

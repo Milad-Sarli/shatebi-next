@@ -100,6 +100,7 @@ export default function DegreeDetailsPage() {
 
   return (
     <PageTransition>
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
       <Card dir="rtl">
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -228,6 +229,7 @@ export default function DegreeDetailsPage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </PageTransition>
   );
 }

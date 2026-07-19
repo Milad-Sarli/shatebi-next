@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useEffect, useState } from "react";
+import { PageTransition } from "@/components/ui/page-transition";
 import { useAuth } from "@/lib/context/auth.context";
 import { fetchNotifications, deleteNotification, markNotificationAsRead } from "@/lib/services/notification.service";
 import { Notification } from "@/components/NotificationDisplay";
@@ -139,7 +140,8 @@ export default function NotificationsTablePage() {
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   return (
-    <div className="p-4" dir="rtl" style={{ direction: 'rtl' }}>
+    <PageTransition>
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6" dir="rtl" style={{ direction: 'rtl' }}>
       <h1 className="text-xl font-bold mb-4 text-right">جدول اعلان‌ها</h1>
       {/* Search and group actions */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
@@ -320,5 +322,6 @@ export default function NotificationsTablePage() {
         </AnimatePresence>
       </div>
     </div>
+    </PageTransition>
   );
 } 

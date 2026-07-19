@@ -2,21 +2,20 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-// Remove AuthService import if only used by store
-// import Cookies from 'js-cookie' // Remove unused import
 import { User, LoginResponse, ResendOtpResponse } from '@/lib/types/auth.types'
-import { useAuthStore } from '@/lib/store/auth.store' // Import the zustand store
+import { useAuthStore } from '@/lib/store/auth.store'
+import { OtpMethod } from '@/lib/services/auth.service'
 
 interface AuthContextType {
   isAuthenticated: boolean
   user: User | null
   accessToken: string | null
   impersonatedBy: number | null
-  login: (username: string) => Promise<LoginResponse>
+  login: (username: string, method?: OtpMethod) => Promise<LoginResponse>
   loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
   verifyOtp: (otp: string, token: string, phone: string) => Promise<void>
   logout: () => Promise<void>
-  resendOtp: (token: string) => Promise<ResendOtpResponse>
+  resendOtp: (token: string, method?: OtpMethod) => Promise<ResendOtpResponse>
   impersonateUser: (userId: number) => Promise<void>
 }
 
@@ -38,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     impersonateUser: storeImpersonateUser,
   } = useAuthStore();
 
-  const login = React.useCallback(async (username: string) => {
-    return storeLogin(username)
+  const login = React.useCallback(async (username: string, method?: OtpMethod) => {
+    return storeLogin(username, method)
   }, [storeLogin])
 
   const verifyOtp = React.useCallback(async (otp: string, token: string, phone: string) => {
@@ -50,8 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storeLogout(router)
   }, [storeLogout, router])
 
-  const resendOtp = React.useCallback(async (token: string) => {
-    return storeResendOtp(token)
+  const resendOtp = React.useCallback(async (token: string, method?: OtpMethod) => {
+    return storeResendOtp(token, method)
   }, [storeResendOtp])
 
   const loginWithUsernameAndPassword = React.useCallback(async (username: string, password: string) => {

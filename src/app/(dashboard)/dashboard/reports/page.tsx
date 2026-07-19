@@ -18,10 +18,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageTransition } from "@/components/ui/page-transition";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageTransition } from "@/components/ui/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
@@ -266,7 +266,7 @@ export default function ReportsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6 p-4 md:p-6 rtl" dir="rtl">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6" dir="rtl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>

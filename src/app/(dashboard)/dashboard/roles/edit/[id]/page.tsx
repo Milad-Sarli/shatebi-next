@@ -105,7 +105,7 @@ export default function EditRolePage() {
 
   return (
     <PageTransition>
-      <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-lg p-4 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-blue-500/10 dark:from-blue-500/5 dark:via-emerald-500/5 dark:to-blue-500/5" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">

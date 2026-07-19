@@ -145,3 +145,84 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 # or for production:
 # NEXT_PUBLIC_API_URL=https://admin.shatebiapp.ir
 ```
+
+## Database Sync (از سرور به local)
+
+پایگاه داده رایگان و جدید برای توسعه:
+
+```bash
+# یکبار: نصب اسکریپت روی سرور
+scp sync-dbs.sh root@178.239.147.149:/usr/local/bin/sync-dbs.sh
+ssh root@178.239.147.149 "chmod +x /usr/local/bin/sync-dbs.sh"
+
+# دریافت دیتابیس‌ها (همه):
+./sync-dbs-local.sh
+
+# یا فقط یک دیتابیس:
+./sync-dbs-local.sh shatebiapp.ir
+./sync-dbs-local.sh kralmode.com
+./sync-dbs-local.sh pedyar.com
+./sync-dbs-local.sh itemer.ir
+```
+
+**فایل‌ها:**
+- `sync-dbs.sh` → سرور: dump + compress همه دیتابیس‌ها
+- `sync-dbs-local.sh` → محلی: دانلود + import به DBngin MySQL
+
+**نیازمندی‌ها:** DBngin MySQL (سوکت `/tmp/mysql_3306.sock`)، SSH key `~/.ssh/id_ed25519_2026`.
+
+**MySQL password (admin):** `bf38@2951@a96a@4a36Aa1`
+
+## Security (Malware Incident - July 2026)
+
+**Incident:** Server was repeatedly compromised by a hacker (Iranian IP ranges) who:
+- Uploaded webshells (Modern Premium PHP File Manager) into public directories
+- Planted a backdoor in `changepass/{username}` route (password reset to `12345678`)
+- Installed systemd malware (komari) connecting to `dash.little.army`
+- Created malicious cron (`/etc/cron.d/auto-upgrade`, immutable) pulling from `0x1x2x3.top`
+- Replaced system binaries (bash, dash, python3.12, mysqld) with empty files
+- Exploited `rise3.9` CodeIgniter project on port 9000 (open to world, no domain, no SSL)
+
+**Root cause:** Port 9000 (`rise3.9` project) was open with `server_name _;`, no SSL, old CodeIgniter 3 with vulnerable `dev-master` package.
+
+**Server hardening (Jul 17-18, 2026):**
+- Port 9000 CLOSED (UFW deny + nginx)
+- 16+ hacker IPs + `94.101.176.0/20` + `185.215.232.0/24` blocked via UFW
+- fail2ban SSH: 3 retries → 24h ban; `ufw limit 22/tcp`
+- System binaries restored (bash, dash, mysqld, python3.12)
+- MySQL password rotated; all 4 Laravel APP_KEYs regenerated
+- 2 webshells deleted & quarantined; `changepass` backdoor removed
+- komari malware + malicious cron disabled (immutable)
+- C2 domains blocked in immutable `/etc/hosts`
+- Security monitoring: integrity-check (daily), webshell-watch (2min), malware-watch (2s)
+- Google Drive daily backup at 3am
+- Docker + n8n removed; Telegram + Pusher removed; Bale restored
+- All security scripts immutable (`chattr +i`)
+
+**Symptoms to watch for:**
+- PM2 restart count spiking (was 47,000+ restarts)
+- 504 Gateway Timeout errors
+- Suspicious files in `/tmp/.e*` or `/tmp/cheddar`
+- PM2 error logs showing `base64` decode or `curl/wget` to external IPs
+- 403 errors in nginx access log (webshell pattern blocked)
+
+**If malware returns:**
+```bash
+# 1. Check for signs
+tail -20 /var/log/webshell-watch.log
+tail -20 /var/log/integrity-check.log
+ls -la /tmp/.e* /tmp/cheddar 2>/dev/null
+pm2 logs shatebiapp-frontend --err --lines 50 --nostream
+
+# 2. Stop PM2 and clean
+pm2 stop shatebiapp-frontend
+rm -rf /var/www/shatebiapp.ir/.next
+rm -rf /tmp/.e* /tmp/cheddar
+
+# 3. Rebuild locally and deploy clean
+npm run build
+rsync -avz --delete .next/ root@178.239.147.149:/var/www/shatebiapp.ir/.next/
+pm2 restart shatebiapp-frontend
+```
+
+**Important:** Always build locally and deploy — never run `npm run build` on the server (no internet access).

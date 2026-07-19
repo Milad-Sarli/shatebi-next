@@ -296,7 +296,7 @@ const WaitingMorakhasiPage: React.FC = () => {
 
   return (
     <PageTransition>
-        <div className="container mx-auto w-full p-6">
+      <div className="flex flex-col gap-3 sm:gap-6 w-full max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
           {/* Header and Search/Filter Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight mb-6 text-center mx-auto">مرخصی‌های در انتظار تایید</h1>

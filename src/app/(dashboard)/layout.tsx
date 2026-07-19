@@ -93,7 +93,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Avatar className="h-8 w-8">
                   <AvatarImage
                     src="/avatars/default.svg"
-                    alt={user?.username}
+                    alt={user?.fname + " " + user?.lname}
                   />
                   <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
                     {getUserInitials(user?.username || "")}
@@ -101,13 +101,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Avatar>
                 <div className="space-y-0.5 text-sm">
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {user?.username}
+                    {user?.fname + " " + user?.lname}
                   </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {user?.phone}
                   </p>
                 </div>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
+                  <DropdownMenuItem onClick={() => logout()} className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                    خروج از حساب کاربری
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -229,8 +241,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               `}</style>
             </div>
           </div>
-          {/* Notification Bell on left */}
-          <div className="relative ml-auto">
+          {/* Notification Bell + User Menu on left */}
+          <div className="relative flex items-center gap-1 ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -252,7 +264,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 text-sm text-right">
                   اعلان‌ها
                 </div>
+
                 <NotificationDisplay />
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
+                <DropdownMenuItem onClick={() => logout()} className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                  خروج از حساب کاربری
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
