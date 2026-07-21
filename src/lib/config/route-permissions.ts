@@ -24,7 +24,7 @@ export const routePermissions: RoutePermissionRule[] = [
   { path: '/dashboard/optimizedNumbers', roles: ['admin', 'master'] },
   { path: '/dashboard/applicants', roles: 'admin' },
   { path: '/dashboard/week-absents', roles: 'admin' },
-  { path: '/dashboard/leaves/new', roles: ['admin', 'master'] },
+  { path: '/dashboard/leaves/new', roles: ['admin', 'master', 'user'] },
   { path: '/dashboard/waiting-morakhasi', roles: 'admin' },
   { path: '/dashboard/guard', roles: ['admin', 'guard'] },
   {
