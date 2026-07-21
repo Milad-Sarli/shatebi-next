@@ -62,13 +62,13 @@ export interface LoginWithPasswordResponse {
 
 export class AuthService {
   private static setAccessTokenCookie(token: string) {
-    // Set cookie with secure options
-    document.cookie = `access_token=${token}; path=/; secure; samesite=strict; max-age=86400`; // 24 hours
+    const secure = process.env.NODE_ENV === 'production' ? '; secure' : ''
+    document.cookie = `access_token=${token}; path=/; samesite=strict; max-age=86400${secure}`; // 24 hours
   }
 
   private static setAppRolesCookie(appRoles: AppRole[]) {
-    // Store app_roles as a JSON string in a cookie (expires in 24 hours)
-    document.cookie = `app_roles=${encodeURIComponent(JSON.stringify(appRoles))}; path=/; secure; samesite=strict; max-age=86400`;
+    const secure = process.env.NODE_ENV === 'production' ? '; secure' : ''
+    document.cookie = `app_roles=${encodeURIComponent(JSON.stringify(appRoles))}; path=/; samesite=strict; max-age=86400${secure}`;
   }
 
   static async login(username: string, method: OtpMethod = 'sms'): Promise<LoginResponse> {

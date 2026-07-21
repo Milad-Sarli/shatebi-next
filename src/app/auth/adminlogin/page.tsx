@@ -18,6 +18,7 @@ import * as motion from "motion/react-client"
 import { useAuth } from '@/lib/context/auth.context'
 import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
 import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
 
 const loginFormSchema = z.object({
   username: z.string().min(3, 'نام کاربری الزامی است'),
@@ -25,16 +26,21 @@ const loginFormSchema = z.object({
 })
 
 export default function AdminLoginPage() {
-  const { loginWithUsernameAndPassword, isAuthenticated } = useAuth()
+  const { loginWithUsernameAndPassword, isAuthenticated, accessToken } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
   const router = useRouter()
 
   React.useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && accessToken) {
+      Cookies.set('access_token', accessToken, {
+        expires: 1,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+      })
       router.push('/dashboard')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, accessToken, router])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),

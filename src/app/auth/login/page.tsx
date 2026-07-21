@@ -22,6 +22,7 @@ import SpotlightCard from '@/components/reactbit/SpotlightCard/SpotlightCard'
 import Image from 'next/image'
 import { MessageSquare, Smartphone } from 'lucide-react'
 import { OtpMethod } from '@/lib/services/auth.service'
+import Cookies from 'js-cookie'
 
 // Step 1: National ID Only
 const loginFormSchema = z.object({
@@ -40,7 +41,7 @@ const otpFormSchema = z.object({
 })
 
 export default function LoginPage() {
-  const { login, verifyOtp, resendOtp, isAuthenticated } = useAuth()
+  const { login, verifyOtp, resendOtp, isAuthenticated, accessToken } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [showOTP, setShowOTP] = React.useState(false)
   const [countdown, setCountdown] = React.useState(0)
@@ -50,10 +51,15 @@ export default function LoginPage() {
   const [otpMethod, setOtpMethod] = React.useState<OtpMethod>('sms')
 
   React.useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && accessToken) {
+      Cookies.set('access_token', accessToken, {
+        expires: 1,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+      })
       window.location.href = '/dashboard'
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, accessToken])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
