@@ -105,7 +105,9 @@ export const optimizedNumberService = {
     scoreRange: string = "all",
     startDate: string | null = null,
     endDate: string | null = null,
-    negative_scores: boolean = false
+    negative_scores: boolean = false,
+    sort_by: string = "created_at",
+    sort_order: string = "desc",
   ): Promise<PaginatedResponse<OptimizedNumber>> {
     const params = new URLSearchParams();
     params.append("page", page.toString());
@@ -117,6 +119,8 @@ export const optimizedNumberService = {
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
     if (negative_scores) params.append("negative_scores", "true");
+    params.append("sort_by", sort_by);
+    params.append("sort_order", sort_order);
 
     try {
       const response = await axios.get(`${API_URL}/api/optimized-numbers?${params.toString()}`, {

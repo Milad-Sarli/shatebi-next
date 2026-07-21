@@ -29,7 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SingleSelectCombobox } from "@/components/ui/Combobox";
 import { optimizedNumberService, OptimizedNumber } from "@/lib/services/number.service";
 import { MasterService, Master } from "@/lib/services/master.service";
 import { useRouter } from "next/navigation";
@@ -75,6 +75,8 @@ interface Filters {
   startDate: DateObject | null;
   endDate: DateObject | null;
   negative_scores: boolean;
+  sort_by: string;
+  sort_order: 'asc' | 'desc';
 }
 
 export default function OptimizedNumbersPage() {
@@ -94,6 +96,8 @@ export default function OptimizedNumbersPage() {
     startDate: null,
     endDate: null,
     negative_scores: false,
+    sort_by: "created_at",
+    sort_order: "desc",
   });
   const [pagination, setPagination] = React.useState({
     current_page: 1,
@@ -130,7 +134,9 @@ export default function OptimizedNumbersPage() {
           filters.scoreRange,
           startJalali,
           endJalali,
-          filters.negative_scores
+          filters.negative_scores,
+          filters.sort_by,
+          filters.sort_order,
         );
 
         if (response && response.data) {
@@ -222,6 +228,14 @@ export default function OptimizedNumbersPage() {
     }));
   }, []);
 
+  const handleSort = React.useCallback((column: string) => {
+    setFilters(prev => ({
+      ...prev,
+      sort_by: column,
+      sort_order: prev.sort_by === column && prev.sort_order === 'asc' ? 'desc' : 'asc',
+    }));
+  }, []);
+
   const handleDeleteNumber = async (id: number) => {
     setNumberToDelete(id);
   };
@@ -309,24 +323,18 @@ export default function OptimizedNumbersPage() {
               }
               placeholder="تاریخ پایان"
             />
-            <Select
+            <SingleSelectCombobox
+              options={[
+                { value: "all", label: "همه استادان" },
+                ...masters.map((m) => ({ value: m.id.toString(), label: m.fullname })),
+              ]}
               value={filters.teacher ?? "all"}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 setFilters((prev) => ({ ...prev, teacher: value, page: 1 }))
               }
-            >
-              <SelectTrigger dir="rtl" className="w-[180px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400 px-3 py-2">
-                <SelectValue placeholder="همه استادان" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem dir="rtl" value="all">همه استادان</SelectItem>
-                {masters.map((master) => (
-                  <SelectItem dir="rtl" key={master.id} value={master.id.toString()}>
-                    {master.fullname}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="جستجوی استاد..."
+              className="w-[180px] rounded-xl"
+            />
             <div className="w-fit flex items-center">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -365,6 +373,8 @@ export default function OptimizedNumbersPage() {
                       startDate: null,
                       endDate: null,
                       negative_scores: false,
+                      sort_by: "created_at",
+                      sort_order: "desc",
                     });
                   }}
                   className="whitespace-nowrap"
@@ -385,23 +395,63 @@ export default function OptimizedNumbersPage() {
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       #
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      دانش‌آموز
+                    <th
+                      className="whitespace-nowrap px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                      onClick={() => handleSort('student.Fname')}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        دانش‌آموز
+                        {filters.sort_by === 'student.Fname' && (
+                          <span className="text-xs">{filters.sort_order === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      استاد
+                    <th
+                      className="whitespace-nowrap px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                      onClick={() => handleSort('master_teacher.fullname')}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        استاد
+                        {filters.sort_by === 'master_teacher.fullname' && (
+                          <span className="text-xs">{filters.sort_order === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      درس
+                    <th
+                      className="whitespace-nowrap px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                      onClick={() => handleSort('dars.title')}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        درس
+                        {filters.sort_by === 'dars.title' && (
+                          <span className="text-xs">{filters.sort_order === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       محدوده درسی
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      نمرات
+                    <th
+                      className="whitespace-nowrap px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                      onClick={() => handleSort('number')}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        نمرات
+                        {filters.sort_by === 'number' && (
+                          <span className="text-xs">{filters.sort_order === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
                     </th>
-                    <th className="whitespace-nowrap px-4 py-3 font-medium">
-                      ثبت شده در
+                    <th
+                      className="whitespace-nowrap px-4 py-3 font-medium cursor-pointer select-none hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        ثبت شده در
+                        {filters.sort_by === 'created_at' && (
+                          <span className="text-xs">{filters.sort_order === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 font-medium">
                       عملیات

@@ -41,7 +41,7 @@ const otpFormSchema = z.object({
 })
 
 export default function LoginPage() {
-  const { login, verifyOtp, resendOtp, isAuthenticated, accessToken } = useAuth()
+  const { login, verifyOtp, resendOtp, isAuthenticated, accessToken, user } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [showOTP, setShowOTP] = React.useState(false)
   const [countdown, setCountdown] = React.useState(0)
@@ -52,14 +52,18 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     if (isAuthenticated && accessToken) {
-      Cookies.set('access_token', accessToken, {
+      const cookieOpts = {
         expires: 1,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict' as const,
-      })
+      }
+      Cookies.set('access_token', accessToken, cookieOpts)
+      if (user?.app_roles) {
+        Cookies.set('app_roles', JSON.stringify(user.app_roles), cookieOpts)
+      }
       window.location.href = '/dashboard'
     }
-  }, [isAuthenticated, accessToken])
+  }, [isAuthenticated, accessToken, user])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),

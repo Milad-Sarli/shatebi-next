@@ -83,9 +83,12 @@ See `.opencode/skills/design/SKILL.md` for full design system details.
 
 ## Local Development
 
+> ⚠️ **CRITICAL: Always ask for permission before deploying to production!**
+> ⚠️ **CRITICAL: Never run `npm run build` without asking — it overwrites `.next/` and crashes the local dev server.**
+
 ```bash
 npm run dev          # default port 3009 (could be 3003 on production)
-npm run build        # production build
+npm run build        # production build (ask first!)
 npm run lint         # lint check
 ```
 

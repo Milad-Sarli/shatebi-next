@@ -26,21 +26,25 @@ const loginFormSchema = z.object({
 })
 
 export default function AdminLoginPage() {
-  const { loginWithUsernameAndPassword, isAuthenticated, accessToken } = useAuth()
+  const { loginWithUsernameAndPassword, isAuthenticated, accessToken, user } = useAuth()
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
   const router = useRouter()
 
   React.useEffect(() => {
     if (isAuthenticated && accessToken) {
-      Cookies.set('access_token', accessToken, {
+      const cookieOpts = {
         expires: 1,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict' as const,
-      })
+      }
+      Cookies.set('access_token', accessToken, cookieOpts)
+      if (user?.app_roles) {
+        Cookies.set('app_roles', JSON.stringify(user.app_roles), cookieOpts)
+      }
       router.push('/dashboard')
     }
-  }, [isAuthenticated, accessToken, router])
+  }, [isAuthenticated, accessToken, user, router])
 
   const loginForm = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
