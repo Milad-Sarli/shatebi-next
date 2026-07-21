@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions)
 
             if (verifyResponse.user.app_roles) {
-              Cookies.set('app_roles', encodeURIComponent(JSON.stringify(verifyResponse.user.app_roles)), cookieOptions)
+              Cookies.set('app_roles', JSON.stringify(verifyResponse.user.app_roles), cookieOptions)
             }
           } catch (cookieError) {
              console.error('Error setting cookies during OTP verify:', cookieError)
@@ -164,7 +164,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           };
           Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions);
           if (response.user.app_roles) {
-            Cookies.set('app_roles', encodeURIComponent(JSON.stringify(response.user.app_roles)), cookieOptions);
+            Cookies.set('app_roles', JSON.stringify(response.user.app_roles), cookieOptions);
           }
         } catch (error) {
           console.error('Impersonation error:', error);
@@ -208,7 +208,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions);
 
             if (response.user.app_roles) {
-              Cookies.set('app_roles', encodeURIComponent(JSON.stringify(response.user.app_roles)), cookieOptions);
+              Cookies.set('app_roles', JSON.stringify(response.user.app_roles), cookieOptions);
             }
           } catch (cookieError) {
             console.error('Error setting cookies during admin login:', cookieError);
