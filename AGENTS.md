@@ -89,8 +89,13 @@ npm run build        # production build
 npm run lint         # lint check
 ```
 
+> ⚠️ **WARNING**: `npm run build` overwrites `.next/` and will crash the running dev server.
+> Always restart after build: `pm2 restart shatebi-frontend`
+
 ```bash
 # If port is stuck, kill and restart:
+pm2 restart shatebi-frontend
+# or force:
 lsof -ti :3009 | xargs kill -9
 npm run dev -- --port 3010
 ```
