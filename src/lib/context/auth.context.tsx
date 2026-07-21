@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   resendOtp: (token: string, method?: OtpMethod) => Promise<ResendOtpResponse>
   impersonateUser: (userId: number) => Promise<void>
+  stopImpersonation: () => Promise<void>
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resendOtp: storeResendOtp,
     loginWithUsernameAndPassword: loginWithUsernameAndPasswordStore,
     impersonateUser: storeImpersonateUser,
+    stopImpersonation: storeStopImpersonation,
   } = useAuthStore();
 
   const login = React.useCallback(async (username: string, method?: OtpMethod) => {
@@ -61,6 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storeImpersonateUser(userId)
   }, [storeImpersonateUser])
 
+  const stopImpersonation = React.useCallback(async () => {
+    await storeStopImpersonation()
+  }, [storeStopImpersonation])
+
   const value = {
     isAuthenticated,
     user,
@@ -72,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     resendOtp,
     impersonateUser,
+    stopImpersonation,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

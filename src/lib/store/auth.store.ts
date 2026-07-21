@@ -10,6 +10,8 @@ interface AuthState {
   user: User | null
   accessToken: string | null
   impersonatedBy: number | null
+  adminToken: string | null
+  adminUser: User | null
 }
 
 interface AuthActions {
@@ -20,6 +22,7 @@ interface AuthActions {
   _setState: (newState: Partial<AuthState>) => void
   loginWithUsernameAndPassword: (username: string, password: string) => Promise<void>
   impersonateUser: (userId: number) => Promise<void>
+  stopImpersonation: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -30,6 +33,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       user: null,
       accessToken: null,
       impersonatedBy: null,
+      adminToken: null,
+      adminUser: null,
 
       // Internal state setter
       _setState: (newState) => set(newState),
@@ -59,6 +64,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             user: verifyResponse.user,
             accessToken: verifyResponse.access_token,
             impersonatedBy: null,
+            adminToken: null,
+            adminUser: null,
           });
 
           // Set cookies (consider if still needed with localStorage persistence)
@@ -113,7 +120,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
 
         // Clear state and cookies/storage
-        set({ isAuthenticated: false, user: null, accessToken: null, impersonatedBy: null })
+        set({ isAuthenticated: false, user: null, accessToken: null, impersonatedBy: null, adminToken: null, adminUser: null })
         Cookies.remove('access_token')
         Cookies.remove('user')
         Cookies.remove('app_roles')
@@ -135,6 +142,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
       impersonateUser: async (userId: number) => {
         const currentToken = get().accessToken;
+        const currentUser = get().user;
         if (!currentToken) throw new Error('No access token');
         try {
           const response = await AuthService.loginAsUser(userId, currentToken);
@@ -149,6 +157,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             },
             accessToken: response.access_token,
             impersonatedBy: response.impersonated_by ?? null,
+            adminToken: currentToken,
+            adminUser: currentUser,
           });
           const cookieOptions = {
             expires: 1,
@@ -172,6 +182,40 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
+      stopImpersonation: async () => {
+        const adminToken = get().adminToken;
+        const adminUser = get().adminUser;
+        if (!adminToken || !adminUser) throw new Error('No admin session found');
+
+        set({
+          isAuthenticated: true,
+          user: adminUser,
+          accessToken: adminToken,
+          impersonatedBy: null,
+          adminToken: null,
+          adminUser: null,
+        });
+
+        const cookieOptions = {
+          expires: 1,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict' as const,
+        };
+        Cookies.set('access_token', adminToken, cookieOptions);
+        const userDataToStore = {
+          id: adminUser.id,
+          username: adminUser.username,
+          phone: adminUser.phone,
+          tenant_id: adminUser.tenant_id ? Number(adminUser.tenant_id) : undefined,
+        };
+        Cookies.set('user', JSON.stringify(userDataToStore), cookieOptions);
+        if (adminUser.app_roles) {
+          Cookies.set('app_roles', JSON.stringify(adminUser.app_roles), cookieOptions);
+        } else {
+          Cookies.remove('app_roles');
+        }
+      },
+
       loginWithUsernameAndPassword: async (username: string, password: string) => {
         try {
           const response = await AuthService.loginWithUsernameAndPassword(username, password);
@@ -188,6 +232,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             },
             accessToken: response.access_token,
             impersonatedBy: null,
+            adminToken: null,
+            adminUser: null,
           });
 
           // Set cookies (same as verifyOtp)

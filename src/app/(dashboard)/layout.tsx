@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Bell } from "lucide-react";
+import { Menu, X, Bell, ArrowRightFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +26,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const { user, accessToken, logout } = useAuth();
+  const { user, accessToken, logout, impersonatedBy, stopImpersonation } = useAuth();
   // const { theme, toggleTheme } = useTheme();
 
   // Notification state for mobile header
@@ -86,6 +86,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
+          {impersonatedBy && (
+            <div className="mb-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2 text-center">
+                ورود به عنوان {user?.fname} {user?.lname}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={stopImpersonation}
+                className="w-full text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/50"
+              >
+                <ArrowRightFromLine className="h-3 w-3" />
+                بازگشت به ادمین
+              </Button>
+            </div>
+          )}
           <Sidebar className="flex-1 overflow-y-auto min-h-0" setSidebarOpen={setSidebarOpen} />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
@@ -115,6 +131,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
+                  {impersonatedBy && (
+                    <DropdownMenuItem onClick={stopImpersonation} className="text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50">
+                      <ArrowRightFromLine className="h-4 w-4 ml-2" />
+                      بازگشت به ادمین
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logout()} className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                     خروج از حساب کاربری
                   </DropdownMenuItem>
@@ -158,6 +180,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
             </Link>
           </div>
+          {impersonatedBy && (
+            <div className="mb-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2 text-center">
+                ورود به عنوان {user?.fname} {user?.lname}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={stopImpersonation}
+                className="w-full text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/50"
+              >
+                <ArrowRightFromLine className="h-3 w-3" />
+                بازگشت به ادمین
+              </Button>
+            </div>
+          )}
           <Sidebar className="flex-1 overflow-y-auto min-h-0" setSidebarOpen={setSidebarOpen} />
           <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="flex items-center justify-between">
@@ -193,6 +231,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
+                    {impersonatedBy && (
+                      <DropdownMenuItem onClick={stopImpersonation} className="text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50">
+                        <ArrowRightFromLine className="h-4 w-4 ml-2" />
+                        بازگشت به ادمین
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => logout()} className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                       خروج از حساب کاربری
                     </DropdownMenuItem>
@@ -275,6 +319,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" align="end">
+                {impersonatedBy && (
+                  <DropdownMenuItem onClick={stopImpersonation} className="text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50">
+                    <ArrowRightFromLine className="h-4 w-4 ml-2" />
+                    بازگشت به ادمین
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => logout()} className="text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                   خروج از حساب کاربری
                 </DropdownMenuItem>
