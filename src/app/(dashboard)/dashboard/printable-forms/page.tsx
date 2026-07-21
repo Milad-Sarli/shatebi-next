@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/ui/page-transition";
-import { FileText, ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, List, Filter } from "lucide-react";
 import Link from "next/link";
 
 interface FormCard {
@@ -21,10 +21,16 @@ const forms: FormCard[] = [
     href: "/dashboard/printable-forms/discipline-control",
   },
   {
-    title: "فرم‌های بیشتر به زودی",
-    description: "فرم‌های چاپی بیشتری در حال اضافه شدن هستند",
-    icon: FileText,
-    href: "#",
+    title: "لیست قرآن‌آموزان",
+    description: "لیست چاپی قرآن‌آموزان به تفکیک کلاس/درس همراه با کد ملی، پایه تحصیلی و تلفن",
+    icon: List,
+    href: "/dashboard/printable-forms/student-list",
+  },
+  {
+    title: "لیست بر اساس وضعیت تحصیلی",
+    description: "لیست چاپی قرآن‌آموزان فیلتر شده بر اساس وضعیت تحصیلی",
+    icon: Filter,
+    href: "/dashboard/printable-forms/student-status-list",
   },
 ];
 
@@ -56,7 +62,7 @@ export default function PrintableFormsPage() {
                 <CardContent>
                   <Button asChild className="w-full">
                     <Link href={form.href}>
-                      <FileText className="ml-2 h-4 w-4" />
+                      <form.icon className="ml-2 h-4 w-4" />
                       مشاهده فرم
                     </Link>
                   </Button>

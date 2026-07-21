@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/context/auth.context";
 import { CurrentlyStudyingStudentsService, type CurrentlyStudyingStudent } from "@/lib/services/currently-studying-students.service";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const hygieneItems = [
   "ناخن‌ها", "موها", "لباس", "کفش", "دست‌ها",
@@ -18,6 +25,8 @@ export default function DisciplineControlPage() {
   const [students, setStudents] = useState<CurrentlyStudyingStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const printRef = useRef<HTMLDivElement>(null);
 
   const tenantId = user?.tenant_id ?? 7;
@@ -42,6 +51,24 @@ export default function DisciplineControlPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [accessToken, tenantId, adminFullName]);
+
+  const sortedStudents = useMemo(() => {
+    const list = [...students];
+    const col = (s: CurrentlyStudyingStudent, f: string) => {
+      switch (f) {
+        case "name": return `${s.Fname} ${s.Lname}`.trim();
+        case "lname": return s.Lname || "";
+        default: return "";
+      }
+    };
+    list.sort((a, b) => {
+      const va = col(a, sortField);
+      const vb = col(b, sortField);
+      const cmp = va.localeCompare(vb, "fa");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [students, sortField, sortDir]);
 
   const handlePrint = () => {
     const printContent = printRef.current;
@@ -99,15 +126,37 @@ export default function DisciplineControlPage() {
   return (
     <PageTransition>
       <div className="space-y-4">
-        <div className="no-print flex items-center justify-between">
+        <div className="no-print flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">فرم کنترل انضباطی</h1>
-            <p className="text-muted-foreground">تعداد قرآن‌آموزان: {students.length} نفر</p>
+            <p className="text-muted-foreground">تعداد قرآن‌آموزان: {sortedStudents.length} نفر</p>
           </div>
-          <Button onClick={handlePrint}>
-            <Printer className="ml-2 h-4 w-4" />
-            چاپ فرم
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">مرتب‌سازی:</span>
+              <Select value={sortField} onValueChange={(v) => setSortField(v)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">نام و نام خانوادگی</SelectItem>
+                  <SelectItem value="lname">نام خانوادگی</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                title={sortDir === "asc" ? "صعودی" : "نزولی"}
+              >
+                <ArrowUpDown className={`h-4 w-4 transition-transform ${sortDir === "desc" ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
+            <Button onClick={handlePrint}>
+              <Printer className="ml-2 h-4 w-4" />
+              چاپ فرم
+            </Button>
+          </div>
         </div>
 
         <div ref={printRef}>
@@ -151,7 +200,7 @@ export default function DisciplineControlPage() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((student, index) => (
+                {sortedStudents.map((student, index) => (
                   <tr key={student.id} style={index % 2 === 1 ? { background: "#f5f5f5" } : {}}>
                     <td style={{ border: "1px solid #000", textAlign: "center", verticalAlign: "middle", padding: "0.15cm 0.08cm" }}>{index + 1}</td>
                     <td style={{ border: "1px solid #000", textAlign: "right", verticalAlign: "middle", padding: "0.15cm 0.08cm", paddingRight: "0.2cm", fontWeight: "bold" }}>
