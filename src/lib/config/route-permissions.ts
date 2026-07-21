@@ -33,6 +33,7 @@ export const routePermissions: RoutePermissionRule[] = [
   },
   { path: '/dashboard/reports', roles: 'admin' },
   { path: '/dashboard/degrees', roles: 'admin' },
+  { path: '/dashboard/printable-forms', roles: 'admin' },
 ]
 
 // Returns the required roles for a given pathname, using the most specific

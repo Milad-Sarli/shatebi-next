@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Trophy, AlertCircle, Bell } from "lucide-react";
+import { GraduationCap, Trophy, AlertCircle, Bell, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/context/auth.context";
 import { DashboardService } from "@/lib/services/dashboard.service";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -143,6 +143,32 @@ export default function DashboardPage() {
 
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
+  // ── DB Sync (superuser only) ──
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const handleSyncDb = useCallback(async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/sync-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncResult({ ok: true, msg: "دیتابیس با موفقیت به‌روزرسانی شد ✅" });
+      } else {
+        setSyncResult({ ok: false, msg: data.error || "خطا در همگام‌سازی" });
+      }
+    } catch {
+      setSyncResult({ ok: false, msg: "خطا در ارتباط با سرور" });
+    } finally {
+      setSyncing(false);
+    }
+  }, [accessToken]);
+
   // Map API data to stat cards, using iconMap and color from API
   const stats = React.useMemo(() => {
     if (!Array.isArray(countyData)) return [];
@@ -201,6 +227,25 @@ export default function DashboardPage() {
           </div>
           {/* Optionally, add a date picker or user avatar here for more modern look */}
         </div>
+        {/* DB Sync Button (Milad only — local dev only) */}
+        {typeof window !== "undefined" && window.location.hostname === "localhost" && user?.phone === "09904762791" && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSyncDb}
+              disabled={syncing}
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "در حال همگام‌سازی..." : "آپدیت دیتابیس از سرور"}
+            </button>
+            {syncResult && (
+              <span className={`text-sm ${syncResult.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                {syncResult.msg}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Stat Cards: Only for Admins */}
         {user?.app_roles?.some((role: unknown) => (role as { name: string }).name === 'admin') && (
           <>

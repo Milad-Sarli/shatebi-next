@@ -18,6 +18,7 @@ import {
   BookMarked,
   ListChecks,
   Library,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/context/auth.context";
@@ -149,6 +150,11 @@ const rawItems: Omit<NavItem, 'requiredRole'>[] = [
         icon: ListChecks,
       },
     ],
+  },
+  {
+    title: "فرم‌های چاپی",
+    href: "/dashboard/printable-forms",
+    icon: Printer,
   },
   {
     title: "گزارشات و آمار ها",
